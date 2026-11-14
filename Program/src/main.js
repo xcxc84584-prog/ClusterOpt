@@ -230,6 +230,23 @@ const $=s=>document.querySelector(s),editor=$('#editor');
 const explorer = new Explorer({
   panel: $('#explorerPanel'),
   openDocument: id => switchDoc(id),
+  newFile: () => create(),
+  closeRoot: async rootHandle => {
+    const matches=[];
+    for(const id of docs.ids()){
+      const opened=docs.handle(id);
+      if(!opened)continue;
+      try{
+        const same=opened===rootHandle || (typeof opened.isSameEntry==='function' && await opened.isSameEntry(rootHandle));
+        const inside=rootHandle.kind==='directory' && typeof rootHandle.resolve==='function' &&
+          (await rootHandle.resolve(opened))!==null;
+        if(same||inside)matches.push(id);
+      }catch(error){omu.emit('EXPLORER','MatchRoot',500,String(error),true);}
+    }
+    // Reuse closeDoc so dirty-file confirmation and session cleanup stay consistent.
+    for(const id of matches){if(!closeDoc(id))return false;}
+    return true;
+  },
   closeFile: async (handle, name) => {
     const matches = [];
     for (const id of docs.ids()) {
@@ -245,7 +262,7 @@ const explorer = new Explorer({
     // Never close a different file solely because it shares the same basename.
     if (!matches.length) return false;
     for (const id of matches) {
-      closeDoc(id);
+      if(!closeDoc(id))return false;
     }
     return matches.every(id => !docs.ids().includes(id));
   },
@@ -351,9 +368,9 @@ refresh();
 editor.focus({preventScroll:true});
   scheduleRecovery();
 }
-function closeDoc(id){const d=docs.get(id).data;
-if(!d)return;
-if(d.dirty&&!confirm(t('confirmClose',d.name)))return;
+function closeDoc(id){const d=docs.get(id)?.data;
+if(!d)return false;
+if(d.dirty&&!confirm(t('confirmClose',d.name)))return false;
 monitor.unwatch(id);
 virtualSessions.delete(id);
 binaryDocuments.delete(id);
@@ -367,6 +384,7 @@ if(active===id){
   else refresh();
 } else refresh();
 scheduleRecovery();
+return true;
 }
 function updateLines(){
   const count = editor.value.split('\n').length;
@@ -1022,7 +1040,7 @@ async function renderVirtualSlice(id, center = null) {
 }
 
 
-const actions={new:()=>create(),open:()=>openFiles(),save:()=>doSave(),saveas:()=>doSave(true),close:()=>active&&closeDoc(active),closeall:()=>{for(const id of docs.ids())closeDoc(id);
+const actions={new:()=>explorer.newFile(),open:()=>explorer.addFile(),save:()=>doSave(),saveas:()=>doSave(true),close:()=>active&&closeDoc(active),closeall:()=>{for(const id of docs.ids())closeDoc(id);
 }};
 $('#menuBtn').onclick=()=>{$('#menu').hidden=!$('#menu').hidden;
 };
@@ -1036,8 +1054,8 @@ for (const item of items) await createVirtual(item);
 e.target.value='';
 };
 document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();doSave(e.shiftKey);}
-if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='n'){e.preventDefault();create();}
-if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='o'){e.preventDefault();openFiles();}});
+if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='n'){e.preventDefault();explorer.newFile();}
+if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='o'){e.preventDefault();explorer.addFile();}});
 window.addEventListener('beforeunload',e=>{if(docs.ids().some(id=>docs.get(id).data.dirty)){e.preventDefault();e.returnValue='';}});
 async function openFiles(){if('showOpenFilePicker' in window){try{const items=await files.openWithHandle();
 for (const item of items) await createVirtual(item);
