@@ -10,6 +10,10 @@ const MESSAGES = Object.freeze({
     empty:'選擇「檔案」建立或開啟文件',ready:'就緒',
     unnamed:'未命名.txt',editor:'文件編輯器',
     priority:'存儲優先級',internal:'內部優先',external:'外部優先',
+    goLineLabel:'行號',goLineButton:'跳至行',goLineHint:'載入完成後才會跳轉',goLineGroup:'跳轉行工具',
+    stateSYNCED:'已同步',stateDIVERGED:'未同步',stateERROR:'錯誤',stateLOADING:'載入中',stateSAVING:'儲存中',stateCONFLICT:'衝突',stateABORTED:'已中止',stateUNVERIFIED:'未驗證',stateINDEXING:'建立索引中',stateREAD:'讀取中',
+    statusLoadedSlice:(index,total)=>`已載入切片 ${index} / ${total}`,
+    statusReadyToJump:'載入完成後才會跳轉',
     plain:'純文字',unsaved:'未儲存',saved:'已儲存',
     downloaded:'已下載檔案',saveFailed:'儲存失敗',
     confirmClose:name=>`「${name}」尚未儲存，確定關閉？`
@@ -24,6 +28,10 @@ const MESSAGES = Object.freeze({
     empty:'Choose File to create or open a document',ready:'Ready',
     unnamed:'Untitled.txt',editor:'Document editor',
     priority:'Storage priority',internal:'Internal first',external:'External first',
+    goLineLabel:'Line',goLineButton:'Go to Line',goLineHint:'Jump available after loading',goLineGroup:'Go to line',
+    stateSYNCED:'SYNCED',stateDIVERGED:'DIVERGED',stateERROR:'ERROR',stateLOADING:'LOADING',stateSAVING:'SAVING',stateCONFLICT:'CONFLICT',stateABORTED:'ABORTED',stateUNVERIFIED:'UNVERIFIED',stateINDEXING:'INDEXING',stateREAD:'READING',
+    statusLoadedSlice:(index,total)=>`Loaded slice ${index} / ${total}`,
+    statusReadyToJump:'Jump available after loading',
     plain:'Plain Text',unsaved:'Unsaved',saved:'Saved',
     downloaded:'File downloaded',saveFailed:'Save failed',
     confirmClose:name=>`"${name}" has unsaved changes. Close anyway?`
