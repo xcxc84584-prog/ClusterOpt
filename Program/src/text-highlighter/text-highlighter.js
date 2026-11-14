@@ -1,3 +1,4 @@
+import {resolveTextColors} from './text-contrast.js';
 // ClusterOpt v0.0.30 — isolated, read-only Shiki tokenization.
 // CDN-loaded grammars are optional; the editor remains fully usable offline.
 const LANGUAGE_BY_EXTENSION = {
@@ -27,13 +28,6 @@ export function categoryFor(scopes=[]) {
   const joined=Array.isArray(scopes)?scopes.join(' '):String(scopes);
   return CATEGORY.find(([pattern])=>pattern.test(joined))?.[1] || 'plain';
 }
-function luminance(rgb) {
-  const c=rgb.map(x=>{const v=x/255;return v<=0.04045?v/12.92:((v+0.055)/1.055)**2.4;});
-  return c[0]*.2126+c[1]*.7152+c[2]*.0722;
-}
-function contrast(a,b) {const x=luminance(a),y=luminance(b);return (Math.max(x,y)+.05)/(Math.min(x,y)+.05);}
-function rgb(hex) {return [1,3,5].map(i=>parseInt(hex.slice(i,i+2),16));}
-function toHex(c) {return '#'+c.map(x=>Math.round(x).toString(16).padStart(2,'0')).join('');}
 export class TextPalette {
   #version=0;
   #colors={};
@@ -44,19 +38,7 @@ export class TextPalette {
     this.#colors[category]=color;this.#version++;return true;
   }
   resolve(background=[0,0,0],minimum=4.5) {
-    const base={keyword:'#8aaaff',string:'#a4df9e',comment:'#a0a7b4',
-      function:'#7bd9dd',type:'#e6ba82',number:'#e4a4df',
-      markup:'#c7b0ff',operator:'#c4c9d3',plain:'#e2e4eb'};
-    const target=luminance(background)>.18?[0,0,0]:[255,255,255];
-    const colors={};
-    for(const [key,value] of Object.entries(base)){
-      let current=rgb(this.#colors[key]||value);
-      for(let i=0;i<32 && contrast(current,background)<minimum;i++){
-        current=current.map((c,j)=>Math.round(c+(target[j]-c)*.09));
-      }
-      colors[key]=toHex(current);
-    }
-    return colors;
+    return resolveTextColors(background,minimum,this.#colors);
   }
 }
 export class TextHighlighter {
