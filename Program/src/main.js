@@ -135,8 +135,20 @@ function scheduleRecovery() {
         dirty: data.dirty, position: viewPositions.get(id) || null};
     });
     // Recovery snapshots are bounded to avoid filling IndexedDB with huge files.
-    const eligible = snapshots.filter(item => item.content.length <= 2 * 1024 * 1024);
-    olr.save('workspace', {active, documents: eligible}).catch(error => {
+    const eligible = snapshots.filter(item => {
+      // Demand-loaded documents may have no materialized content. Never
+      // serialize that state as an empty string or access null.length.
+      if (typeof item.content !== 'string') {
+        omu.emit('OLR', 'SnapshotSkipped', 422,
+          'Document content is not materialized: ' + item.name, true);
+        return false;
+      }
+      return item.content.length <= 2 * 1024 * 1024;
+    });
+    olr.save('workspace', {
+      active: eligible.some(item => item.id === active) ? active : null,
+      documents: eligible
+    }).catch(error => {
       omu.emit('OLR', 'Persist', 500, String(error), true);
     });
   }, 350);
