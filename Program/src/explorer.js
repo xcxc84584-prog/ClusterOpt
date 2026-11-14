@@ -48,6 +48,8 @@ export class Explorer {
     this.#tree.addEventListener('scroll',()=>this.#closeMenu(),{passive:true});
     this.#tree.addEventListener('wheel',()=>this.#closeMenu(),{passive:true});
     this.#tree.addEventListener('touchmove',()=>this.#closeMenu(),{passive:true});
+    if(typeof window!=='undefined')
+      window.addEventListener('resize',()=>this.#closeMenu(),{passive:true});
     this.#tree.addEventListener('pointerdown',e=>this.#pointerDown(e));
     document.addEventListener('pointermove',e=>this.#pointerMove(e));
     document.addEventListener('pointerup',e=>this.#pointerUp(e));
@@ -330,14 +332,20 @@ export class Explorer {
       if(event.key==='Home'){event.preventDefault();buttons[0].focus();}
       if(event.key==='End'){event.preventDefault();buttons.at(-1).focus();}
     });
-    this.#panel.append(menu);
+    // Portal outside the clipped workspace; never cover the Explorer itself.
+    document.body.append(menu);
     this.#menu=menu;
-    // Position using measured dimensions, not hard-coded menu height.
     const rect=this.#panel.getBoundingClientRect();
-    const width=menu.offsetWidth,height=menu.offsetHeight;
-    const x=clientX-rect.left,y=clientY-rect.top;
-    menu.style.left=Math.max(8,Math.min(x,rect.width-width-8))+'px';
-    menu.style.top=Math.max(8,Math.min(y,rect.height-height-8))+'px';
+    const left=Math.ceil(rect.right);
+    const available=Math.max(0,window.innerWidth-left-8);
+    menu.style.position='fixed';
+    menu.style.left=left+'px';
+    menu.style.width=Math.min(224,available)+'px';
+    menu.style.maxWidth=available+'px';
+    menu.style.maxHeight=Math.max(0,window.innerHeight-16)+'px';
+    // Fixed horizontal anchor; vertical position stays within the viewport.
+    const height=menu.offsetHeight;
+    menu.style.top=Math.max(8,Math.min(clientY,window.innerHeight-height-8))+'px';
     buttons[0]?.focus({preventScroll:true});
   }
   async #createIn(node,kind){
