@@ -1,0 +1,3 @@
+# ArcD v0.0.40
+
+Input fast path: Shiki matchingWindow and retainDuringEdit no longer execute synchronously per keystroke; both execute in the existing cancellable debounce timer. Indentation guide DOM rebuild is debounced 180 ms. Position update avoids split array allocations. Gutter count uses an incremental beforeinput newline delta for known insertion types; unknown operations fall back to scanning the textarea. Existing asynchronous MVCC edit queue, virtual slice boundaries, and recovery semantics remain unchanged. Limitations: native textarea still holds one 256 KiB slice; matchingWindow and renderer may scan the whole slice once per idle update; repeated async edit commits can still create backpressure.
