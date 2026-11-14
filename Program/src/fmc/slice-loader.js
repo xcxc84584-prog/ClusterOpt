@@ -84,6 +84,14 @@ export class SliceLoader {
     }
   }
 
+  loadedIndices(documentId) {
+    const prefix = documentId + ':';
+    return [...this.#loaded.keys()]
+      .filter(id => id.startsWith(prefix))
+      .map(id => Number(id.slice(prefix.length)))
+      .filter(Number.isInteger);
+  }
+
   unload(documentId, index) {
     const sliceId = documentId + ':' + index;
     const result = this.#access.unregister(sliceId);
