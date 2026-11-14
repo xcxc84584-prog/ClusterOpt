@@ -1,3 +1,6 @@
+import {FileManagementCore} from './fmc/file-management-core.js';
+import {SliceLoader} from './fmc/slice-loader.js';
+import {StorageProgressTracker} from './fmc/storage-progress-tracker.js';
 import {OMU} from './omu.js';
 import {InterfacePalette} from './interface-palette.js';
 import {createDocumentsClass} from './documents.js';
@@ -8,6 +11,9 @@ import {LanguageProperty} from './language.js';
 // Cluster Opt 1: object state is private; contracts are the only cross-object channel.
 const contract=(ok,data=null,code=200,message='')=>Object.freeze({ok,code,data,message});
 const omu=new OMU();
+const fmc = new FileManagementCore();
+const sliceLoader = new SliceLoader(fmc);
+const storageProgress = new StorageProgressTracker();
 class ExternalChangeMonitor {
  #baseline=new Map();
 #busy=new Set();
@@ -87,6 +93,7 @@ GLOBALS.register('LANGUAGE',LANGUAGE);
 GLOBALS.register('UI_PALETTE', UI_PALETTE);
 GLOBALS.register('STORAGE_PRIORITY','internal');
 GLOBALS.register('DOCUMENT_STATUS',syncStates);
+GLOBALS.register('STORAGE_PROGRESS', storageProgress);
 const monitor=new ExternalChangeMonitor(docs,syncStates,GLOBALS);
 let active=null;
 const $=s=>document.querySelector(s),editor=$('#editor');
@@ -155,10 +162,14 @@ editor.addEventListener('keydown',e=>{if(e.key==='Tab'){e.preventDefault();
 const s=editor.selectionStart;editor.setRangeText('    ',s,editor.selectionEnd,'end');editor.dispatchEvent(new Event('input'));}});
 async function doSave(as=false){if(!active)return;
 const id=active;
+const operationId=storageProgress.start(id,'SAVE',1);
+syncStates.set(id,'SAVING');
 const d=docs.get(id).data;
 const revision=d.revision;
 const res=await files.save(d,docs.handle(id),as);
-if(res.ok){if(!docs.get(id).ok)return;
+if(res.ok){storageProgress.update(operationId,1,'FLUSH');
+storageProgress.finish(operationId,'SUCCESS');
+if(!docs.get(id).ok)return;
 docs.setSaved(id,res.data.handle,res.data.name,revision);
 if(res.data.handle){monitor.watch(id,d.content);
 if(docs.get(id).data.revision!==revision)monitor.onEdit(id);
@@ -167,7 +178,9 @@ else syncStates.set(id,'UNVERIFIED');
 refresh();
 status(t(res.data.download?'downloaded':'saved'));
 }
-else status(res.message||t('saveFailed'));
+else {storageProgress.finish(operationId,'ERROR');
+syncStates.set(id,'ERROR');
+status(res.message||t('saveFailed'));}
 }
 const actions={new:()=>create(),open:()=>openFiles(),save:()=>doSave(),saveas:()=>doSave(true),close:()=>active&&closeDoc(active),closeall:()=>{for(const id of docs.ids())closeDoc(id);
 }};
@@ -195,13 +208,37 @@ status(String(e));
 return;
 }}$('#fileInput').click();
 }
-function renderSyncStatus(){const state=active?syncStates.get(active):'UNVERIFIED';
-const colors={SYNCED:'#22C55E',DIVERGED:'#EAB308',ERROR:'#EF4444',LOADING:'#3B82F6',UNVERIFIED:'#64748B'};
-const bar=$('#meterFill');
-bar.style.width='100%';
-bar.style.background=colors[state];
-bar.parentElement.title=state;
+function renderSyncStatus() {
+  const state = active ? syncStates.get(active) : 'UNVERIFIED';
+  const progress = active ? storageProgress.get(active) : null;
+  const colors = {
+    SYNCED: '#22C55E', DIVERGED: '#EAB308', ERROR: '#EF4444',
+    LOADING: '#3B82F6', SAVING: '#3B82F6',
+    CONFLICT: '#F97316', ABORTED: '#EF4444', UNVERIFIED: '#64748B'
+  };
+  const bar = $('#meterFill');
+  const percent = progress && progress.state === 'RUNNING'
+    ? progress.progressPercent : null;
+  const saving = state === 'SAVING';
+  bar.style.width = saving && percent !== null ? percent + '%' : '100%';
+  bar.style.background = colors[state] || colors.UNVERIFIED;
+  bar.parentElement.classList.toggle('indeterminate', saving && percent === null);
+  const label = saving && percent !== null ? state + ' ' + percent + '%' : state;
+  bar.parentElement.title = label;
+  bar.parentElement.setAttribute('role', 'progressbar');
+  bar.parentElement.setAttribute('aria-label', label);
+  bar.parentElement.setAttribute('aria-valuemin', '0');
+  bar.parentElement.setAttribute('aria-valuemax', '100');
+  if (saving && percent === null) {
+    bar.parentElement.removeAttribute('aria-valuenow');
+  } else {
+    bar.parentElement.setAttribute('aria-valuenow', String(percent ?? 100));
+  }
+  $('#syncLabel').textContent = label;
 }
+storageProgress.subscribe(operation => {
+  if (operation.documentId === active) renderSyncStatus();
+});
 syncStates.subscribe((id)=>{if(id===active)renderSyncStatus();});
 $('#priority').value=GLOBALS.get('STORAGE_PRIORITY');
 $('#priority').addEventListener('change',()=>{GLOBALS.set('STORAGE_PRIORITY',$('#priority').value);omu.emit('STORAGE_PRIORITY','Set',200);monitor.checkAll();});
@@ -234,12 +271,12 @@ const consoleApi=Object.freeze({
   help:()=>Object.freeze(['Cluster.log()','Cluster.log({limit:20})','Cluster.log({code:404})','Cluster.ehu()','Cluster.dep()'])
 });
 Object.defineProperty(window,'Cluster',{value:consoleApi,writable:false,configurable:false});
-window.ClusterOpt=Object.freeze({language:()=>LANGUAGE.value,setLanguage:value=>LANGUAGE.set(value),palette:()=>UI_PALETTE.value,setPalette:rgb=>UI_PALETTE.set(rgb),logs:()=>omu.logs(),dependencies:copyDependencies});
+window.ClusterOpt=Object.freeze({fmcStatus:()=>({loadedSlices:fmc.loadedSliceCount}),language:()=>LANGUAGE.value,setLanguage:value=>LANGUAGE.set(value),palette:()=>UI_PALETTE.value,setPalette:rgb=>UI_PALETTE.set(rgb),logs:()=>omu.logs(),dependencies:copyDependencies});
 refresh();
 
 function renderLanguage() {
   document.documentElement.lang=LANGUAGE.value;
-  document.title='Cluster Opt 6';
+  document.title='Cluster Opt 7';
   $('#menuBtn').textContent=t('file')+'⌄';
   for (const key of ['new','open','save','saveas','close','closeall']) {
     const button=$('#menu [data-action="'+key+'"]');
