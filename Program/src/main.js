@@ -492,8 +492,14 @@ function syncGutterScroll(){
   gutter.style.paddingBottom=(16+missing)+'px';
   gutter.scrollTop=editor.scrollTop;
 }
+let cachedLineCount=null;
+let pendingLineDelta=null;
 function updateLines(){
-  const count=1+(editor.value.match(/\n/g)?.length||0);
+  const count=pendingLineDelta!==null&&cachedLineCount!==null?
+    Math.max(1,cachedLineCount+pendingLineDelta):
+    1+(editor.value.match(/\n/g)?.length||0);
+  pendingLineDelta=null;
+  cachedLineCount=count;
   const session=active?virtualSessions.get(active):null;
   const first=session?(session.lineStarts?.[session.center]||1):1;
   const signature=active+':'+session?.center+':'+first+':'+count;
@@ -612,6 +618,14 @@ editor.addEventListener('beforeinput',event=>{
   const backward=from>0?editor.value[from-1]:'';
   const forward=editor.value[to]||'';
   const inserted=event.data;
+  // For ordinary typing/paste, derive line count from the exact replacement.
+  // History, composition and unknown input operations use the full-count fallback.
+  pendingLineDelta=(typeof inserted==='string'&&
+    (event.inputType==='insertText'||event.inputType==='insertFromPaste'||
+     event.inputType==='insertLineBreak'||event.inputType==='insertParagraph'))?
+    (inserted.match(/\n/g)?.length||0)-(removed.match(/\n/g)?.length||0):null;
+  if(event.inputType==='insertLineBreak'||event.inputType==='insertParagraph')
+    pendingLineDelta=1-(removed.match(/\n/g)?.length||0);
   lineStructureChanged=event.inputType==='insertLineBreak'||
     event.inputType==='insertParagraph'||
     inserted===null||inserted===undefined||inserted.includes('\n')||
