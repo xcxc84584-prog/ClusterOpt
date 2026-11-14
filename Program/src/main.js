@@ -490,6 +490,12 @@ function updateLines(){
   $('#gutter').dataset.signature=signature;
   $('#gutter').textContent=Array.from({length:count},(_,i)=>String(first+i)).join('\n');
   $('#gutter').scrollTop=editor.scrollTop;
+  // A newly appended line changes scrollHeight after layout. Re-sync once
+  // the browser has laid out the expanded gutter, including at EOF.
+  requestAnimationFrame(()=>{
+    if(active && $('#gutter').dataset.signature===signature)
+      $('#gutter').scrollTop=editor.scrollTop;
+  });
 }
 /**
  * Navigate only after the target physical slice has finished loading.
