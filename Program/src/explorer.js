@@ -41,11 +41,12 @@ export class Explorer {
     panel.querySelector('#explorerRefresh').addEventListener('click',()=>this.refresh());
     panel.querySelector('#explorerClose').addEventListener('click',()=>this.toggle(false));
     document.querySelector('#explorerToggle').addEventListener('click',()=>this.toggle());
-    this.#tree.addEventListener('contextmenu',e=>this.#context(e));
+    // Right mouse is reserved for sibling reordering, never the action menu.
+    this.#tree.addEventListener('contextmenu',e=>{if(e.target.closest('.explorer-entry'))e.preventDefault();});
     this.#tree.addEventListener('pointerdown',e=>this.#pointerDown(e));
-    this.#tree.addEventListener('pointermove',e=>this.#pointerMove(e));
-    this.#tree.addEventListener('pointerup',e=>this.#pointerUp(e));
-    this.#tree.addEventListener('pointercancel',()=>this.#clearHold());
+    document.addEventListener('pointermove',e=>this.#pointerMove(e));
+    document.addEventListener('pointerup',e=>this.#pointerUp(e));
+    document.addEventListener('pointercancel',()=>{this.#clearHold();this.#drag=null;this.#tree.querySelectorAll('.drag-ready,.drag-target').forEach(el=>el.classList.remove('drag-ready','drag-target'));});
     document.addEventListener('click',e=>{if(this.#menu&&!this.#menu.contains(e.target))this.#closeMenu();});
     document.addEventListener('keydown',e=>{if(e.key==='Escape'){this.#closeMenu();this.#cancelRename();}});
     this.#restoreRoots();
@@ -279,12 +280,12 @@ export class Explorer {
   }
   #clearHold(){if(this.#hold){clearTimeout(this.#hold.timer);this.#hold=null;}}
   #pointerDown(e){
-    if(e.button!==0)return;
+    if(e.button!==2)return;
     const row=e.target.closest('.explorer-entry[data-path]');if(!row)return;
-    this.#clearHold();
+    e.preventDefault();this.#clearHold();this.#drag=null;
     const node=this.#nodeAt(row);if(!node)return;
-    this.#hold={node,x:e.clientX,y:e.clientY,ready:false,
-      timer:setTimeout(()=>{if(this.#hold){this.#hold.ready=true;row.classList.add('drag-ready');}},200)};
+    this.#hold={node,x:e.clientX,y:e.clientY,ready:true,timer:null};
+    row.classList.add('drag-ready');
   }
   #pointerMove(e){
     if(!this.#hold)return;
@@ -294,13 +295,15 @@ export class Explorer {
     }
     const row=document.elementFromPoint(e.clientX,e.clientY)?.closest('.explorer-entry[data-path]');
     this.#tree.querySelectorAll('.drag-target').forEach(el=>el.classList.remove('drag-target'));
-    row?.classList.add('drag-target');this.#drag=row?.dataset.path||null;
+    if(row&&this.#nodeAt(row)?.parent===this.#hold.node.parent){
+      row.classList.add('drag-target');this.#drag=row.dataset.path;
+    }else this.#drag=null;
   }
   #pointerUp(e){
     if(!this.#hold)return;
     const {node,ready}=this.#hold;this.#clearHold();
     this.#tree.querySelectorAll('.drag-ready,.drag-target').forEach(el=>el.classList.remove('drag-ready','drag-target'));
-    if(!ready||!this.#drag)return;
+    if(!ready||e.button!==2||!this.#drag){this.#drag=null;return;}
     const target=this.#allNodes().find(n=>this.#key(n)===this.#drag);this.#drag=null;
     if(!target||node===target||node.parent!==target.parent)return;
     const siblings=node.parent?node.parent.children:this.#roots;
