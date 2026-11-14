@@ -962,3 +962,8 @@ header .menu-wrap { margin-left:auto; }
 /* Explorer v0.0.24: New, Folder, Open and Refresh share the action rail. */
 #explorerPanel .explorer-actions { grid-template-columns:1fr 1.2fr 1.2fr 32px; gap:4px; }
 #explorerPanel .explorer-actions button { font-size:10px; padding:7px 2px; white-space:nowrap; }
+
+/* v0.0.26: inline Explorer file/folder naming. */
+#explorerPanel .explorer-actions { grid-template-columns:1fr 1fr 32px; }
+#explorerTree .explorer-create-row { display:flex; align-items:center; }
+#explorerTree .explorer-create-input { flex:1; min-width:0; width:auto; background:var(--ui-panel); color:var(--ui-text-on-panel); border:1px solid var(--ui-accent); outline:none; padding:4px 6px; }
