@@ -25,3 +25,11 @@ test('existing code is not paired inside identifiers', () => {
   assert.equal(dfomEdit('word',0,0,'('),null);
   assert.equal(dfomEdit('x',0,0,'(',{composing:true}),null);
 });
+
+test('angle brackets, Chinese typography and skip closing', () => {
+  for (const [open, close] of [['<','>'],['《','》'],['〈','〉'],['【','】'],['＜','＞']]) {
+    assert.equal(dfomEdit('',0,0,open).text,open+close);
+    assert.equal(dfomEdit('word',0,4,open).text,open+'word'+close);
+    assert.equal(dfomEdit(open+close,1,1,close).caret,2);
+  }
+});
