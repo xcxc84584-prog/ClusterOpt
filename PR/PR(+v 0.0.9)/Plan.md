@@ -21,3 +21,7 @@
 - 已修改切片仍常駐記憶體，未建立完整 Dirty Journal 與硬性記憶體預算。
 - File System Access API 以外的低記憶體儲存備援未完成。
 - 本版未執行 1/5 GiB 真實瀏覽器壓力測試，不能標示 PASS。
+
+## 修補補充
+
+儲存成功後重新以 handle.getFile() 取得最新 Blob，解除舊切片註冊並重新 attach，避免原始 immutable Blob 與已儲存文件內容不一致。
