@@ -600,12 +600,19 @@ function updatePos(){
  $('#position').textContent=t('position',line,p-lastBreak);
 }
 const tabGuide = $('#tabGuide');
+const tabGuideContent=document.createElement('div');
+tabGuideContent.className='tab-guide-content';
+if(tabGuide)tabGuide.replaceChildren(tabGuideContent);
+function syncTabGuides(){
+ if(!tabGuide)return;
+ // Unlike independent scroll containers, transform never clamps at EOF.
+ tabGuideContent.style.transform=`translate3d(${-editor.scrollLeft}px, ${-editor.scrollTop}px, 0)`;
+}
 let tabGuideTimer=null;
 function renderTabGuides() {
   if (!tabGuide) return;
-  tabGuide.replaceChildren(buildTabGuideFragment(document, editor.value));
-  tabGuide.scrollTop = editor.scrollTop;
-  tabGuide.scrollLeft = editor.scrollLeft;
+  tabGuideContent.replaceChildren(buildTabGuideFragment(document, editor.value));
+  syncTabGuides();
 }
 function scheduleTabGuides(){
   clearTimeout(tabGuideTimer);
@@ -691,7 +698,7 @@ if(activeTab)activeTab.querySelector('.name').textContent=docs.get(active).data.
 editor.addEventListener('scroll',()=>{
  highlightRenderer.sync();
   syncGutterScroll();
-  if (tabGuide) { tabGuide.scrollTop=editor.scrollTop; tabGuide.scrollLeft=editor.scrollLeft; }
+  syncTabGuides();
   if (active && virtualSessions.has(active)) {
     virtualSessions.get(active).setPosition(
       virtualSessions.get(active).center,
@@ -1395,7 +1402,7 @@ renderTabGuides();
 function renderLanguage() {
   document.documentElement.lang=LANGUAGE.value;
   explorer.setLocale(LANGUAGE.value, t);
-  document.title='Cluster Opt v0.0.40';
+  document.title='Cluster Opt v0.0.41';
   $('#menuBtn').textContent=t('file')+'⌄';
   for (const key of ['new','open','save','saveas','close','closeall']) {
     const button=$('#menu [data-action="'+key+'"]');
