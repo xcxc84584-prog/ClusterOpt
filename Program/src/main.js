@@ -163,7 +163,7 @@ let highlightTimer = null;
 let highlightAbort = null;
 function scheduleHighlight(){
   clearTimeout(highlightTimer);
-  highlightRenderer.clear();
+  highlightRenderer.retainDuringEdit();
   const generation=++highlightGeneration;
   highlightAbort?.abort();
   highlightAbort=new AbortController();
@@ -199,7 +199,7 @@ function scheduleHighlight(){
       if(state)state.textContent=scheme.status==='OK'?'Shiki · '+scheme.language:
         '純文字模式'+(scheme.error?'（語法引擎不可用）':'');
       if(scheme.error)omu.emit('TextHighlighter','HighlightSlice',500,scheme.error,true);
-    }catch(error){highlightRenderer.clear();omu.emit('TextHighlighter','HighlightSlice',500,String(error),true);}
+    }catch(error){omu.emit('TextHighlighter','HighlightSlice',500,String(error),true);}
   },180);
 }
 
@@ -1049,6 +1049,7 @@ async function renderVirtualSlice(id, center = null) {
     }
     editor.value = current.content;
     renderTabGuides();
+    highlightRenderer.clear();
     scheduleHighlight();
     editor.dataset.doc = id;
     editor.dataset.sliceReady = 'true';
