@@ -161,6 +161,16 @@ export class VirtualFileSession {
         sliceId, leaseId, fencingToken, read.data.versionId, content
       );
       if (result.ok) {
+        if (this.lineStarts) {
+          const lineCount = text => (text.match(/\\n/g) || []).length;
+          const delta = lineCount(content) - lineCount(read.data.content);
+          if (delta !== 0) {
+            for (let i = index + 1; i < this.lineStarts.length; i++) {
+              this.lineStarts[i] += delta;
+            }
+            this.totalLines += delta;
+          }
+        }
         this.#dirty.set(index, {
           content, versionId: result.data.versionId
         });
