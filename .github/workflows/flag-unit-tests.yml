@@ -1,4 +1,4 @@
-name: FlagUnit tests
+name: ClusterOpt tests
 on:
   push:
     branches: [main]
@@ -11,4 +11,5 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - run: node --check Program/src/main.js
       - run: npm test

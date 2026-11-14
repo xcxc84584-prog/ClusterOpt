@@ -1,3 +1,4 @@
+import {createClusterDependencies} from './dependency-registry.js';
 import {VirtualFileSession} from './fmc/virtual-file-session.js';
 import {FileTypeIdentifier} from './fmc/file-type-identifier.js';
 import {OverloadRestorer} from './fmc/overload-restorer.js';
@@ -939,15 +940,8 @@ $('#priority').addEventListener('change',()=>{GLOBALS.set('STORAGE_PRIORITY',$('
 setInterval(()=>{if(!document.hidden)monitor.checkAll();},2500);
 window.addEventListener('focus',()=>monitor.checkAll());
 // Read-only diagnostics, not a remote HTTP endpoint.
-const dependencies=Object.freeze([
-  Object.freeze({from:'UI',to:'Documents',type:'Request/Response'}),
-  Object.freeze({from:'UI',to:'FileManager',type:'Request/Response'}),
-  Object.freeze({from:'Documents',to:'OMU',type:'LOG'}),
-  Object.freeze({from:'FileManager',to:'OMU',type:'LOG'}),
-  Object.freeze({from:'FileMenu',to:'LANGUAGE',type:'Request/Response'}),
-  Object.freeze({from:'LANGUAGE',to:'UI',type:'Subscribe'})
-]);
-const copyDependencies=()=>dependencies.map(d=>({...d}));
+const dependencyRegistry = createClusterDependencies();
+const copyDependencies = () => dependencyRegistry.edges();
 const selectLogs=(options={},onlyEhu=false)=>{
   if(options===null||typeof options!=='object'||Array.isArray(options))return Object.freeze({ok:false,code:400,message:'Options must be an object'});
   const {limit,code,source}=options;
@@ -961,8 +955,9 @@ const selectLogs=(options={},onlyEhu=false)=>{
 const consoleApi=Object.freeze({
   log:(options={})=>selectLogs(options),
   ehu:(options={})=>selectLogs(options,true),
-  dep:()=>copyDependencies(),
-  help:()=>Object.freeze(['Cluster.log()','Cluster.log({limit:20})','Cluster.log({code:404})','Cluster.ehu()','Cluster.dep()'])
+  dep:(objectName=null)=>dependencyRegistry.dep(objectName),
+  objects:()=>dependencyRegistry.list(),
+  help:()=>Object.freeze(['Cluster.log()','Cluster.log({limit:20})','Cluster.log({code:404})','Cluster.ehu()','Cluster.dep()','Cluster.dep("FlagUnit")','Cluster.objects()'])
 });
 Object.defineProperty(window,'Cluster',{value:consoleApi,writable:false,configurable:false});
 window.ClusterOpt=Object.freeze({clearRecovery:()=>olr.clearAll(),fmcStatus:()=>({loadedSlices:fmc.loadedSliceCount}),
@@ -975,7 +970,7 @@ refresh();
 
 function renderLanguage() {
   document.documentElement.lang=LANGUAGE.value;
-  document.title='Cluster Opt v0.0.10+6';
+  document.title='Cluster Opt v0.0.12';
   $('#menuBtn').textContent=t('file')+'⌄';
   for (const key of ['new','open','save','saveas','close','closeall']) {
     const button=$('#menu [data-action="'+key+'"]');
