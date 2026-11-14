@@ -216,20 +216,20 @@ function scheduleLineHighlight(){
   clearTimeout(highlightTimer);
   highlightAbort?.abort();
   ++highlightGeneration;
-  highlightRenderer.retainDuringEdit();
   const generation=++lineHighlightGeneration;
   if(!TEXT_HIGHLIGHTER.enabled)return;
   const id=active,item=id?docs.get(id)?.data:null;
   if(!item||binaryDocuments.has(id))return;
   const value=editor.value,caret=editor.selectionStart;
-  const window=matchingWindow(value,caret,100);
-  const {startLine,endLine,starts}=window;
-  const from=starts[startLine];
-  const to=endLine+1<starts.length?starts[endLine+1]-1:value.length;
-  const source=value.slice(from,to);
   const sliceId=virtualSessions.get(id)?.center??0;
   lineHighlightTimer=setTimeout(async()=>{
     if(generation!==lineHighlightGeneration||active!==id)return;
+    highlightRenderer.retainDuringEdit();
+    const window=matchingWindow(value,caret,100);
+    const {startLine,endLine,starts}=window;
+    const from=starts[startLine];
+    const to=endLine+1<starts.length?starts[endLine+1]-1:value.length;
+    const source=value.slice(from,to);
     const bg=getComputedStyle(document.documentElement).getPropertyValue('--ui-editor');
     const background=(bg.match(/\d+/g)||['0','0','0']).slice(0,3).map(Number);
     const scheme=await TEXT_HIGHLIGHTER.highlightRegion({
@@ -585,15 +585,25 @@ $('#goLineButton').addEventListener('click', () =>
 $('#goLineInput').addEventListener('keydown', event => {
   if (event.key === 'Enter') goToLine(Number(event.currentTarget.value));
 });
-function updatePos(){const p=editor.selectionStart||0,txt=editor.value.slice(0,p),lines=txt.split('\n');
-$('#position').textContent=t('position',lines.length,lines.at(-1).length+1);
+function updatePos(){
+ const p=editor.selectionStart||0;
+ // Avoid splitting the whole prefix into thousands of strings.
+ let line=1,lastBreak=-1;
+ const text=editor.value;
+ for(let i=0;i<p;i++)if(text.charCodeAt(i)===10){line++;lastBreak=i;}
+ $('#position').textContent=t('position',line,p-lastBreak);
 }
 const tabGuide = $('#tabGuide');
+let tabGuideTimer=null;
 function renderTabGuides() {
   if (!tabGuide) return;
   tabGuide.replaceChildren(buildTabGuideFragment(document, editor.value));
   tabGuide.scrollTop = editor.scrollTop;
   tabGuide.scrollLeft = editor.scrollLeft;
+}
+function scheduleTabGuides(){
+  clearTimeout(tabGuideTimer);
+  tabGuideTimer=setTimeout(renderTabGuides,180);
 }
 let lineStructureChanged=true;
 editor.addEventListener('beforeinput',event=>{
@@ -611,7 +621,8 @@ editor.addEventListener('beforeinput',event=>{
 },true);
 editor.addEventListener('input',()=>{
  scheduleLineHighlight();
-renderTabGuides();if(!active || editor.readOnly)return;
+ scheduleTabGuides();
+ if(!active || editor.readOnly)return;
 const abortSave = saveAbortControllers.get(active);
 if (abortSave && !abortSave.signal.aborted) {
   abortSave.abort();
@@ -1370,7 +1381,7 @@ renderTabGuides();
 function renderLanguage() {
   document.documentElement.lang=LANGUAGE.value;
   explorer.setLocale(LANGUAGE.value, t);
-  document.title='Cluster Opt v0.0.39';
+  document.title='Cluster Opt v0.0.40';
   $('#menuBtn').textContent=t('file')+'⌄';
   for (const key of ['new','open','save','saveas','close','closeall']) {
     const button=$('#menu [data-action="'+key+'"]');
