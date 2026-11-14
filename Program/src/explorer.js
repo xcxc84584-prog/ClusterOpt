@@ -150,10 +150,23 @@ export class Explorer {
     this.render();
   }
   async refresh(){
-    const visit=async nodes=>{for(const node of nodes)if(node.kind==='directory'&&node.expanded){
-      await this.#loadChildren(node,true);await visit(node.children||[]);
-    }};
-    await visit(this.#roots);this.render();
+    // Explorer refresh resets the visible tree to its collapsed state.
+    // Preserve workspace roots, open editor tabs and on-disk files.
+    ++this.#revealGeneration;
+    this.#selected=null;
+    this.#closeMenu();
+    this.#clearHold();
+    this.#drag=null;
+    this.#state.expanded={};
+    const collapse=nodes=>{
+      for(const node of nodes){
+        node.expanded=false;
+        if(node.children)collapse(node.children);
+      }
+    };
+    collapse(this.#roots);
+    this.#save();
+    this.render();
   }
   async revealDocument(id){
     const generation=++this.#revealGeneration;
