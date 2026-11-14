@@ -28,6 +28,7 @@ async function handleTransaction(mode,callback){
 }
 export class Explorer {
   #roots=[];#documents=[];#active=null;#locale='zh-Hant';
+  #translate=(key)=>key;
   #panel;#tree;#search;#openFile;#openDocument;#closeFile;#closeRoot;#newFile;#log;
   #state=readState();#clipboard=null;#menu=null;#rename=null;
   #hold=null;#drag=null;#selected=null;#revealGeneration=0;#suppressClick=false;#draft=null;
@@ -89,6 +90,7 @@ export class Explorer {
   }
   setLocale(locale,translate){
     this.#locale=locale;
+    this.#translate=translate;
     const labels={explorerTitle:'#explorerTitle',explorerSearch:'#explorerSearch',
       explorerAddFolder:'#explorerAddFolder',explorerAddFile:'#explorerAddFile',explorerClose:'#explorerClose'};
     for(const [key,selector] of Object.entries(labels)){
@@ -96,6 +98,13 @@ export class Explorer {
       if(key==='explorerSearch'){el.placeholder=translate(key);el.setAttribute('aria-label',translate(key));}
       else if(key==='explorerTitle')el.textContent=translate(key);
       else{el.title=translate(key);el.setAttribute('aria-label',translate(key));}
+    }
+    const importLabels={explorerAddFolder:['▣ ',translate('explorerImportFolder')],explorerAddFile:['◇ ',translate('explorerImportFile')]};
+    for(const [id,[symbol,label]] of Object.entries(importLabels)){
+      const button=this.#panel.querySelector('#'+id);
+      button.textContent=symbol+label;
+      button.title=label;
+      button.setAttribute('aria-label',label);
     }
     const refresh=this.#panel.querySelector('#explorerRefresh');
     refresh.title=this.#say('重新整理','Refresh');refresh.setAttribute('aria-label',refresh.title);

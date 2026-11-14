@@ -1,6 +1,7 @@
 // Global LANGUAGE property: black-box localization service.
 const MESSAGES = Object.freeze({
   'zh-Hant': Object.freeze({
+    explorerImportFolder:'導入資料夾',explorerImportFile:'導入文件',
     explorerTitle:'檔案總管',explorerSearch:'搜尋文件',explorerAddFolder:'開啟資料夾',explorerAddFile:'開啟文件',explorerClose:'關閉檔案總管',
     file:'檔案',new:'建立新檔',open:'開啟檔案',save:'儲存',
     saveas:'另存新檔',close:'關閉分頁',closeall:'關閉全部',
@@ -29,6 +30,7 @@ const MESSAGES = Object.freeze({
     confirmClose:name=>`「${name}」尚未儲存，確定關閉？`
   }),
   en: Object.freeze({
+    explorerImportFolder:'Import Folder',explorerImportFile:'Import File',
     explorerTitle:'Explorer',explorerSearch:'Search files',explorerAddFolder:'Open Folder',explorerAddFile:'Open File',explorerClose:'Close Explorer',
     file:'File',new:'New File',open:'Open File',save:'Save',
     saveas:'Save As',close:'Close Tab',closeall:'Close All',

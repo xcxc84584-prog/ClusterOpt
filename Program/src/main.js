@@ -1,3 +1,4 @@
+import {matchingWindow} from './text-highlighter/matching-window.js';
 import {transcodeToUtf8} from './fmc/chinese-transcoder.js';
 import {TextHighlighter,detectLanguage} from './text-highlighter/text-highlighter.js';
 import {HighlightRenderer} from './text-highlighter/highlight-renderer.js';
@@ -208,7 +209,8 @@ function scheduleHighlight(){
   },180);
 }
 
-// The edit path NEVER calls highlightSlice or reads neighboring slices.
+// Edit path: search matching lexical boundaries near the caret, never
+// retokenize the entire physical slice. 100-line hard cap per update.
 function scheduleLineHighlight(){
   clearTimeout(lineHighlightTimer);
   clearTimeout(highlightTimer);
@@ -217,28 +219,27 @@ function scheduleLineHighlight(){
   highlightRenderer.retainDuringEdit();
   const generation=++lineHighlightGeneration;
   if(!TEXT_HIGHLIGHTER.enabled)return;
-  const id=active;
-  const item=id?docs.get(id)?.data:null;
+  const id=active,item=id?docs.get(id)?.data:null;
   if(!item||binaryDocuments.has(id))return;
-  const value=editor.value;
-  const caret=editor.selectionStart;
-  const start=value.lastIndexOf('\n',Math.max(0,caret-1))+1;
-  const newline=value.indexOf('\n',start);
-  const end=newline<0?value.length:newline;
-  const line=value.slice(start,end);
+  const value=editor.value,caret=editor.selectionStart;
+  const window=matchingWindow(value,caret,100);
+  const {startLine,endLine,starts}=window;
+  const from=starts[startLine];
+  const to=endLine+1<starts.length?starts[endLine+1]-1:value.length;
+  const source=value.slice(from,to);
   const sliceId=virtualSessions.get(id)?.center??0;
   lineHighlightTimer=setTimeout(async()=>{
     if(generation!==lineHighlightGeneration||active!==id)return;
     const bg=getComputedStyle(document.documentElement).getPropertyValue('--ui-editor');
     const background=(bg.match(/\d+/g)||['0','0','0']).slice(0,3).map(Number);
-    const scheme=await TEXT_HIGHLIGHTER.highlightLine({
+    const scheme=await TEXT_HIGHLIGHTER.highlightRegion({
       documentId:id,targetSliceId:String(sliceId),revision:generation,
-      language:detectLanguage(item.name),line,background
+      language:detectLanguage(item.name),source,background
     });
     if(generation!==lineHighlightGeneration||active!==id||editor.value!==value)return;
-    highlightRenderer.renderLine({...scheme,start,end},value);
-    if(scheme.error)omu.emit('TextHighlighter','HighlightLine',500,scheme.error,true);
-  },90);
+    highlightRenderer.renderRegion({...scheme,startLine,endLine},value);
+    if(scheme.error)omu.emit('TextHighlighter','HighlightRegion',500,scheme.error,true);
+  },100);
 }
 
 const t=(key,...args)=>LANGUAGE.t(key,...args);
@@ -1366,7 +1367,7 @@ renderTabGuides();
 function renderLanguage() {
   document.documentElement.lang=LANGUAGE.value;
   explorer.setLocale(LANGUAGE.value, t);
-  document.title='Cluster Opt v0.0.36';
+  document.title='Cluster Opt v0.0.37';
   $('#menuBtn').textContent=t('file')+'⌄';
   for (const key of ['new','open','save','saveas','close','closeall']) {
     const button=$('#menu [data-action="'+key+'"]');
