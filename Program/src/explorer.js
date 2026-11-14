@@ -300,13 +300,7 @@ export class Explorer {
       const heading=document.createElement('div');heading.className='explorer-section';heading.textContent=title;
       fragment.append(heading,...rows);
     };
-    /* Open editors are represented by tabs; Explorer displays only the workspace. */
-    /* const docs=filterExplorerEntries(this.#documents,query).map(doc=>{
-      const row=this.#button(doc.name+(doc.dirty?' ●':''),'file',0);
-      if(doc.id===this.#active)row.classList.add('active');
-      row.onclick=()=>this.#openDocument(doc.id);return row;
-    });
-    section(this.#say('已開啟文件','OPEN EDITORS'),docs); */
+    // Open editor tabs are managed by the editor, not duplicated in Explorer.
     const nodes=[];
     const walk=(node,depth)=>{
       const matches=!query||node.name.toLocaleLowerCase().includes(query);
@@ -320,6 +314,7 @@ export class Explorer {
       if(row.dataset.path===this.#selected)row.classList.add('active');
       row.querySelector('.explorer-arrow').textContent=node.kind==='directory'?(node.expanded?'⌄':'›'):'';
       row.onclick=event=>{
+        event.stopPropagation();
         if(this.#rename)return;
         this.#selected=this.#key(node);this.render();
         if(node.kind==='directory')this.#expand(node);
