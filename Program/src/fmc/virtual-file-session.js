@@ -137,6 +137,17 @@ export class VirtualFileSession {
    * Stream ordered slices into a writable file. Never concatenate the file.
    * The caller must not mark saved if the writer fails or is canceled.
    */
+  async #alignedOffset(offset) {
+    if (offset <= 0 || offset >= this.#blob.size) {
+      return Math.min(Math.max(offset, 0), this.#blob.size);
+    }
+    const bytes = new Uint8Array(await this.#blob.slice(offset, offset + 4).arrayBuffer());
+    let skip = 0;
+    while (skip < bytes.length && (bytes[skip] & 0xc0) === 0x80) skip++;
+    if (skip === bytes.length) throw new Error('Invalid UTF-8 boundary');
+    return offset + skip;
+  }
+
   async save(handle, onProgress = () => {}) {
     const writer = await handle.createWritable();
     try {
@@ -145,8 +156,10 @@ export class VirtualFileSession {
           await writer.write(this.#dirty.get(index).content);
         } else {
           // Copy unchanged source bytes without decoding or allocating a JS string.
-          const start = index * 256 * 1024;
-          const end = Math.min(this.#blob.size, start + 256 * 1024);
+          const start = await this.#alignedOffset(index * 256 * 1024);
+          const end = await this.#alignedOffset(
+            Math.min(this.#blob.size, (index + 1) * 256 * 1024)
+          );
           await writer.write(this.#blob.slice(start, end));
         }
         onProgress({completed: index + 1, total: this.#count});
