@@ -199,14 +199,15 @@ tab.append(name,close);
 tab.onclick=()=>switchDoc(id);
 $('#tabs').append(tab);
 }
-if(d){if(editor.dataset.doc!==active){
+if(d){const changedDocument = editor.dataset.doc !== active;
+if(changedDocument){
   editor.value = virtualSessions.has(active) ? '' : d.content;
   editor.dataset.doc=active;
 }
 $('#filename').textContent=d.name+(d.dirty?' *':'');
 if (virtualSessions.has(active)) {
   const session = virtualSessions.get(active);
-  $('#gutter').textContent = '…';
+  if (changedDocument || rebuildingDocuments.has(active)) $('#gutter').textContent = '…';
 } else {
   updateLines();
 }
@@ -429,7 +430,7 @@ docs.setSaved(id,res.data.handle,res.data.name,revision);
 if(res.data.handle && !virtualSessions.has(id)){monitor.watch(id,d.content);
 if(docs.get(id).data.revision!==revision)monitor.onEdit(id);
 }
-else syncStates.set(id,'UNVERIFIED');
+syncStates.set(id, docs.get(id).data.revision === revision && res.data.handle ? 'SYNCED' : 'DIVERGED');
 if (active === id) {
   refresh();
   if (!virtualSessions.has(id)) restorePosition(id);
@@ -442,7 +443,27 @@ syncStates.set(id,'ERROR');
 status(res.message||t('saveFailed'));}
 }
 
+async function findOpenDocument(item) {
+  for (const id of docs.ids()) {
+    const current = docs.get(id).data;
+    const handle = docs.handle(id);
+    if (handle && item.handle && typeof handle.isSameEntry === 'function') {
+      try { if (await handle.isSameEntry(item.handle)) return id; }
+      catch (error) { omu.emit('Documents', 'CompareHandle', 409, String(error)); }
+    }
+    // Fallback only for unhandled file inputs; avoid merging distinct files
+    // with identical names when both have stable filesystem handles.
+    if (!handle && !item.handle && current.name === item.name &&
+        virtualSessions.has(id)) return id;
+  }
+  return null;
+}
 async function createVirtual(item) {
+  const existing = await findOpenDocument(item);
+  if (existing) {
+    switchDoc(existing);
+    return;
+  }
   const result = docs.create(item.name, '', item.handle);
   const id = result.data.id;
   const session = new VirtualFileSession(id, item.blob);
@@ -569,7 +590,7 @@ function renderSyncStatus() {
   const saving = state === 'SAVING' || state === 'LOADING' || progress?.state === 'RUNNING';
   updateEditorLock();
   bar.style.width = saving && percent !== null ? percent + '%' : '100%';
-  bar.style.background = colors[state] || colors.UNVERIFIED;
+  bar.style.background = state === 'SYNCED' ? '#22C55E' : colors[state] || colors.UNVERIFIED;
   bar.parentElement.classList.toggle('indeterminate', saving && percent === null);
   const label = state === 'LOADING' && progress?.state === 'RUNNING'
     ? (progress.operationType === 'INDEX' ? 'INDEXING' : 'LOADING') + ' (' + progress.completedUnits + '/' +
