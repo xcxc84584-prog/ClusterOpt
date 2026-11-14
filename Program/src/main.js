@@ -754,6 +754,7 @@ async function reloadVirtualFromExternal(id, file, previous) {
   }
   backgroundIndexing.add(id);
   const operationId = storageProgress.start(id, 'INDEX', next.sliceCount);
+  let succeeded = false;
   try {
     await next.indexLines(progress =>
       storageProgress.update(operationId, progress.completed, 'INDEX'));
@@ -767,13 +768,14 @@ async function reloadVirtualFromExternal(id, file, previous) {
     virtualRenderGenerations.set(id, generation + 1);
     omu.emit('ExternalChangeMonitor', 'Reload', 200);
     scheduleRecovery();
+    succeeded = true;
     return true;
   } catch (error) {
     omu.emit('ExternalChangeMonitor', 'Reload', 500, String(error), true);
     return false;
   } finally {
     backgroundIndexing.delete(id);
-    storageProgress.finish(operationId, 'SUCCESS');
+    storageProgress.finish(operationId, succeeded ? 'SUCCESS' : 'ERROR');
     if (virtualSessions.get(id) === next && active === id) {
       await renderVirtualSlice(id, center);
     }
