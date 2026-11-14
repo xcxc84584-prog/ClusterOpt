@@ -130,6 +130,17 @@
         </span>
       </footer>
     </div>
+    <dialog id="encodingDialog" class="highlighter-dialog" aria-labelledby="encodingTitle">
+      <div class="palette-modal-header"><div><div class="palette-eyebrow">CLUSTER / FTI</div>
+      <h2 id="encodingTitle">選擇文件編碼</h2></div></div>
+      <div class="highlighter-content"><p id="encodingMessage"></p>
+      <label for="encodingSelect">來源編碼 / Source encoding</label>
+      <select id="encodingSelect"><option value="Big5">Big5</option>
+      <option value="GBK">GBK</option><option value="GB18030">GB18030</option></select>
+      <p id="encodingNotice">編輯器將轉換為 UTF-8，儲存時使用 UTF-8；原始文件在儲存前不變。</p></div>
+      <div class="palette-modal-footer"><button id="encodingCancel" type="button">取消 / Cancel</button>
+      <button id="encodingConfirm" type="button">開啟 / Open</button></div>
+    </dialog>
     <dialog id="paletteDialog" aria-labelledby="paletteTitle">
       <div class="palette-modal-header">
         <div>

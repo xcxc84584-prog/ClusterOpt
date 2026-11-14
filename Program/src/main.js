@@ -1,3 +1,4 @@
+import {transcodeToUtf8} from './fmc/chinese-transcoder.js';
 import {TextHighlighter,detectLanguage} from './text-highlighter/text-highlighter.js';
 import {HighlightRenderer} from './text-highlighter/highlight-renderer.js';
 import {Explorer} from './explorer.js?v=opt027-inline-ui';
@@ -163,11 +164,11 @@ let highlightTimer = null;
 let highlightAbort = null;
 function scheduleHighlight(){
   clearTimeout(highlightTimer);
-  highlightRenderer.clear();
+  highlightRenderer.retainDuringEdit();
   const generation=++highlightGeneration;
   highlightAbort?.abort();
   highlightAbort=new AbortController();
-  if(!TEXT_HIGHLIGHTER.enabled)return;
+  if(!TEXT_HIGHLIGHTER.enabled){highlightRenderer.clear();return;}
   highlightTimer=setTimeout(async()=>{
     const id=active;
     if(!id)return;
@@ -196,10 +197,10 @@ function scheduleHighlight(){
       if(signal.aborted||generation!==highlightGeneration||active!==id||editor.value!==target)return;
       highlightRenderer.render(scheme);
       const state=document.querySelector('#highlighterState');
-      if(state)state.textContent=scheme.status==='OK'?'Shiki · '+scheme.language:
-        '純文字模式'+(scheme.error?'（語法引擎不可用）':'');
+      if(state)state.textContent=scheme.status==='OK'?t('highlighterActive',scheme.language):
+        t('highlighterFallback')+(scheme.error?' ('+t('highlighterUnavailable')+')':'');
       if(scheme.error)omu.emit('TextHighlighter','HighlightSlice',500,scheme.error,true);
-    }catch(error){highlightRenderer.clear();omu.emit('TextHighlighter','HighlightSlice',500,String(error),true);}
+    }catch(error){omu.emit('TextHighlighter','HighlightSlice',500,String(error),true);}
   },180);
 }
 
@@ -254,6 +255,7 @@ function scheduleRecovery() {
               ? session.sourceBlob : null,
             edits: session.recoveryEdits,
             forceText: session.forceText,
+            sourceEncoding: session.sourceEncoding,
             center: session.center,
             position: session.getPosition(session.center) || null
           };
@@ -868,7 +870,11 @@ function attachFlagEvents(session) {
 async function reloadVirtualFromExternal(id, file, previous) {
   if (virtualSessions.get(id) !== previous) return false;
   const generation = virtualRenderGenerations.get(id) || 0;
-  const next = new VirtualFileSession(id, file, {forceText: previous.forceText});
+  const sourceEncoding=previous.sourceEncoding;
+  const normalized=sourceEncoding!=='UTF-8' ?
+    await transcodeToUtf8(file,sourceEncoding) : file;
+  const next = new VirtualFileSession(id, normalized, {forceText: previous.forceText,
+    sourceEncoding});
   const center = Math.min(previous.center, next.sliceCount - 1);
   const position = previous.getPosition(previous.center);
   if (active === id) {
@@ -917,6 +923,28 @@ async function reloadVirtualFromExternal(id, file, previous) {
   }
 }
 
+async function chooseLegacyEncoding(name, candidates) {
+  const dialog=$('#encodingDialog');
+  $('#encodingMessage').textContent=name+' · '+candidates.join(' / ');
+  const select=$('#encodingSelect');
+  for(const option of select.options)option.hidden=!candidates.includes(option.value);
+  select.value=candidates[0];
+  return new Promise(resolve=>{
+    const confirm=$('#encodingConfirm'),cancel=$('#encodingCancel');
+    const finish=value=>{
+      confirm.removeEventListener('click',accept);
+      cancel.removeEventListener('click',reject);
+      dialog.removeEventListener('close',reject);
+      if(dialog.open)dialog.close();
+      resolve(value);
+    };
+    const accept=()=>finish(select.value),reject=()=>finish(null);
+    confirm.addEventListener('click',accept);
+    cancel.addEventListener('click',reject);
+    dialog.addEventListener('close',reject);
+    dialog.showModal();
+  });
+}
 async function createVirtual(item) {
   let type;
   try {
@@ -925,6 +953,21 @@ async function createVirtual(item) {
     omu.emit('FTI', 'Identify', 500, String(error), true);
     if (!await askForceBinary(item.name, String(error))) return;
     type = FTI.forceText();
+  }
+  if (type.mode === 'ENCODING_CHOICE' || ['Big5','GBK','GB18030'].includes(type.format)) {
+    const candidates=type.candidates||[type.format];
+    const encoding=await chooseLegacyEncoding(item.name,candidates);
+    if(!encoding)return;
+    try {
+      item={...item,blob:await transcodeToUtf8(item.blob,encoding)};
+      item.sourceEncoding=encoding;
+      type={kind:'TEXT',format:'UTF-8',mode:'TEXT',ehu:'FTI_TRANSCODED'};
+      omu.emit('FTI','TranscodeToUtf8',200,encoding);
+    }catch(error){
+      omu.emit('FTI','TranscodeToUtf8',422,String(error),true);
+      status('Encoding conversion failed: '+String(error));
+      return;
+    }
   }
   if (type.mode === 'PROMPT') {
     omu.emit('FTI', 'Parse', 422, type.ehu, true);
@@ -942,7 +985,8 @@ async function createVirtual(item) {
   }
   const result = docs.create(item.name, '', item.handle);
   const id = result.data.id;
-  const session = new VirtualFileSession(id, item.blob, {forceText: type.mode === 'FORCE_TEXT'});
+  const session = new VirtualFileSession(id, item.blob, {forceText: type.mode === 'FORCE_TEXT',
+    sourceEncoding: item.sourceEncoding || 'UTF-8'});
   attachFlagEvents(session);
   virtualSessions.set(id, session);
   if (item.handle) monitor.watch(id, null, item.blob);
@@ -1049,6 +1093,7 @@ async function renderVirtualSlice(id, center = null) {
     }
     editor.value = current.content;
     renderTabGuides();
+    highlightRenderer.clear();
     scheduleHighlight();
     editor.dataset.doc = id;
     editor.dataset.sliceReady = 'true';
@@ -1253,6 +1298,19 @@ function renderLanguage() {
   $('#languageBtn').textContent=t('language')+' ›';
   $('#toolBtn').textContent=t('tool')+' ›';
   $('#paletteBtn').textContent=t('palette')+' ›';
+  $('#highlighterBtn').textContent='◇ '+t('highlighter');
+  $('#highlighterTitle').textContent=t('highlighter');
+  $('#highlighterEnabled').parentElement.lastChild.textContent=' '+t('highlighterEnabled');
+  const highlighterText=document.querySelectorAll('.highlighter-content p');
+  highlighterText[0].textContent=t('highlighterHint');
+  highlighterText[1].textContent=t('highlighterSlices');
+  $('#highlighterDone').textContent=t('done');
+  $('#highlighterClose').setAttribute('aria-label',t('closeDialog'));
+  $('#encodingTitle').textContent=t('encodingTitle');
+  $('#encodingNotice').textContent=t('encodingNotice');
+  $('#encodingCancel').textContent=t('encodingCancel');
+  $('#encodingConfirm').textContent=t('encodingConfirm');
+  document.querySelector('label[for="encodingSelect"]').textContent=t('encodingLabel');
   $('#paletteLabel').textContent=t('paletteRGB');
   $('#paletteTitle').textContent=t('palette');
   $('#paletteDark').textContent=t('darkEndpoint');
@@ -1433,7 +1491,11 @@ updatePaletteControls();
           if (!blob) continue;
           const created = docs.create(item.name, '', item.handle || null);
           const id = created.data.id;
-          const session = new VirtualFileSession(id, blob, {forceText: item.forceText === true});
+          if(item.handle && item.sourceEncoding && item.sourceEncoding!=='UTF-8') {
+            blob=await transcodeToUtf8(blob,item.sourceEncoding);
+          }
+          const session = new VirtualFileSession(id, blob, {forceText: item.forceText === true,
+            sourceEncoding: item.sourceEncoding || 'UTF-8'});
           attachFlagEvents(session);
           virtualSessions.set(id, session);
           if (item.handle) monitor.watch(id, null, blob);

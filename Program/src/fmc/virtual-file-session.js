@@ -22,9 +22,11 @@ export class VirtualFileSession {
   #pending = new Map();
   #recoveryProtected = new Set();
   #forceText = false;
+  #sourceEncoding = 'UTF-8';
 
   constructor(documentId, blob, options = {}) {
     this.#forceText = options.forceText === true;
+    this.#sourceEncoding = options.sourceEncoding || 'UTF-8';
     this.#loader = new SliceLoader(this.#core, 256 * 1024, options);
     this.#documentId = documentId;
     this.#blob = blob;
@@ -34,6 +36,7 @@ export class VirtualFileSession {
   }
 
   get forceText() { return this.#forceText; }
+  get sourceEncoding() { return this.#sourceEncoding; }
 
   get sliceCount() {
     return this.#count;
@@ -299,6 +302,7 @@ export class VirtualFileSession {
     const detached = this.#loader.detach(this.#documentId);
     if (!detached.ok) throw new Error('Cannot release old slice registry');
     this.#blob = savedBlob;
+    this.#sourceEncoding = 'UTF-8';
     const attached = this.#loader.attach(this.#documentId, savedBlob);
     if (!attached.ok) throw new Error('Cannot attach saved file');
     this.#count = attached.data.sliceCount;
