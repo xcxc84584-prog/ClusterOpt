@@ -81,3 +81,29 @@ test('VirtualFileSession USER edit preempts agent and protects recovery content'
   assert.equal(session.recoveryEdits[0].content, 'world');
   assert.equal(session.getFlagStatus(0).data.mode, 'FREE');
 });
+
+test('FMC emits EHU when AGENT uses a revoked write lease', () => {
+  const core = new FileManagementCore();
+  const events = [];
+  core.onFlagEvent(e => events.push(e));
+  core.loaderAccess.register({sliceId: 's', documentId: 'd', content: 'v0',
+    startOffset: 0, endOffset: 2});
+  const agent = core.acquireWTF('s', 'agent-1').data;
+  core.userWrite('s');
+  const denied = core.agentCommit('s', 'agent-1', agent.leaseId,
+    agent.fencingToken, 0, 'stale');
+  assert.equal(denied.code, 403);
+  assert.ok(events.some(e => e.type === 'EHU' && e.reason === 'FLAG_PERMISSION_DENIED'));
+});
+
+test('AGENT deferred read is bounded while USER holds a WTF', async () => {
+  const session = new VirtualFileSession('d', new Blob(['v0']));
+  await session.requestSlice(0);
+  const userLease = session.getFlagStatus(0);
+  assert.equal(userLease.data.mode, 'FREE');
+  const agent = session.getAgentGateway('agent-1');
+  const controller = new AbortController();
+  controller.abort();
+  const result = await agent.readDeferred(0, {signal: controller.signal});
+  assert.equal(result.code, 499);
+});
