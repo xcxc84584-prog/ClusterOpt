@@ -29,7 +29,7 @@ export class FileTypeIdentifier {
           ['gb18030','GB18030']]) {
           try {
             const text = new TextDecoder(label, {fatal: true}).decode(sample);
-            if (/[\\u3400-\\u9fff\\uf900-\\ufaff]/u.test(text)) candidates.push(format);
+            if (/[\u3400-\u9fff\uf900-\ufaff]/u.test(text)) candidates.push(format);
           } catch { /* Invalid byte sequence for this encoding. */ }
         }
         if (candidates.length === 1) return {kind:'TEXT',format:candidates[0],
