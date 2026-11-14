@@ -201,14 +201,12 @@ if(d){if(editor.dataset.doc!==active){
 $('#filename').textContent=d.name+(d.dirty?' *':'');
 if (virtualSessions.has(active)) {
   const session = virtualSessions.get(active);
-  $('#sliceControls').hidden = true;
   $('#gutter').textContent = '…';
 } else {
-  $('#sliceControls').hidden = true;
   updateLines();
 }
 }
-else{$('#sliceControls').hidden = true;$('#filename').textContent=t('unnamed');
+else{$('#filename').textContent=t('unnamed');
 editor.dataset.doc='';
 }updatePos();
 renderSyncStatus();
@@ -315,6 +313,29 @@ editor.addEventListener('scroll',()=>{
     }
   }
 });
+// Native wheel input continues into adjacent slices without a footer control.
+editor.addEventListener('wheel', event => {
+  if (!active || !virtualSessions.has(active) || editor.readOnly ||
+      virtualScrollBusy || event.deltaY === 0) return;
+  const session = virtualSessions.get(active);
+  const max = Math.max(0, editor.scrollHeight - editor.clientHeight);
+  const next = event.deltaY > 0 && editor.scrollTop >= max - 2
+    ? session.center + 1
+    : event.deltaY < 0 && editor.scrollTop <= 2
+      ? session.center - 1 : session.center;
+  if (next === session.center || next < 0 || next >= session.sliceCount) return;
+  const now = Date.now();
+  if (now - (virtualScrollCooldown.get(active) || 0) < 300) return;
+  event.preventDefault();
+  virtualScrollCooldown.set(active, now);
+  const id = active;
+  virtualScrollBusy = true;
+  renderVirtualSlice(id, next).then(() => {
+    if (active === id && event.deltaY < 0) {
+      editor.scrollTop = Math.max(0, editor.scrollHeight - editor.clientHeight);
+    }
+  }).finally(() => { virtualScrollBusy = false; });
+}, {passive: false});
 ['click','keyup','select'].forEach(ev=>editor.addEventListener(ev,()=>{
   updatePos();
   capturePosition();
@@ -452,7 +473,6 @@ async function renderVirtualSlice(id, center = null) {
     $('#gutter').textContent = Array.from(
       {length: firstLine}, (_, i) => String(lineStart + i)
     ).join('\n');
-    $('#sliceControls').hidden = true;
     status('Loaded slice ' + (index + 1) + ' / ' + session.sliceCount);
     $('#gutter').scrollTop = editor.scrollTop;
     updatePos();
@@ -474,24 +494,6 @@ async function renderVirtualSlice(id, center = null) {
   }
 }
 
-async function moveVirtual(delta) {
-  if (!active || !virtualSessions.has(active)) return;
-  const id = active;
-  const session = virtualSessions.get(id);
-  session.setPosition(session.center, {
-    scrollTop: editor.scrollTop,
-    scrollLeft: editor.scrollLeft,
-    selectionStart: editor.selectionStart,
-    selectionEnd: editor.selectionEnd
-  });
-  const next = Math.max(0, Math.min(
-    session.sliceCount - 1, session.center + delta
-  ));
-  await renderVirtualSlice(id, next);
-}
-
-$('#slicePrevious').addEventListener('click', () => moveVirtual(-1));
-$('#sliceNext').addEventListener('click', () => moveVirtual(1));
 
 const actions={new:()=>create(),open:()=>openFiles(),save:()=>doSave(),saveas:()=>doSave(true),close:()=>active&&closeDoc(active),closeall:()=>{for(const id of docs.ids())closeDoc(id);
 }};
