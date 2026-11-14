@@ -1,3 +1,4 @@
+import {VirtualFileSession} from './fmc/virtual-file-session.js';
 import {OverloadRestorer} from './fmc/overload-restorer.js';
 import {LineTree} from './fmc/line-tree.js';
 import {WindowLoader} from './fmc/window-loader.js';
@@ -20,6 +21,9 @@ const storageProgress = new StorageProgressTracker();
 const olr = new OverloadRestorer();
 const windowLoader = new WindowLoader(sliceLoader, fmc);
 const viewPositions = new Map();
+const virtualSessions = new Map();
+let virtualRenderGeneration = 0;
+let virtualEditQueue = Promise.resolve();
 let recoveryTimer = null;
 let restoring = false;
 class ExternalChangeMonitor {
@@ -44,7 +48,7 @@ else this.states.set(id,'UNVERIFIED');
  async checkNow(id, loopId = null){
   if(this.#busy.has(id))return;
   const handle=this.docs.handle(id);
-if(!handle)return;
+if(!handle || virtualSessions.has(id))return;
   const before=this.docs.get(id);
 if(!before.ok)return;
   const generation=this.#generation.get(id),revision=before.data.revision,previous=this.#baseline.get(id);
@@ -125,7 +129,7 @@ function scheduleRecovery() {
   if (restoring) return;
   clearTimeout(recoveryTimer);
   recoveryTimer = setTimeout(() => {
-    const snapshots = docs.ids().map(id => {
+    const snapshots = docs.ids().filter(id => !virtualSessions.has(id)).map(id => {
       const data = docs.get(id).data;
       return {id, name: data.name, content: data.content,
         dirty: data.dirty, position: viewPositions.get(id) || null};
@@ -161,21 +165,41 @@ tab.append(name,close);
 tab.onclick=()=>switchDoc(id);
 $('#tabs').append(tab);
 }
-if(d){if(editor.dataset.doc!==active){editor.value=d.content;
-editor.dataset.doc=active;
-}$('#filename').textContent=d.name+(d.dirty?' *':'');
-updateLines();
+if(d){if(editor.dataset.doc!==active){
+  editor.value = virtualSessions.has(active) ? '' : d.content;
+  editor.dataset.doc=active;
 }
-else{$('#filename').textContent=t('unnamed');
+$('#filename').textContent=d.name+(d.dirty?' *':'');
+if (virtualSessions.has(active)) {
+  const session = virtualSessions.get(active);
+  $('#sliceControls').hidden = false;
+  $('#sliceNumber').textContent = (session.center + 1) + ' / ' + session.sliceCount;
+  $('#gutter').textContent = '…';
+} else {
+  $('#sliceControls').hidden = true;
+  updateLines();
+}
+}
+else{$('#sliceControls').hidden = true;$('#filename').textContent=t('unnamed');
 editor.dataset.doc='';
 }updatePos();
 renderSyncStatus();
 }
 function switchDoc(id){
-  capturePosition();
+  if (active && virtualSessions.has(active)) {
+    const session = virtualSessions.get(active);
+    session.setPosition(session.center, {
+      scrollTop: editor.scrollTop, scrollLeft: editor.scrollLeft,
+      selectionStart: editor.selectionStart, selectionEnd: editor.selectionEnd
+    });
+  } else capturePosition();
   active=id;
   refresh();
-  restorePosition(id);
+  if (virtualSessions.has(id)) {
+    renderVirtualSlice(id);
+  } else {
+    restorePosition(id);
+  }
   editor.focus({preventScroll:true});
   scheduleRecovery();
 }
@@ -190,6 +214,7 @@ function closeDoc(id){const d=docs.get(id).data;
 if(!d)return;
 if(d.dirty&&!confirm(t('confirmClose',d.name)))return;
 monitor.unwatch(id);
+virtualSessions.delete(id);
 viewPositions.delete(id);
 docs.close(id);
 if(active===id)active=docs.ids().at(-1)||null;
@@ -205,6 +230,25 @@ function updatePos(){const p=editor.selectionStart||0,txt=editor.value.slice(0,p
 $('#position').textContent=`Ln ${lines.length}, Col ${lines.at(-1).length+1}`;
 }
 editor.addEventListener('input',()=>{if(!active)return;
+if (virtualSessions.has(active)) {
+  const id = active;
+  const session = virtualSessions.get(id);
+  const index = session.center;
+  const content = editor.value;
+  capturePosition(id);
+  virtualEditQueue = virtualEditQueue.then(async () => {
+    const result = await session.edit(index, content);
+    if (!result.ok) throw new Error('WTF/MVCC commit failed: ' + result.code);
+    docs.update(id, '');
+    syncStates.set(id, 'DIVERGED');
+    scheduleRecovery();
+  }).catch(error => {
+    status(String(error));
+    omu.emit('VirtualEditor', 'Commit', 500, String(error), true);
+  });
+  $('#filename').textContent = docs.get(id).data.name + ' *';
+  return;
+}
 const previous = docs.get(active).data.content;
 if (previous.length < 2 * 1024 * 1024 && editor.value.length < 2 * 1024 * 1024) {
   olr.record(active, previous, editor.value);
@@ -226,7 +270,7 @@ editor.addEventListener('scroll',()=>{
 }));
 editor.addEventListener('keydown',e=>{
   if ((e.ctrlKey || e.metaKey) && ['z','y'].includes(e.key.toLowerCase())) {
-    if (!active || editor.value.length >= 2 * 1024 * 1024) return;
+    if (!active || virtualSessions.has(active) || editor.value.length >= 2 * 1024 * 1024) return;
     e.preventDefault();
     const content = e.key.toLowerCase() === 'y' || e.shiftKey
       ? olr.redo(active, editor.value) : olr.undo(active, editor.value);
@@ -253,12 +297,28 @@ const operationId=storageProgress.start(id,'SAVE',1);
 syncStates.set(id,'SAVING');
 const d=docs.get(id).data;
 const revision=d.revision;
-const res=await files.save(d,docs.handle(id),as);
+let res;
+if (virtualSessions.has(id)) {
+  try {
+    await virtualEditQueue;
+    let handle = as ? null : docs.handle(id);
+    if (!handle && 'showSaveFilePicker' in window) {
+      handle = await window.showSaveFilePicker({suggestedName: d.name});
+    }
+    if (!handle) throw new Error('Streaming save requires a file handle');
+    await virtualSessions.get(id).save(handle);
+    res = contract(true, {handle, name: handle.name});
+  } catch (error) {
+    res = contract(false, null, 500, String(error));
+  }
+} else {
+  res = await files.save(d, docs.handle(id), as);
+}
 if(res.ok){storageProgress.update(operationId,1,'FLUSH');
 storageProgress.finish(operationId,'SUCCESS');
 if(!docs.get(id).ok)return;
 docs.setSaved(id,res.data.handle,res.data.name,revision);
-if(res.data.handle){monitor.watch(id,d.content);
+if(res.data.handle && !virtualSessions.has(id)){monitor.watch(id,d.content);
 if(docs.get(id).data.revision!==revision)monitor.onEdit(id);
 }
 else syncStates.set(id,'UNVERIFIED');
@@ -271,6 +331,74 @@ else {storageProgress.finish(operationId,'ERROR');
 syncStates.set(id,'ERROR');
 status(res.message||t('saveFailed'));}
 }
+
+async function createVirtual(item) {
+  const result = docs.create(item.name, '', item.handle);
+  const id = result.data.id;
+  const session = new VirtualFileSession(id, item.blob);
+  virtualSessions.set(id, session);
+  active = id;
+  refresh();
+  await renderVirtualSlice(id);
+  editor.focus({preventScroll: true});
+}
+
+async function renderVirtualSlice(id, center = null) {
+  const session = virtualSessions.get(id);
+  if (!session) return;
+  const generation = ++virtualRenderGeneration;
+  await virtualEditQueue;
+  const index = center === null ? session.center : center;
+  const result = await session.window(index);
+  if (!result.ok) {
+    status(result.message || 'Slice load failed');
+    return;
+  }
+  if (generation !== virtualRenderGeneration || active !== id) return;
+  const current = result.data.slices.find(item => item.index === index);
+  editor.value = current.content;
+  editor.dataset.doc = id;
+  const position = session.getPosition(index);
+  if (position) {
+    editor.setSelectionRange(
+      Math.min(position.selectionStart, editor.value.length),
+      Math.min(position.selectionEnd, editor.value.length)
+    );
+    editor.scrollTop = position.scrollTop;
+    editor.scrollLeft = position.scrollLeft;
+  } else {
+    editor.setSelectionRange(0, 0);
+    editor.scrollTop = 0;
+    editor.scrollLeft = 0;
+  }
+  const firstLine = current.content.split('\n').length;
+  $('#gutter').textContent = Array.from(
+    {length: firstLine}, (_, i) => String(i + 1)
+  ).join('\n');
+  $('#sliceNumber').textContent = (index + 1) + ' / ' + session.sliceCount;
+  $('#sliceControls').hidden = false;
+  updatePos();
+}
+
+async function moveVirtual(delta) {
+  if (!active || !virtualSessions.has(active)) return;
+  const id = active;
+  const session = virtualSessions.get(id);
+  session.setPosition(session.center, {
+    scrollTop: editor.scrollTop,
+    scrollLeft: editor.scrollLeft,
+    selectionStart: editor.selectionStart,
+    selectionEnd: editor.selectionEnd
+  });
+  const next = Math.max(0, Math.min(
+    session.sliceCount - 1, session.center + delta
+  ));
+  await renderVirtualSlice(id, next);
+}
+
+$('#slicePrevious').addEventListener('click', () => moveVirtual(-1));
+$('#sliceNext').addEventListener('click', () => moveVirtual(1));
+
 const actions={new:()=>create(),open:()=>openFiles(),save:()=>doSave(),saveas:()=>doSave(true),close:()=>active&&closeDoc(active),closeall:()=>{for(const id of docs.ids())closeDoc(id);
 }};
 $('#menuBtn').onclick=()=>{$('#menu').hidden=!$('#menu').hidden;
@@ -281,7 +409,7 @@ $('#menu').hidden=true;
 }};
 document.addEventListener('click',e=>{if(!e.target.closest('.menu-wrap'))$('#menu').hidden=true;});
 $('#fileInput').onchange=async e=>{const items=await files.open(e.target.files);
-items.forEach(x=>create(x.name,x.content,x.handle));
+for (const item of items) await createVirtual(item);
 e.target.value='';
 };
 document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();doSave(e.shiftKey);}
@@ -370,7 +498,7 @@ refresh();
 
 function renderLanguage() {
   document.documentElement.lang=LANGUAGE.value;
-  document.title='Cluster Opt 7';
+  document.title='Cluster Opt 8';
   $('#menuBtn').textContent=t('file')+'⌄';
   for (const key of ['new','open','save','saveas','close','closeall']) {
     const button=$('#menu [data-action="'+key+'"]');
