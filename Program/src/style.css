@@ -728,3 +728,23 @@ nav button {
   #goLineBar { padding: 4px 8px; }
   .goLineHint { display: none; }
 }
+
+/* FTI modal shares the global palette and does not overlap editor content. */
+#ftiDialog {
+  color: var(--text, #e8ebf2);
+  background: var(--panel, #171a21);
+  border: 1px solid var(--border, #414754);
+  border-radius: 10px;
+  width: min(460px, calc(100vw - 32px));
+  box-sizing: border-box;
+  padding: 22px;
+  box-shadow: 0 18px 70px #0009;
+}
+#ftiDialog::backdrop { background: #05070bc9; }
+.fti-dialog-head { display: flex; gap: 12px; align-items: center; }
+.fti-symbol { color: #4ea7f5; font-size: 24px; }
+#ftiFileName { overflow-wrap: anywhere; font-weight: 600; }
+#ftiReason, .fti-note { font-size: 13px; line-height: 1.6; color: var(--muted, #a6b0c0); }
+.fti-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+.fti-actions button { padding: 8px 12px; border: 1px solid var(--border, #414754); border-radius: 6px; background: var(--panel, #262c36); color: inherit; }
+#ftiForce { background: #246db5; color: white; }
