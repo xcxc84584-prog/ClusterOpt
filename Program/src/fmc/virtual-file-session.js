@@ -162,7 +162,7 @@ export class VirtualFileSession {
       );
       if (result.ok) {
         if (this.lineStarts) {
-          const lineCount = text => (text.match(/\\n/g) || []).length;
+          const lineCount = text => (text.match(/\n/g) || []).length;
           const delta = lineCount(content) - lineCount(read.data.content);
           if (delta !== 0) {
             for (let i = index + 1; i < this.lineStarts.length; i++) {
