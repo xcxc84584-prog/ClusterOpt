@@ -9,7 +9,7 @@ ExternalChangeMonitor.checkNow()
        |-- virtual --> compare size / lastModified
                             |-- unchanged --> SYNCED / DIVERGED
                             |-- internal --> DIVERGED (retain editor)
-                            |-- external + dirty/busy --> EHU + DIVERGED
+                            |-- external + busy --> deferred; external + dirty --> discard and reload
                             |-- external + clean --> new VirtualFileSession
                                                   --> indexLines()
                                                   --> atomic session swap
@@ -20,4 +20,4 @@ ExternalChangeMonitor.checkNow()
 page boot --> localStorage.getItem --> GLOBALS.register
 ```
 
-External reload never silently discards unsaved MVCC/OLR edits. The file handle must be available and readable; picker-only files without handles cannot be monitored. UI selection persists independently from workspace recovery.
+External priority explicitly discards unsaved MVCC edits when external content changes; an OMU event records the discard. The file handle must be available and readable; picker-only files without handles cannot be monitored. UI selection persists independently from workspace recovery.
