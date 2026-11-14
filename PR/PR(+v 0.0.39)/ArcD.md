@@ -1,0 +1,3 @@
+# ArcD — Dual Endpoint Text Palette
+
+TextPalette now delegates to pure text-contrast resolver. Two independent per-token palettes: dark-editor bright endpoint, light-editor dark endpoint. Blend using relative luminance of the effective editor background (provided by UI_PALETTE). If the resulting color misses WCAG 4.5:1 contrast, move it minimally toward black or white (whichever contrasts more with the actual background), using binary search. Overrides also undergo contrast correction. No editor text or token offsets are modified. UI_PALETTE subscription already refreshes highlighting after palette changes.
