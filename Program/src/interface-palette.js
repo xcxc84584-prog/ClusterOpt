@@ -28,8 +28,6 @@ const LIGHT = Object.freeze({
   gutter: [240, 242, 247]
 });
 
-const clamp = value => Math.max(0, Math.min(255, value));
-
 function channelToLinear(channel) {
   const value = channel / 255;
   return value <= 0.04045
@@ -43,6 +41,20 @@ function brightness(rgb) {
     0.7152 * channelToLinear(rgb[1]) +
     0.0722 * channelToLinear(rgb[2])
   );
+}
+
+function contrastRatio(a, b) {
+  const light = Math.max(brightness(a), brightness(b));
+  const dark = Math.min(brightness(a), brightness(b));
+  return (light + 0.05) / (dark + 0.05);
+}
+
+function readableText(background) {
+  const white = [255, 255, 255];
+  const black = [0, 0, 0];
+  return contrastRatio(background, white) >= contrastRatio(background, black)
+    ? white
+    : black;
 }
 
 function blend(start, end, weight) {
@@ -122,13 +134,30 @@ export class InterfacePalette {
     const weight = this.weight;
     const keys = Object.keys(DARK);
 
+    const surfaces = {};
+
     for (const key of keys) {
+      if (key === 'text' || key === 'muted') continue;
+
       const base = blend(DARK[key], LIGHT[key], weight);
-      // Keep the user's RGB hue as a subtle surface tint.
-      const tint = key === 'text' || key === 'muted' ? 0 : 0.12;
-      const result = blend(base, this.#rgb, tint);
-      root.style.setProperty(`--ui-${key}`, rgbText(result));
+      const tint = weight === 0 || weight === 1 ? 0 : 0.12;
+      surfaces[key] = blend(base, this.#rgb, tint);
+      root.style.setProperty(`--ui-${key}`, rgbText(surfaces[key]));
     }
+
+    const foreground = readableText(surfaces.background);
+    const secondary = readableText(surfaces.surface);
+    root.style.setProperty('--ui-text', rgbText(foreground));
+    root.style.setProperty('--ui-muted', rgbText(secondary));
+    root.style.setProperty('--ui-text-on-surface', rgbText(secondary));
+    root.style.setProperty(
+      '--ui-text-on-control',
+      rgbText(readableText(surfaces.control))
+    );
+    root.style.setProperty(
+      '--ui-text-on-panel',
+      rgbText(readableText(surfaces.panel))
+    );
 
     root.style.colorScheme = this.mode;
     root.style.setProperty('--ui-accent', rgbText(this.#rgb));
