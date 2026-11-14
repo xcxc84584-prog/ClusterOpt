@@ -41,6 +41,7 @@ class ExternalChangeMonitor {
  #baseline=new Map();
 #busy=new Set();
 #generation=new Map();
+ #fileSignatures=new Map();
  constructor(documents,states,registry){this.docs=documents;
 this.states=states;
 this.registry=registry;
