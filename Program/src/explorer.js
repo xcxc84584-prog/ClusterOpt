@@ -48,6 +48,13 @@ export class Explorer {
     this.#tree.addEventListener('scroll',()=>this.#closeMenu(),{passive:true});
     this.#tree.addEventListener('wheel',()=>this.#closeMenu(),{passive:true});
     this.#tree.addEventListener('touchmove',()=>this.#closeMenu(),{passive:true});
+    // The editor is a separate scroll container: dismiss the side menu there too.
+    const editor=document.querySelector('#editor');
+    if(editor){
+      editor.addEventListener('scroll',()=>this.#closeMenu(),{passive:true});
+      editor.addEventListener('wheel',()=>this.#closeMenu(),{passive:true});
+      editor.addEventListener('touchmove',()=>this.#closeMenu(),{passive:true});
+    }
     if(typeof window!=='undefined')
       window.addEventListener('resize',()=>this.#closeMenu(),{passive:true});
     this.#tree.addEventListener('pointerdown',e=>this.#pointerDown(e));
