@@ -936,3 +936,20 @@ header .menu-wrap { margin-left:auto; }
  color:var(--ui-text-on-panel); padding:8px 10px; border-radius:3px; font:inherit; }
 .explorer-context button:hover { background:var(--ui-hover); }
 @media(max-width:650px) { #explorerPanel { width:min(85vw,310px); flex-basis:min(85vw,310px); } }
+
+/* Explorer v0.0.19 — rounded controls and exactly one selected workspace row. */
+#explorerPanel .explorer-actions button,
+#explorerPanel .explorer-header button,
+#explorerToggle { border-radius:10px; transition:background-color .15s ease,border-color .15s ease; }
+#explorerSearch { border-radius:10px; }
+#explorerTree { padding:4px 6px 12px; }
+#explorerTree .explorer-entry { border-radius:8px; min-height:32px; padding-top:5px; padding-bottom:5px; margin:1px 0; }
+#explorerTree .explorer-entry.active {
+ background:color-mix(in srgb,var(--ui-accent) 23%,var(--ui-panel));
+ color:var(--ui-text-on-panel); border-left:0;
+ box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--ui-accent) 42%,transparent);
+}
+#explorerTree .explorer-entry.active:hover { background:color-mix(in srgb,var(--ui-accent) 30%,var(--ui-panel)); }
+#explorerPanel .explorer-context { border-radius:12px; padding:6px; }
+#explorerPanel .explorer-context button { border-radius:8px; }
+#explorerPanel .explorer-rename { border-radius:7px; }
