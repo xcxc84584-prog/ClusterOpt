@@ -116,6 +116,18 @@ export class HighlightRenderer {
     this.starts=buildLineStarts(next);
     this.windowStart=-1;this.#draw(true);this.sync();
   }
+  // A local edit can arrive before the asynchronous full-slice initial pass.
+  // Initialize a blank decoration scheme so local region painting is not lost.
+  bootstrap(text){
+    if(this.lastScheme)return;
+    this.lastText=text;
+    this.starts=buildLineStarts(text);
+    this.lastScheme={status:'OK',ranges:[]};
+    this.windowStart=-1;
+    this.#draw(true);
+    this.editor.classList.add('highlight-active');
+    this.sync();
+  }
   renderRegion({startLine,endLine,ranges,status},expectedText){
     if(status!=='OK'||!this.lastScheme||expectedText!==this.editor.value)return false;
     if(startLine<0||endLine<startLine||endLine>=this.starts.length||
