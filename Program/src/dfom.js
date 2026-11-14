@@ -11,38 +11,96 @@ export const DFOM_PAIRS = Object.freeze({
   '｢': '｣', '«': '»', '‹': '›', '＜': '＞'
 });
 
+export const DFOM_SETTINGS = Object.freeze({
+  tabSize: 4, indent: '\t', autoCloseBefore: ';:.,=}])> \n\t',
+  expandBlockOnSpace: true
+});
+
+function lineContext(value, position) {
+  const lineStart = value.lastIndexOf('\n', position - 1) + 1;
+  const lineEnd = value.indexOf('\n', position);
+  const before = value.slice(lineStart, position);
+  const after = value.slice(position, lineEnd < 0 ? value.length : lineEnd);
+  return {before, after, indent: (before.match(/^[ \t]*/) || [''])[0]};
+}
+
+function previousIndent(indent) {
+  if (indent.endsWith('\t')) return indent.slice(0, -1);
+  return indent.slice(0, Math.max(0, indent.length - DFOM_SETTINGS.tabSize));
+}
+
 export function dfomEdit(value, start, end, key, options = {}) {
   if (typeof value !== 'string' || !Number.isInteger(start) ||
       !Number.isInteger(end) || start < 0 || end < start || end > value.length) {
     return null;
   }
+  if (options.ctrl || options.alt || options.meta || options.composing) return null;
   const selected = value.slice(start, end);
-  if (key === 'Tab' && !options.shift) {
+  const context = lineContext(value, start);
+  const betweenBraces = start === end && value[start - 1] === '{' && value[start] === '}';
+  if (key === 'Tab') {
+    if (options.shift) {
+      const lineStart = start - context.before.length;
+      const currentIndent = (value.slice(lineStart).match(/^[ \t]*/) || [''])[0];
+      if (!currentIndent) return null;
+      const removed = currentIndent.endsWith('\t') ? '\t' :
+        ' '.repeat(Math.min(DFOM_SETTINGS.tabSize, currentIndent.length));
+      return {start: lineStart + currentIndent.length - removed.length,
+        end: lineStart + currentIndent.length, text: '',
+        caret: Math.max(lineStart, start - removed.length)};
+    }
     return {start, end, text: '\t', caret: start + 1};
   }
   if (key === 'Backspace' && start === end && start > 0) {
     if (value[start - 1] === '\t') {
       return {start: start - 1, end: start, text: '', caret: start - 1};
     }
-    // A generated empty pair is removed in a single Backspace.
     if (start < value.length && DFOM_PAIRS[value[start - 1]] === value[start]) {
       return {start: start - 1, end: start + 1, text: '', caret: start - 1};
     }
+    if (/^ +$/.test(context.before)) {
+      const remove = ((context.before.length - 1) % DFOM_SETTINGS.tabSize) + 1;
+      return {start: start - remove, end: start, text: '', caret: start - remove};
+    }
   }
-  if (options.ctrl || options.alt || options.meta || options.composing) return null;
+  // ClusterOpt extension: space inside an empty brace block expands to a new line.
+  if (key === ' ' && betweenBraces && DFOM_SETTINGS.expandBlockOnSpace) {
+    const text = '\n' + context.indent + DFOM_SETTINGS.indent +
+      '\n' + context.indent;
+    return {start, end, text, caret: start + 1 + context.indent.length +
+      DFOM_SETTINGS.indent.length};
+  }
+  if (key === 'Enter') {
+    if (start !== end) return null;
+    if (betweenBraces) {
+      const text = '\n' + context.indent + DFOM_SETTINGS.indent +
+        '\n' + context.indent;
+      return {start, end, text, caret: start + 1 + context.indent.length +
+        DFOM_SETTINGS.indent.length};
+    }
+    const opening = /[{\[(]\s*$/.test(context.before);
+    const closing = /^[}\])]/.test(context.after);
+    const indent = closing && !opening ? previousIndent(context.indent) :
+      context.indent + (opening ? DFOM_SETTINGS.indent : '');
+    const text = '\n' + indent;
+    return {start, end, text, caret: start + text.length};
+  }
   if (selected && DFOM_PAIRS[key]) {
     return {start, end, text: key + selected + DFOM_PAIRS[key],
-      selectStart: start + key.length, selectEnd: start + key.length + selected.length};
-  }
-  if (start === end && DFOM_PAIRS[key]) {
-    const next = value[start] || '';
-    // Avoid duplicating a closing pair inside existing identifiers or punctuation.
-    if (next && !/[\s\)\]\}\uff09\uff3d\uff5d,;:.>＞〉》】〕〗»›]/u.test(next)) return null;
-    return {start, end, text: key + DFOM_PAIRS[key], caret: start + key.length};
+      selectStart: start + key.length,
+      selectEnd: start + key.length + selected.length};
   }
   if (start === end && Object.values(DFOM_PAIRS).includes(key) &&
       value[start] === key) {
     return {start, end: start + 1, text: key, caret: start + 1};
+  }
+  if (start === end && DFOM_PAIRS[key]) {
+    const next = value[start] || '';
+    // Prefer predictable pairing for angle brackets even beside identifiers.
+    if (key !== '<' && next && !DFOM_SETTINGS.autoCloseBefore.includes(next)) {
+      return null;
+    }
+    return {start, end, text: key + DFOM_PAIRS[key], caret: start + key.length};
   }
   return null;
 }
