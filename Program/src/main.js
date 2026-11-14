@@ -1,3 +1,4 @@
+import {createVTE} from './vte/vte.js';
 import {readStoragePriority, writeStoragePriority, fileSignature} from './storage-priority.js';
 import {createClusterDependencies} from './dependency-registry.js';
 import {VirtualFileSession} from './fmc/virtual-file-session.js';
@@ -18,6 +19,8 @@ import {LanguageProperty} from './language.js?v=20261114-i18n-v2';
 // Cluster Opt 1: object state is private; contracts are the only cross-object channel.
 const contract=(ok,data=null,code=200,message='')=>Object.freeze({ok,code,data,message});
 const omu=new OMU();
+// Rule 07: VTE is a separate in-memory test environment, never a production editor session.
+window.VTE = createVTE();
 const fmc = new FileManagementCore();
 const sliceLoader = new SliceLoader(fmc);
 const storageProgress = new StorageProgressTracker();
