@@ -176,8 +176,19 @@ function scheduleRecovery() {
 }
 
 const $=s=>document.querySelector(s),editor=$('#editor');
-function status(msg){$('#status').textContent=msg;
-$('#status').title=msg;
+function localizeStatusMessage(raw) {
+  if (raw === '就緒' || raw === 'Ready') return t('ready');
+  if (raw === '未儲存' || raw === 'Unsaved') return t('unsaved');
+  if (raw === '已儲存' || raw === 'Saved') return t('saved');
+  const slice = /^(?:Loaded slice|已載入切片) (\\d+) \\/ (\\d+)$/.exec(raw);
+  if (slice) return t('statusLoadedSlice', slice[1], slice[2]);
+  return raw;
+}
+function status(msg){
+  const el = $('#status');
+  el.dataset.rawMessage = String(msg);
+  el.textContent = localizeStatusMessage(String(msg));
+  el.title = el.textContent;
 }
 function updateEditorLock() {
   const operation = active ? storageProgress.get(active) : null;
@@ -846,10 +857,11 @@ function renderSyncStatus() {
   bar.style.width = saving && percent !== null ? percent + '%' : '100%';
   bar.style.background = state === 'SYNCED' ? '#22C55E' : colors[state] || colors.UNVERIFIED;
   bar.parentElement.classList.toggle('indeterminate', saving && percent === null);
+  const stateLabel = t('state' + (state || 'UNVERIFIED'));
   const label = state === 'LOADING' && progress?.state === 'RUNNING'
-    ? (progress.operationType === 'INDEX' ? 'INDEXING' : 'LOADING') + ' (' + progress.completedUnits + '/' +
-      (progress.totalUnits ?? '?') + ' slices)'
-    : saving && percent !== null ? state + ' ' + percent + '%' : state;
+    ? t('state' + (progress.operationType === 'INDEX' ? 'INDEXING' : 'LOADING')) +
+      ' (' + progress.completedUnits + '/' + (progress.totalUnits ?? '?') + ' slices)'
+    : saving && percent !== null ? stateLabel + ' ' + percent + '%' : stateLabel;
   const percentage = $('#meterPercent');
   percentage.hidden = !saving;
   percentage.textContent = percent === null ? '…' : percent + '%';
@@ -939,13 +951,17 @@ function renderLanguage() {
   $('#priority option[value="internal"]').textContent=t('internal');
   $('#priority option[value="external"]').textContent=t('external');
   $('#fileType').textContent=t('plain');
+  $('#goLineBar').setAttribute('aria-label',t('goLineGroup'));
+  $('#goLineBar label[for="goLineInput"]').textContent=t('goLineLabel');
+  $('#goLineButton').textContent=t('goLineButton');
+  $('#goLineBar .goLineHint').textContent=t('goLineHint');
   for (const button of document.querySelectorAll('[data-locale]')) {
     button.querySelector('.locale-check').textContent=
       button.dataset.locale===LANGUAGE.value?'✓':'';
     button.setAttribute('aria-pressed',String(button.dataset.locale===LANGUAGE.value));
   }
-const statusText=$('#status').dataset.statusKey||'ready';
-  status(t(statusText));
+const currentStatus=$('#status').dataset.rawMessage;
+  status(currentStatus || t('ready'));
   refresh();
 }
 LANGUAGE.subscribe(()=>{renderLanguage();omu.emit('LANGUAGE','Set',200);});
