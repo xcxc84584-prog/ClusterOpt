@@ -1128,7 +1128,7 @@ renderTabGuides();
 
 function renderLanguage() {
   document.documentElement.lang=LANGUAGE.value;
-  document.title='Cluster Opt v0.0.12+2';
+  document.title='Cluster Opt v0.0.14';
   $('#menuBtn').textContent=t('file')+'⌄';
   for (const key of ['new','open','save','saveas','close','closeall']) {
     const button=$('#menu [data-action="'+key+'"]');
@@ -1148,6 +1148,9 @@ function renderLanguage() {
   $('#paletteClose').setAttribute('aria-label',t('closeDialog'));
   $('#empty p').textContent=t('empty');
   $('#editor').setAttribute('aria-label',t('editor'));
+  const priorityLabel = $('#toolOptions .priority-heading');
+  priorityLabel.textContent=t('priority');
+  $('#priority').setAttribute('aria-label',t('priority'));
   $('#priority').title=t('priority');
   $('#priority option[value="internal"]').textContent=t('internal');
   $('#priority option[value="external"]').textContent=t('external');
