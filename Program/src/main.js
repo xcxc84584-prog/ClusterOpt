@@ -479,22 +479,29 @@ scheduleRecovery();
 return true;
 }
 let lastGutterSignature='';
+// The textarea and gutter are independent scroll containers. Their scrollHeight
+// must match; otherwise scrollTop is clamped at the gutter's shorter boundary.
+function syncGutterScroll(){
+  const gutter=$('#gutter');
+  gutter.style.paddingBottom='16px';
+  const missing=Math.max(0,editor.scrollHeight-gutter.scrollHeight);
+  gutter.style.paddingBottom=(16+missing)+'px';
+  gutter.scrollTop=editor.scrollTop;
+}
 function updateLines(){
-  // Count the actual unsaved textarea contents, not the persisted slice index.
   const count=1+(editor.value.match(/\n/g)?.length||0);
   const session=active?virtualSessions.get(active):null;
   const first=session?(session.lineStarts?.[session.center]||1):1;
   const signature=active+':'+session?.center+':'+first+':'+count;
-  if(signature===lastGutterSignature && $('#gutter').dataset.signature===signature)return;
-  lastGutterSignature=signature;
-  $('#gutter').dataset.signature=signature;
-  $('#gutter').textContent=Array.from({length:count},(_,i)=>String(first+i)).join('\n');
-  $('#gutter').scrollTop=editor.scrollTop;
-  // A newly appended line changes scrollHeight after layout. Re-sync once
-  // the browser has laid out the expanded gutter, including at EOF.
+  const gutter=$('#gutter');
+  if(signature!==lastGutterSignature||gutter.dataset.signature!==signature){
+    lastGutterSignature=signature;
+    gutter.dataset.signature=signature;
+    gutter.textContent=Array.from({length:count},(_,i)=>String(first+i)).join('\n');
+  }
+  syncGutterScroll();
   requestAnimationFrame(()=>{
-    if(active && $('#gutter').dataset.signature===signature)
-      $('#gutter').scrollTop=editor.scrollTop;
+    if(active&&gutter.dataset.signature===signature)syncGutterScroll();
   });
 }
 /**
@@ -654,7 +661,7 @@ const activeTab=[...$('#tabs').children].find(tab=>tab.classList.contains('activ
 if(activeTab)activeTab.querySelector('.name').textContent=docs.get(active).data.name+' ●';status(t('unsaved'));});
 editor.addEventListener('scroll',()=>{
  highlightRenderer.sync();
-  $('#gutter').scrollTop=editor.scrollTop;
+  syncGutterScroll();
   if (tabGuide) { tabGuide.scrollTop=editor.scrollTop; tabGuide.scrollLeft=editor.scrollLeft; }
   if (active && virtualSessions.has(active)) {
     virtualSessions.get(active).setPosition(
@@ -1187,7 +1194,7 @@ async function renderVirtualSlice(id, center = null) {
     lastGutterSignature='';
     updateLines();
     status('Loaded slice ' + (index + 1) + ' / ' + session.sliceCount);
-    $('#gutter').scrollTop = editor.scrollTop;
+    syncGutterScroll();
     updatePos();
     scheduleRecovery();
     storageProgress.update(operationId, total, 'READ');
@@ -1359,7 +1366,7 @@ renderTabGuides();
 function renderLanguage() {
   document.documentElement.lang=LANGUAGE.value;
   explorer.setLocale(LANGUAGE.value, t);
-  document.title='Cluster Opt v0.0.35';
+  document.title='Cluster Opt v0.0.36';
   $('#menuBtn').textContent=t('file')+'⌄';
   for (const key of ['new','open','save','saveas','close','closeall']) {
     const button=$('#menu [data-action="'+key+'"]');
