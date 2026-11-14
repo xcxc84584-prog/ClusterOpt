@@ -897,7 +897,6 @@ function renderSyncStatus() {
 storageProgress.subscribe(operation => {
   if (operation.documentId === active) {
     renderSyncStatus();
-    if (rebuildingDocuments.has(active)) showRecoveryFor(active);
   }
 });
 syncStates.subscribe((id)=>{if(id===active)renderSyncStatus();});
@@ -1069,29 +1068,7 @@ UI_PALETTE.subscribe(updatePaletteControls);
 updatePaletteControls();
 
 // Prebuilt recovery window: metadata is visible before large-file indexing finishes.
-const recoveryPrebuild = document.createElement('div');
-recoveryPrebuild.id = 'recoveryPrebuild';
-recoveryPrebuild.setAttribute('role', 'status');
-recoveryPrebuild.setAttribute('aria-live', 'polite');
-recoveryPrebuild.hidden = true;
-recoveryPrebuild.innerHTML = '<strong id="recoveryName"></strong><span id="recoveryStage">正在重建文件視窗…</span><progress id="recoveryProgress" max="100" value="0"></progress><span id="recoveryCount">0%</span>';
-document.querySelector('#workspace').append(recoveryPrebuild);
-function recoveryDisplay(name, completed = 0, total = 1, stage = '建立切片索引') {
-  // Recovery is a background operation; never cover the editor with a modal.
-  recoveryPrebuild.hidden = true;
-  document.querySelector('#recoveryName').textContent = name;
-  document.querySelector('#recoveryStage').textContent = stage;
-  const percent = Math.min(100, Math.floor(100 * completed / Math.max(1, total)));
-  document.querySelector('#recoveryProgress').value = percent;
-  document.querySelector('#recoveryCount').textContent =
-    completed + ' / ' + total + ' slices (' + percent + '%)';
-}
-function showRecoveryFor(id) {
-  if (id !== active || !rebuildingDocuments.has(id)) return;
-  const operation = storageProgress.get(id);
-  recoveryDisplay(docs.get(id).data?.name || '文件',
-    operation?.completedUnits || 0, operation?.totalUnits || 1, '視窗重建中');
-}
+// Recovery and indexing now report through the document-scoped footer tracker.
 // Restore virtual drafts and small documents after reload.
 (async () => {
   try {
@@ -1190,6 +1167,5 @@ function showRecoveryFor(id) {
     restoring = false;
     rebuildingDocuments.clear();
     backgroundIndexing.clear();
-    recoveryPrebuild.hidden = true;
   }
 })();
