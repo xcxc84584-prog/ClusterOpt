@@ -20,7 +20,8 @@ export class VirtualFileSession {
   #pending = new Map();
   #recoveryProtected = new Set();
 
-  constructor(documentId, blob) {
+  constructor(documentId, blob, options = {}) {
+    this.#loader = new SliceLoader(this.#core, 256 * 1024, options);
     this.#documentId = documentId;
     this.#blob = blob;
     const attached = this.#loader.attach(documentId, blob);
