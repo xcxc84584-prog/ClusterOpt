@@ -790,7 +790,7 @@ refresh();
 
 function renderLanguage() {
   document.documentElement.lang=LANGUAGE.value;
-  document.title='Cluster Opt 8';
+  document.title='Cluster Opt v0.0.10+4';
   $('#menuBtn').textContent=t('file')+'⌄';
   for (const key of ['new','open','save','saveas','close','closeall']) {
     const button=$('#menu [data-action="'+key+'"]');
