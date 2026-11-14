@@ -1,3 +1,5 @@
+import {AgentFlagGateway} from './flag-agent-api.js';
+import {UserFlagGateway} from './flag-user-api.js';
 import {FileManagementCore} from './file-management-core.js';
 import {SliceLoader} from './slice-loader.js';
 
@@ -50,6 +52,34 @@ export class VirtualFileSession {
   }
 
   get sourceBlob() { return this.#blob; }
+
+  /** Gateway-bound agent APIs; identity is supplied by the trusted caller. */
+  getAgentGateway(agentId) {
+    if (!agentId || agentId === 'USER') throw new Error('Invalid agent identity');
+    return new AgentFlagGateway(this, agentId);
+  }
+
+  getUserGateway(userId = 'USER') { return new UserFlagGateway(this, userId); }
+
+  onFlagEvent(callback) { return this.#core.onFlagEvent(callback); }
+  getFlagStatus(index) { return this.#core.getFlagStatus(this.#documentId + ':' + index); }
+  listOwnedFlags(ownerId) { return this.#core.listOwnedFlags(ownerId); }
+
+  async agentRead(index, agentId) {
+    const loaded = await this.requestSlice(index);
+    if (!loaded.ok) return loaded;
+    const sliceId = this.#documentId + ':' + index;
+    const flag = this.#core.acquireORF(sliceId, agentId);
+    if (!flag.ok) return flag;
+    try {
+      return this.#core.readWithORF(sliceId, flag.data.leaseId,
+        flag.data.fencingToken, agentId);
+    } finally {
+      this.#core.releaseORF(sliceId, flag.data.leaseId,
+        flag.data.fencingToken, agentId);
+    }
+  }
+
 
   get recoveryEdits() {
     return [...this.#dirty].map(([index, data]) => ({
@@ -181,7 +211,8 @@ export class VirtualFileSession {
     const sliceId = this.#documentId + ':' + index;
     const read = await this.read(index);
     if (!read.ok) return read;
-    const lease = this.#core.acquireWTF(sliceId, ownerId);
+    const lease = ownerId === 'USER' ? this.#core.userWrite(sliceId, ownerId) :
+      this.#core.acquireWTF(sliceId, ownerId);
     if (!lease.ok) return lease;
     const {leaseId, fencingToken} = lease.data;
     try {
