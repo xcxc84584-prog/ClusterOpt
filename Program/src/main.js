@@ -5,38 +5,66 @@ import {createSyncStatusClass} from './sync-status.js';
 import {LanguageProperty} from './language.js';
 // Cluster Opt 1: object state is private; contracts are the only cross-object channel.
 const contract=(ok,data=null,code=200,message='')=>Object.freeze({ok,code,data,message});
-class OMU {#events=[];emit(source,action,code,message='',ehu=false){this.#events.push(Object.freeze({id:this.#events.length+1,time:new Date().toISOString(),source,action,code,message,ehu}));if(this.#events.length>500)this.#events.shift();}logs(){return this.#events.map(e=>({...e}));}}
+class OMU {#events=[];
+emit(source,action,code,message='',ehu=false){this.#events.push(Object.freeze({id:this.#events.length+1,time:new Date().toISOString(),source,action,code,message,ehu}));
+if(this.#events.length>500)this.#events.shift();
+}logs(){return this.#events.map(e=>({...e}));
+}}
 const omu=new OMU();
 class ExternalChangeMonitor {
- #baseline=new Map();#busy=new Set();#generation=new Map();
- constructor(documents,states,registry){this.docs=documents;this.states=states;this.registry=registry;}
- watch(id,content){this.#baseline.set(id,content);this.#generation.set(id,(this.#generation.get(id)||0)+1);this.states.set(id,'SYNCED');}
- unwatch(id){this.#baseline.delete(id);this.#generation.set(id,(this.#generation.get(id)||0)+1);this.states.delete(id);}
- onEdit(id){if(this.#baseline.has(id))this.states.set(id,'DIVERGED');else this.states.set(id,'UNVERIFIED');}
+ #baseline=new Map();
+#busy=new Set();
+#generation=new Map();
+ constructor(documents,states,registry){this.docs=documents;
+this.states=states;
+this.registry=registry;
+}
+ watch(id,content){this.#baseline.set(id,content);
+this.#generation.set(id,(this.#generation.get(id)||0)+1);
+this.states.set(id,'SYNCED');
+}
+ unwatch(id){this.#baseline.delete(id);
+this.#generation.set(id,(this.#generation.get(id)||0)+1);
+this.states.delete(id);
+}
+ onEdit(id){if(this.#baseline.has(id))this.states.set(id,'DIVERGED');
+else this.states.set(id,'UNVERIFIED');
+}
  async checkNow(id){
   if(this.#busy.has(id))return;
-  const handle=this.docs.handle(id);if(!handle)return;
-  const before=this.docs.get(id);if(!before.ok)return;
+  const handle=this.docs.handle(id);
+if(!handle)return;
+  const before=this.docs.get(id);
+if(!before.ok)return;
   const generation=this.#generation.get(id),revision=before.data.revision,previous=this.#baseline.get(id);
-  this.#busy.add(id);this.states.set(id,'LOADING');
+  this.#busy.add(id);
+this.states.set(id,'LOADING');
   try{
    const file=await handle.getFile(),external=await file.text();
    if(this.#generation.get(id)!==generation||!this.docs.get(id).ok)return;
    const current=this.docs.get(id).data;
-   if(external!==previous){this.#baseline.set(id,external);omu.emit('ExternalChangeMonitor','ExternalChange',200);}
+   if(external!==previous){this.#baseline.set(id,external);
+omu.emit('ExternalChangeMonitor','ExternalChange',200);
+}
     if(this.registry.get('STORAGE_PRIORITY')==='external' && current.content!==external){
      const replaced=this.docs.replaceFromExternal(id,external,current.revision);
      if(!replaced.ok)throw Error(replaced.message);
-     if(active===id){editor.value=external;editor.dataset.doc=id;refresh();}
+     if(active===id){editor.value=external;
+editor.dataset.doc=id;
+refresh();
+}
     }
-   
    const latest=this.docs.get(id).data;
    this.states.set(id,latest.content===external?'SYNCED':'DIVERGED');
   }catch(e){
-   if(this.#generation.get(id)===generation){this.states.set(id,'ERROR');omu.emit('ExternalChangeMonitor','Read',e.name==='NotAllowedError'?403:500,String(e),true);}
-  }finally{this.#busy.delete(id);}
+   if(this.#generation.get(id)===generation){this.states.set(id,'ERROR');
+omu.emit('ExternalChangeMonitor','Read',e.name==='NotAllowedError'?403:500,String(e),true);
+}
+  }finally{this.#busy.delete(id);
+}
  }
- async checkAll(){for(const id of this.docs.ids())if(this.docs.handle(id))await this.checkNow(id);}
+ async checkAll(){for(const id of this.docs.ids())if(this.docs.handle(id))await this.checkNow(id);
+}
 }
 const Documents = createDocumentsClass(omu, contract);
 const FileManager = createFileManagerClass(omu, contract);
@@ -44,16 +72,114 @@ const GlobalPropertyRegistry = createGlobalPropertyRegistryClass();
 const SyncStatus = createSyncStatusClass();
 const LANGUAGE=new LanguageProperty();
 const t=(key,...args)=>LANGUAGE.t(key,...args);
-const docs=new Documents(),files=new FileManager(),GLOBALS=new GlobalPropertyRegistry(),syncStates=new SyncStatus();GLOBALS.register('LANGUAGE',LANGUAGE);GLOBALS.register('UI_PALETTE','dark');GLOBALS.register('STORAGE_PRIORITY','internal');GLOBALS.register('DOCUMENT_STATUS',syncStates);const monitor=new ExternalChangeMonitor(docs,syncStates,GLOBALS);let active=null;const $=s=>document.querySelector(s),editor=$('#editor');
-function status(msg){$('#status').textContent=msg;}function refresh(){const d=active?docs.get(active).data:null;$('#empty').hidden=!!d;$('#editorPane').hidden=!d;$('#tabs').replaceChildren();for(const id of docs.ids()){const x=docs.get(id).data;const tab=document.createElement('div');tab.className='tab'+(id===active?' active':'');const name=document.createElement('span');name.className='name';name.textContent=x.name+(x.dirty?' ●':'');const close=document.createElement('span');close.className='close';close.textContent='×';close.onclick=e=>{e.stopPropagation();closeDoc(id);};tab.append(name,close);tab.onclick=()=>switchDoc(id);$('#tabs').append(tab);}if(d){if(editor.dataset.doc!==active){editor.value=d.content;editor.dataset.doc=active;}$('#filename').textContent=d.name+(d.dirty?' *':'');updateLines();}else{$('#filename').textContent=t('unnamed');editor.dataset.doc='';}updatePos();renderSyncStatus();}
-function switchDoc(id){active=id;refresh();editor.focus();}function create(name=t('unnamed'),content='',handle=null){const res=docs.create(name,content,handle);active=res.data.id;if(handle)monitor.watch(active,content);refresh();editor.focus();}
-function closeDoc(id){const d=docs.get(id).data;if(!d)return;if(d.dirty&&!confirm(t('confirmClose',d.name)))return;monitor.unwatch(id);docs.close(id);if(active===id)active=docs.ids().at(-1)||null;refresh();}
-function updateLines(){const count=editor.value.split('\n').length;$('#gutter').textContent=Array.from({length:count},(_,i)=>i+1).join('\n');}function updatePos(){const p=editor.selectionStart||0,txt=editor.value.slice(0,p),lines=txt.split('\n');$('#position').textContent=`Ln ${lines.length}, Col ${lines.at(-1).length+1}`;}
-editor.addEventListener('input',()=>{if(!active)return;docs.update(active,editor.value);monitor.onEdit(active);updateLines();updatePos();$('#filename').textContent=docs.get(active).data.name+' *';const activeTab=[...$('#tabs').children].find(tab=>tab.classList.contains('active'));if(activeTab)activeTab.querySelector('.name').textContent=docs.get(active).data.name+' ●';status(t('unsaved'));});editor.addEventListener('scroll',()=>{$('#gutter').scrollTop=editor.scrollTop;});['click','keyup','select'].forEach(ev=>editor.addEventListener(ev,updatePos));editor.addEventListener('keydown',e=>{if(e.key==='Tab'){e.preventDefault();const s=editor.selectionStart;editor.setRangeText('    ',s,editor.selectionEnd,'end');editor.dispatchEvent(new Event('input'));}});
-async function doSave(as=false){if(!active)return;const id=active;const d=docs.get(id).data;const revision=d.revision;const res=await files.save(d,docs.handle(id),as);if(res.ok){if(!docs.get(id).ok)return;docs.setSaved(id,res.data.handle,res.data.name,revision);if(res.data.handle){monitor.watch(id,d.content);if(docs.get(id).data.revision!==revision)monitor.onEdit(id);}else syncStates.set(id,'UNVERIFIED');refresh();status(t(res.data.download?'downloaded':'saved'));}else status(res.message||t('saveFailed'));}
-const actions={new:()=>create(),open:()=>openFiles(),save:()=>doSave(),saveas:()=>doSave(true),close:()=>active&&closeDoc(active),closeall:()=>{for(const id of docs.ids())closeDoc(id);}};$('#menuBtn').onclick=()=>{$('#menu').hidden=!$('#menu').hidden;};$('#menu').onclick=e=>{const key=e.target.dataset.action;if(actions[key]){actions[key]();$('#menu').hidden=true;}};document.addEventListener('click',e=>{if(!e.target.closest('.menu-wrap'))$('#menu').hidden=true;});$('#fileInput').onchange=async e=>{const items=await files.open(e.target.files);items.forEach(x=>create(x.name,x.content,x.handle));e.target.value='';};document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();doSave(e.shiftKey);}if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='n'){e.preventDefault();create();}if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='o'){e.preventDefault();openFiles();}});window.addEventListener('beforeunload',e=>{if(docs.ids().some(id=>docs.get(id).data.dirty)){e.preventDefault();e.returnValue='';}});
-async function openFiles(){if('showOpenFilePicker' in window){try{const items=await files.openWithHandle();items.forEach(x=>create(x.name,x.content,x.handle));return;}catch(e){if(e.name==='AbortError')return;omu.emit('FileManager','Open',500,String(e),true);status(String(e));return;}}$('#fileInput').click();}
-function renderSyncStatus(){const state=active?syncStates.get(active):'UNVERIFIED';const colors={SYNCED:'#22C55E',DIVERGED:'#EAB308',ERROR:'#EF4444',LOADING:'#3B82F6',UNVERIFIED:'#64748B'};const bar=$('#meterFill');bar.style.width='100%';bar.style.background=colors[state];bar.parentElement.title=state;}
+const docs=new Documents(),files=new FileManager(),GLOBALS=new GlobalPropertyRegistry(),syncStates=new SyncStatus();
+GLOBALS.register('LANGUAGE',LANGUAGE);
+GLOBALS.register('UI_PALETTE','dark');
+GLOBALS.register('STORAGE_PRIORITY','internal');
+GLOBALS.register('DOCUMENT_STATUS',syncStates);
+const monitor=new ExternalChangeMonitor(docs,syncStates,GLOBALS);
+let active=null;
+const $=s=>document.querySelector(s),editor=$('#editor');
+function status(msg){$('#status').textContent=msg;
+}function refresh(){const d=active?docs.get(active).data:null;
+$('#empty').hidden=!!d;
+$('#editorPane').hidden=!d;
+$('#tabs').replaceChildren();
+for(const id of docs.ids()){const x=docs.get(id).data;
+const tab=document.createElement('div');
+tab.className='tab'+(id===active?' active':'');
+const name=document.createElement('span');
+name.className='name';
+name.textContent=x.name+(x.dirty?' ●':'');
+const close=document.createElement('span');
+close.className='close';
+close.textContent='×';
+close.onclick=e=>{e.stopPropagation();
+closeDoc(id);
+};
+tab.append(name,close);
+tab.onclick=()=>switchDoc(id);
+$('#tabs').append(tab);
+}if(d){if(editor.dataset.doc!==active){editor.value=d.content;
+editor.dataset.doc=active;
+}$('#filename').textContent=d.name+(d.dirty?' *':'');
+updateLines();
+}else{$('#filename').textContent=t('unnamed');
+editor.dataset.doc='';
+}updatePos();
+renderSyncStatus();
+}
+function switchDoc(id){active=id;
+refresh();
+editor.focus();
+}function create(name=t('unnamed'),content='',handle=null){const res=docs.create(name,content,handle);
+active=res.data.id;
+if(handle)monitor.watch(active,content);
+refresh();
+editor.focus();
+}
+function closeDoc(id){const d=docs.get(id).data;
+if(!d)return;
+if(d.dirty&&!confirm(t('confirmClose',d.name)))return;
+monitor.unwatch(id);
+docs.close(id);
+if(active===id)active=docs.ids().at(-1)||null;
+refresh();
+}
+function updateLines(){const count=editor.value.split('\n').length;
+$('#gutter').textContent=Array.from({length:count},(_,i)=>i+1).join('\n');
+}function updatePos(){const p=editor.selectionStart||0,txt=editor.value.slice(0,p),lines=txt.split('\n');
+$('#position').textContent=`Ln ${lines.length}, Col ${lines.at(-1).length+1}`;
+}
+editor.addEventListener('input',()=>{if(!active)return;docs.update(active,editor.value);monitor.onEdit(active);updateLines();updatePos();$('#filename').textContent=docs.get(active).data.name+' *';const activeTab=[...$('#tabs').children].find(tab=>tab.classList.contains('active'));if(activeTab)activeTab.querySelector('.name').textContent=docs.get(active).data.name+' ●';status(t('unsaved'));});
+editor.addEventListener('scroll',()=>{$('#gutter').scrollTop=editor.scrollTop;});
+['click','keyup','select'].forEach(ev=>editor.addEventListener(ev,updatePos));
+editor.addEventListener('keydown',e=>{if(e.key==='Tab'){e.preventDefault();const s=editor.selectionStart;editor.setRangeText('    ',s,editor.selectionEnd,'end');editor.dispatchEvent(new Event('input'));}});
+async function doSave(as=false){if(!active)return;
+const id=active;
+const d=docs.get(id).data;
+const revision=d.revision;
+const res=await files.save(d,docs.handle(id),as);
+if(res.ok){if(!docs.get(id).ok)return;
+docs.setSaved(id,res.data.handle,res.data.name,revision);
+if(res.data.handle){monitor.watch(id,d.content);
+if(docs.get(id).data.revision!==revision)monitor.onEdit(id);
+}else syncStates.set(id,'UNVERIFIED');
+refresh();
+status(t(res.data.download?'downloaded':'saved'));
+}else status(res.message||t('saveFailed'));
+}
+const actions={new:()=>create(),open:()=>openFiles(),save:()=>doSave(),saveas:()=>doSave(true),close:()=>active&&closeDoc(active),closeall:()=>{for(const id of docs.ids())closeDoc(id);
+}};
+$('#menuBtn').onclick=()=>{$('#menu').hidden=!$('#menu').hidden;
+};
+$('#menu').onclick=e=>{const key=e.target.dataset.action;
+if(actions[key]){actions[key]();
+$('#menu').hidden=true;
+}};
+document.addEventListener('click',e=>{if(!e.target.closest('.menu-wrap'))$('#menu').hidden=true;});
+$('#fileInput').onchange=async e=>{const items=await files.open(e.target.files);
+items.forEach(x=>create(x.name,x.content,x.handle));
+e.target.value='';
+};
+document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();doSave(e.shiftKey);}if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='n'){e.preventDefault();create();}if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='o'){e.preventDefault();openFiles();}});
+window.addEventListener('beforeunload',e=>{if(docs.ids().some(id=>docs.get(id).data.dirty)){e.preventDefault();e.returnValue='';}});
+async function openFiles(){if('showOpenFilePicker' in window){try{const items=await files.openWithHandle();
+items.forEach(x=>create(x.name,x.content,x.handle));
+return;
+}catch(e){if(e.name==='AbortError')return;
+omu.emit('FileManager','Open',500,String(e),true);
+status(String(e));
+return;
+}}$('#fileInput').click();
+}
+function renderSyncStatus(){const state=active?syncStates.get(active):'UNVERIFIED';
+const colors={SYNCED:'#22C55E',DIVERGED:'#EAB308',ERROR:'#EF4444',LOADING:'#3B82F6',UNVERIFIED:'#64748B'};
+const bar=$('#meterFill');
+bar.style.width='100%';
+bar.style.background=colors[state];
+bar.parentElement.title=state;
+}
 syncStates.subscribe((id)=>{if(id===active)renderSyncStatus();});
 $('#priority').value=GLOBALS.get('STORAGE_PRIORITY');
 $('#priority').addEventListener('change',()=>{GLOBALS.set('STORAGE_PRIORITY',$('#priority').value);omu.emit('STORAGE_PRIORITY','Set',200);monitor.checkAll();});
@@ -86,7 +212,8 @@ const consoleApi=Object.freeze({
   help:()=>Object.freeze(['Cluster.log()','Cluster.log({limit:20})','Cluster.log({code:404})','Cluster.ehu()','Cluster.dep()'])
 });
 Object.defineProperty(window,'Cluster',{value:consoleApi,writable:false,configurable:false});
-window.ClusterOpt=Object.freeze({language:()=>LANGUAGE.value,setLanguage:value=>LANGUAGE.set(value),logs:()=>omu.logs(),dependencies:copyDependencies});refresh();
+window.ClusterOpt=Object.freeze({language:()=>LANGUAGE.value,setLanguage:value=>LANGUAGE.set(value),logs:()=>omu.logs(),dependencies:copyDependencies});
+refresh();
 
 function renderLanguage() {
   document.documentElement.lang=LANGUAGE.value;
