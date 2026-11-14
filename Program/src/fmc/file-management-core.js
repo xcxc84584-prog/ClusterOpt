@@ -118,8 +118,10 @@ export class FileManagementCore {
 
   /** Only the authenticated owner may commit using an AGENT lease. */
   agentCommit(sliceId, agentId, leaseId, token, baseVersionId, content) {
-    if (!this.#flags.validate(sliceId, leaseId, token, Date.now(), agentId))
+    if (!this.#flags.validate(sliceId, leaseId, token, Date.now(), agentId)) {
+      this.#flags.reportEHU(sliceId, agentId, 'FLAG_PERMISSION_DENIED');
       return {ok: false, code: 403, ehu: 'FLAG_PERMISSION_DENIED'};
+    }
     return this.commit(sliceId, leaseId, token, baseVersionId, content);
   }
 
