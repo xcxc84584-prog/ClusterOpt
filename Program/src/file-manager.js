@@ -5,7 +5,7 @@
 export function createFileManagerClass(omu, contract) {
   return class FileManager {
  async open(files){const out=[];
-for(const f of files){try{out.push({name:f.name,content:await f.text(),handle:null});
+for(const f of files){try{out.push({name:f.name,blob:f,content:null,handle:null});
 omu.emit('FileManager','Read',200);
 }catch(e){omu.emit('FileManager','Read',500,String(e),true);
 }}return out;
@@ -13,7 +13,7 @@ omu.emit('FileManager','Read',200);
  async openWithHandle(){const handles=await window.showOpenFilePicker({multiple:true});
 const out=[];
 for(const handle of handles){const file=await handle.getFile();
-out.push({name:file.name,content:await file.text(),handle});
+out.push({name:file.name,blob:file,content:null,handle});
 }return out;
 }
  async save(doc,handle,forceAs=false){try{let h=forceAs?null:handle;
