@@ -162,7 +162,11 @@ const highlightRenderer = new HighlightRenderer(document.querySelector('#editor'
 let highlightGeneration = 0;
 let highlightTimer = null;
 let highlightAbort = null;
+let lineHighlightTimer=null;
+let lineHighlightGeneration=0;
 function scheduleHighlight(){
+  clearTimeout(lineHighlightTimer);
+  lineHighlightGeneration++;
   clearTimeout(highlightTimer);
   highlightRenderer.retainDuringEdit();
   const generation=++highlightGeneration;
@@ -202,6 +206,39 @@ function scheduleHighlight(){
       if(scheme.error)omu.emit('TextHighlighter','HighlightSlice',500,scheme.error,true);
     }catch(error){omu.emit('TextHighlighter','HighlightSlice',500,String(error),true);}
   },180);
+}
+
+// The edit path NEVER calls highlightSlice or reads neighboring slices.
+function scheduleLineHighlight(){
+  clearTimeout(lineHighlightTimer);
+  clearTimeout(highlightTimer);
+  highlightAbort?.abort();
+  ++highlightGeneration;
+  highlightRenderer.retainDuringEdit();
+  const generation=++lineHighlightGeneration;
+  if(!TEXT_HIGHLIGHTER.enabled)return;
+  const id=active;
+  const item=id?docs.get(id)?.data:null;
+  if(!item||binaryDocuments.has(id))return;
+  const value=editor.value;
+  const caret=editor.selectionStart;
+  const start=value.lastIndexOf('\n',Math.max(0,caret-1))+1;
+  const newline=value.indexOf('\n',start);
+  const end=newline<0?value.length:newline;
+  const line=value.slice(start,end);
+  const sliceId=virtualSessions.get(id)?.center??0;
+  lineHighlightTimer=setTimeout(async()=>{
+    if(generation!==lineHighlightGeneration||active!==id)return;
+    const bg=getComputedStyle(document.documentElement).getPropertyValue('--ui-editor');
+    const background=(bg.match(/\d+/g)||['0','0','0']).slice(0,3).map(Number);
+    const scheme=await TEXT_HIGHLIGHTER.highlightLine({
+      documentId:id,targetSliceId:String(sliceId),revision:generation,
+      language:detectLanguage(item.name),line,background
+    });
+    if(generation!==lineHighlightGeneration||active!==id||editor.value!==value)return;
+    highlightRenderer.renderLine({...scheme,start,end},value);
+    if(scheme.error)omu.emit('TextHighlighter','HighlightLine',500,scheme.error,true);
+  },90);
 }
 
 const t=(key,...args)=>LANGUAGE.t(key,...args);
@@ -532,7 +569,7 @@ function renderTabGuides() {
   tabGuide.scrollLeft = editor.scrollLeft;
 }
 editor.addEventListener('input',()=>{
- scheduleHighlight();
+ scheduleLineHighlight();
 renderTabGuides();if(!active || editor.readOnly)return;
 const abortSave = saveAbortControllers.get(active);
 if (abortSave && !abortSave.signal.aborted) {
