@@ -157,6 +157,14 @@ function scheduleRecovery() {
 const $=s=>document.querySelector(s),editor=$('#editor');
 function status(msg){$('#status').textContent=msg;
 }
+function updateEditorLock() {
+  const operation = active ? storageProgress.get(active) : null;
+  const loading = !!active && (syncStates.get(active) === 'LOADING' ||
+    (operation?.operationType === 'LOAD' && operation.state === 'RUNNING'));
+  editor.readOnly = loading;
+  editor.setAttribute('aria-readonly', String(loading));
+  editor.title = loading ? 'Loading slices — editing is disabled' : '';
+}
 function refresh(){const d=active?docs.get(active).data:null;
 $('#empty').hidden=!!d;
 $('#editorPane').hidden=!d;
@@ -241,7 +249,7 @@ function updateLines(){
 function updatePos(){const p=editor.selectionStart||0,txt=editor.value.slice(0,p),lines=txt.split('\n');
 $('#position').textContent=`Ln ${lines.length}, Col ${lines.at(-1).length+1}`;
 }
-editor.addEventListener('input',()=>{if(!active)return;
+editor.addEventListener('input',()=>{if(!active || editor.readOnly)return;
 if (virtualSessions.has(active)) {
   const id = active;
   const session = virtualSessions.get(id);
@@ -372,48 +380,62 @@ async function renderVirtualSlice(id, center = null) {
   const session = virtualSessions.get(id);
   if (!session) return;
   const generation = ++virtualRenderGeneration;
-  await virtualEditQueue;
-  const index = center === null ? session.center : center;
-  const operationId = storageProgress.start(id, 'LOAD', Math.min(
-    session.sliceCount, index === 0 || index === session.sliceCount - 1 ? 2 : 3
-  ));
   syncStates.set(id, 'LOADING');
-  const result = await session.window(index, progress => {
-    storageProgress.update(operationId, progress.completed, 'READ');
-  });
-  storageProgress.finish(operationId, result.ok ? 'SUCCESS' : 'ERROR');
-  if (active === id) syncStates.set(id, result.ok ?
-    (session.dirty ? 'DIVERGED' : 'UNVERIFIED') : 'ERROR');
-  if (!result.ok) {
-    status(result.message || 'Slice load failed');
-    return;
+  const index = center === null ? session.center : center;
+  const total = 1 + Number(index > 0) + Number(index < session.sliceCount - 1);
+  const operationId = storageProgress.start(id, 'LOAD', total);
+  let succeeded = false;
+  try {
+    await virtualEditQueue;
+    if (generation !== virtualRenderGeneration || active !== id) return;
+    const result = await session.window(index, progress => {
+      storageProgress.update(operationId, progress.completed, 'READ');
+    });
+    if (generation !== virtualRenderGeneration || active !== id) return;
+    if (!result.ok) throw new Error(result.message || 'Slice load failed');
+    const current = result.data.slices.find(item => item.index === index);
+    if (!current || typeof current.content !== 'string') {
+      throw new Error('Requested slice is unavailable');
+    }
+    editor.value = current.content;
+    editor.dataset.doc = id;
+    const position = session.getPosition(index);
+    if (position) {
+      editor.setSelectionRange(
+        Math.min(position.selectionStart, editor.value.length),
+        Math.min(position.selectionEnd, editor.value.length)
+      );
+      editor.scrollTop = position.scrollTop;
+      editor.scrollLeft = position.scrollLeft;
+    } else {
+      editor.setSelectionRange(0, 0);
+      editor.scrollTop = 0;
+      editor.scrollLeft = 0;
+    }
+    const firstLine = current.content.split('\n').length;
+    $('#gutter').textContent = Array.from(
+      {length: firstLine}, (_, i) => String(i + 1)
+    ).join('\n');
+    $('#sliceNumber').textContent = (index + 1) + ' / ' + session.sliceCount;
+    $('#sliceControls').hidden = false;
+    status('Loaded slice ' + (index + 1) + ' / ' + session.sliceCount);
+    $('#gutter').scrollTop = editor.scrollTop;
+    updatePos();
+    storageProgress.update(operationId, total, 'READ');
+    succeeded = true;
+    syncStates.set(id, session.dirty ? 'DIVERGED' : 'UNVERIFIED');
+  } catch (error) {
+    if (generation === virtualRenderGeneration && active === id) {
+      syncStates.set(id, 'ERROR');
+      status('Slice load failed: ' + String(error));
+      omu.emit('VirtualEditor', 'Load', 500, String(error), true);
+    }
+  } finally {
+    storageProgress.finish(operationId, succeeded ? 'SUCCESS' : 'ERROR');
+    if (generation === virtualRenderGeneration && active === id &&
+        syncStates.get(id) === 'LOADING') syncStates.set(id, 'ERROR');
+    updateEditorLock();
   }
-  if (generation !== virtualRenderGeneration || active !== id) return;
-  const current = result.data.slices.find(item => item.index === index);
-  editor.value = current.content;
-  editor.dataset.doc = id;
-  const position = session.getPosition(index);
-  if (position) {
-    editor.setSelectionRange(
-      Math.min(position.selectionStart, editor.value.length),
-      Math.min(position.selectionEnd, editor.value.length)
-    );
-    editor.scrollTop = position.scrollTop;
-    editor.scrollLeft = position.scrollLeft;
-  } else {
-    editor.setSelectionRange(0, 0);
-    editor.scrollTop = 0;
-    editor.scrollLeft = 0;
-  }
-  const firstLine = current.content.split('\n').length;
-  $('#gutter').textContent = Array.from(
-    {length: firstLine}, (_, i) => String(i + 1)
-  ).join('\n');
-  $('#sliceNumber').textContent = (index + 1) + ' / ' + session.sliceCount;
-  $('#sliceControls').hidden = false;
-  status('Loaded slice ' + (index + 1) + ' / ' + session.sliceCount);
-  $('#gutter').scrollTop = editor.scrollTop;
-  updatePos();
 }
 
 async function moveVirtual(delta) {
@@ -473,10 +495,14 @@ function renderSyncStatus() {
   const percent = progress && progress.state === 'RUNNING'
     ? progress.progressPercent : null;
   const saving = state === 'SAVING' || state === 'LOADING';
+  updateEditorLock();
   bar.style.width = saving && percent !== null ? percent + '%' : '100%';
   bar.style.background = colors[state] || colors.UNVERIFIED;
   bar.parentElement.classList.toggle('indeterminate', saving && percent === null);
-  const label = saving && percent !== null ? state + ' ' + percent + '%' : state;
+  const label = state === 'LOADING' && progress?.state === 'RUNNING'
+    ? 'LOADING ' + (percent ?? 0) + '% (' + progress.completedUnits +
+      '/' + (progress.totalUnits ?? '?') + ' slices)'
+    : saving && percent !== null ? state + ' ' + percent + '%' : state;
   bar.parentElement.title = label;
   bar.parentElement.setAttribute('role', 'progressbar');
   bar.parentElement.setAttribute('aria-label', label);
