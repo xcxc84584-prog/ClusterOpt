@@ -30,13 +30,12 @@ export class Explorer {
   #roots=[];#documents=[];#active=null;#locale='zh-Hant';
   #panel;#tree;#search;#openFile;#openDocument;#closeFile;#closeRoot;#newFile;#log;
   #state=readState();#clipboard=null;#menu=null;#rename=null;
-  #hold=null;#drag=null;#selected=null;#revealGeneration=0;#suppressClick=false;
+  #hold=null;#drag=null;#selected=null;#revealGeneration=0;#suppressClick=false;#draft=null;
   constructor({panel,openFile,openDocument,closeFile=async()=>false,closeRoot=async()=>true,newFile=()=>{},log=()=>{}}){
     this.#panel=panel;this.#tree=panel.querySelector('#explorerTree');
     this.#search=panel.querySelector('#explorerSearch');
     this.#openFile=openFile;this.#openDocument=openDocument;this.#closeFile=closeFile;this.#closeRoot=closeRoot;this.#newFile=newFile;this.#log=log;
     this.#search.addEventListener('input',()=>this.render());
-    panel.querySelector('#explorerNewFile')?.addEventListener('click',()=>this.newFile());
     panel.querySelector('#explorerAddFolder').addEventListener('click',()=>this.addDirectory());
     panel.querySelector('#explorerAddFile').addEventListener('click',()=>this.addFile());
     panel.querySelector('#explorerRefresh').addEventListener('click',()=>this.refresh());
@@ -98,8 +97,6 @@ export class Explorer {
       else if(key==='explorerTitle')el.textContent=translate(key);
       else{el.title=translate(key);el.setAttribute('aria-label',translate(key));}
     }
-    const newButton=this.#panel.querySelector('#explorerNewFile');
-    if(newButton){newButton.textContent=this.#say('＋ 新建','＋ New');newButton.title=this.#say('建立新文件','New file');}
     const refresh=this.#panel.querySelector('#explorerRefresh');
     refresh.title=this.#say('重新整理','Refresh');refresh.setAttribute('aria-label',refresh.title);
     document.querySelector('#explorerToggle').title=translate('explorerTitle');
@@ -260,19 +257,48 @@ export class Explorer {
   }
   async #createIn(node,kind){
     const directory=node.kind==='directory'?node:node.parent;
-    if(!directory){if(kind==='file')this.newFile();else this.#log('Select a folder to create a directory');return;}
-    const name=prompt(kind==='file'?this.#say('新文件名稱','New file name'):this.#say('新資料夾名稱','New folder name'))?.trim();
-    if(!name||name==='.'||name==='..'||name.includes('/')||name.includes('\\'))return;
+    if(!directory){this.#log('Select a folder to create an entry');return;}
+    // Show a draft entry inside the tree. Nothing is written until Enter/blur.
+    directory.expanded=true;
+    this.#state.expanded??={};
+    this.#state.expanded[this.#key(directory)]=true;
+    await this.#loadChildren(directory);
+    this.#draft={directory,kind,busy:false};
+    this.#save();
+    this.render();
+    this.#tree.querySelector('.explorer-create-input')?.focus();
+  }
+  async #commitDraft(draft,value){
+    if(this.#draft!==draft||draft.busy)return;
+    const name=value.trim();
+    if(!name){this.#draft=null;this.render();return;}
+    if(name==='.'||name==='..'||name.includes('/')||name.includes('\\\\')){
+      this.#log('Invalid entry name: '+name);
+      this.#tree.querySelector('.explorer-create-input')?.focus();
+      return;
+    }
+    draft.busy=true;
     try{
-      // Never overwrite an existing file silently.
-      for await(const existing of directory.handle.keys())if(existing===name){this.#log('Entry already exists: '+name);return;}
-      const handle=kind==='file'?await directory.handle.getFileHandle(name,{create:true}):await directory.handle.getDirectoryHandle(name,{create:true});
-      await this.#loadChildren(directory,true);
-      directory.expanded=true;
-      this.#state.expanded??={};this.#state.expanded[this.#key(directory)]=true;
-      this.#save();this.render();
-      if(kind==='file')await this.#openFile(handle);
-    }catch(error){this.#log('Create entry failed: '+error);}
+      for await(const existing of draft.directory.handle.keys()){
+        if(existing===name){
+          this.#log('Entry already exists: '+name);
+          draft.busy=false;
+          this.#tree.querySelector('.explorer-create-input')?.focus();
+          return;
+        }
+      }
+      const handle=draft.kind==='file'
+        ?await draft.directory.handle.getFileHandle(name,{create:true})
+        :await draft.directory.handle.getDirectoryHandle(name,{create:true});
+      this.#draft=null;
+      await this.#loadChildren(draft.directory,true);
+      this.render();
+      if(draft.kind==='file')await this.#openFile(handle);
+    }catch(error){
+      draft.busy=false;
+      this.#log('Create entry failed: '+error);
+      this.#tree.querySelector('.explorer-create-input')?.focus();
+    }
   }
   async #closeEntry(node){
     if(!node.parent){
@@ -434,6 +460,35 @@ export class Explorer {
     };
     for(const root of this.#roots)walk(root,0);
     section(this.#say('工作區','WORKSPACE'),nodes);
+    if(this.#draft){
+      const draft=this.#draft, directory=draft.directory;
+      const siblings=nodes;
+      const parentIndex=siblings.findIndex(row=>row.dataset?.path===this.#key(directory));
+      if(parentIndex>=0){
+        const depth=this.#key(directory).split('/').length;
+        const row=this.#button('',draft.kind,depth);
+        row.classList.add('explorer-create-row');
+        const input=document.createElement('input');
+        input.className='explorer-create-input explorer-rename';
+        input.placeholder=draft.kind==='file'?this.#say('新文件名稱','New file name'):this.#say('新資料夾名稱','New folder name');
+        row.querySelector('.explorer-name').replaceWith(input);
+        row.onclick=e=>e.stopPropagation();
+        input.onclick=e=>e.stopPropagation();
+        input.onkeydown=e=>{
+          e.stopPropagation();
+          if(e.key==='Enter'){e.preventDefault();void this.#commitDraft(draft,input.value);}
+          if(e.key==='Escape'){e.preventDefault();this.#draft=null;this.render();}
+        };
+        input.onblur=()=>{if(this.#draft===draft&&!draft.busy)void this.#commitDraft(draft,input.value);};
+        let insertAt=parentIndex+1;
+        while(insertAt<siblings.length&&siblings[insertAt].style?.paddingInlineStart&&
+          parseInt(siblings[insertAt].style.paddingInlineStart,10)>parseInt(siblings[parentIndex].style.paddingInlineStart,10))insertAt++;
+        siblings.splice(insertAt,0,row);
+        fragment.replaceChildren?.();
+        const heading=document.createElement('div');heading.className='explorer-section';heading.textContent=this.#say('工作區','WORKSPACE');
+        fragment.append(heading,...siblings);
+      }
+    }
     this.#tree.replaceChildren(fragment);
   }
   #button(name,kind,depth){
