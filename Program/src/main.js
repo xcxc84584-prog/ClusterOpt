@@ -142,7 +142,10 @@ function scheduleRecovery() {
             // File handles can be structured-cloned into IndexedDB.
             handle: docs.handle(id) || null,
             // Keep source bytes for picker-only files without a handle.
-            blob: !docs.handle(id) || session.sourceBlob.size <= 16 * 1024 * 1024
+            // Never assume a session exposes a Blob (older cached modules may
+            // lack the sourceBlob accessor). Persist edits independently.
+            blob: session.sourceBlob instanceof Blob &&
+              (!docs.handle(id) || session.sourceBlob.size <= 16 * 1024 * 1024)
               ? session.sourceBlob : null,
             edits: session.recoveryEdits,
             center: session.center,
