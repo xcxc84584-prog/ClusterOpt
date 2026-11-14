@@ -180,7 +180,7 @@ function localizeStatusMessage(raw) {
   if (raw === '就緒' || raw === 'Ready') return t('ready');
   if (raw === '未儲存' || raw === 'Unsaved') return t('unsaved');
   if (raw === '已儲存' || raw === 'Saved') return t('saved');
-  const slice = /^(?:Loaded slice|已載入切片) (\\d+) \\/ (\\d+)$/.exec(raw);
+  const slice = /^(?:Loaded slice|已載入切片) ([0-9]+) \/ ([0-9]+)$/.exec(raw);
   if (slice) return t('statusLoadedSlice', slice[1], slice[2]);
   return raw;
 }
