@@ -1,3 +1,4 @@
+import {InterfacePalette} from './interface-palette.js';
 import {createDocumentsClass} from './documents.js';
 import {createFileManagerClass} from './file-manager.js';
 import {createGlobalPropertyRegistryClass} from './global-properties.js';
@@ -71,10 +72,11 @@ const FileManager = createFileManagerClass(omu, contract);
 const GlobalPropertyRegistry = createGlobalPropertyRegistryClass();
 const SyncStatus = createSyncStatusClass();
 const LANGUAGE=new LanguageProperty();
+const UI_PALETTE = new InterfacePalette();
 const t=(key,...args)=>LANGUAGE.t(key,...args);
 const docs=new Documents(),files=new FileManager(),GLOBALS=new GlobalPropertyRegistry(),syncStates=new SyncStatus();
 GLOBALS.register('LANGUAGE',LANGUAGE);
-GLOBALS.register('UI_PALETTE','dark');
+GLOBALS.register('UI_PALETTE', UI_PALETTE);
 GLOBALS.register('STORAGE_PRIORITY','internal');
 GLOBALS.register('DOCUMENT_STATUS',syncStates);
 const monitor=new ExternalChangeMonitor(docs,syncStates,GLOBALS);
@@ -224,18 +226,23 @@ const consoleApi=Object.freeze({
   help:()=>Object.freeze(['Cluster.log()','Cluster.log({limit:20})','Cluster.log({code:404})','Cluster.ehu()','Cluster.dep()'])
 });
 Object.defineProperty(window,'Cluster',{value:consoleApi,writable:false,configurable:false});
-window.ClusterOpt=Object.freeze({language:()=>LANGUAGE.value,setLanguage:value=>LANGUAGE.set(value),logs:()=>omu.logs(),dependencies:copyDependencies});
+window.ClusterOpt=Object.freeze({language:()=>LANGUAGE.value,setLanguage:value=>LANGUAGE.set(value),palette:()=>UI_PALETTE.value,setPalette:rgb=>UI_PALETTE.set(rgb),logs:()=>omu.logs(),dependencies:copyDependencies});
 refresh();
 
 function renderLanguage() {
   document.documentElement.lang=LANGUAGE.value;
-  document.title='Cluster Opt 5';
+  document.title='Cluster Opt 6';
   $('#menuBtn').textContent=t('file')+'⌄';
   for (const key of ['new','open','save','saveas','close','closeall']) {
     const button=$('#menu [data-action="'+key+'"]');
     if (button) button.textContent=t(key);
   }
-  $('#languageBtn').firstChild.textContent=t('language')+' ';
+  $('#languageBtn').textContent=t('language')+' ›';
+  $('#toolBtn').textContent=t('tool')+' ›';
+  $('#paletteBtn').textContent=t('palette')+' ›';
+  $('#paletteLabel').textContent=t('paletteRGB');
+  $('#paletteDark').textContent=t('darkEndpoint');
+  $('#paletteLight').textContent=t('lightEndpoint');
   $('#empty p').textContent=t('empty');
   $('#editor').setAttribute('aria-label',t('editor'));
   $('#priority').title=t('priority');
@@ -268,3 +275,63 @@ $('#languageOptions').addEventListener('click',event=>{
   $('#menu').hidden=true;
 });
 renderLanguage();
+
+/* Opt 6: the UI reads and writes only the public UI_PALETTE contract. */
+function updatePaletteControls() {
+  const rgb = UI_PALETTE.value;
+  const hex = rgb.map(value => value.toString(16).padStart(2, '0')).join('');
+  $('#palettePicker').value = '#' + hex;
+
+  document.querySelectorAll('[data-rgb]').forEach(input => {
+    input.value = rgb[Number(input.dataset.rgb)];
+  });
+}
+
+function setPalette(rgb) {
+  const result = UI_PALETTE.set(rgb);
+
+  if (!result.ok) {
+    omu.emit('UI_PALETTE', 'Set', result.code, result.message, true);
+    return;
+  }
+
+  omu.emit('UI_PALETTE', 'Set', 200);
+  updatePaletteControls();
+}
+
+$('#toolBtn').addEventListener('click', event => {
+  event.stopPropagation();
+  const options = $('#toolOptions');
+  options.hidden = !options.hidden;
+  $('#toolBtn').setAttribute('aria-expanded', String(!options.hidden));
+});
+
+$('#paletteBtn').addEventListener('click', event => {
+  event.stopPropagation();
+  const options = $('#paletteOptions');
+  options.hidden = !options.hidden;
+  $('#paletteBtn').setAttribute('aria-expanded', String(!options.hidden));
+});
+
+$('#paletteOptions').addEventListener('click', event => {
+  event.stopPropagation();
+});
+
+$('#palettePicker').addEventListener('input', event => {
+  const hex = event.target.value;
+  const rgb = [1, 3, 5].map(index => parseInt(hex.slice(index, index + 2), 16));
+  setPalette(rgb);
+});
+
+document.querySelectorAll('[data-rgb]').forEach(input => {
+  input.addEventListener('change', () => {
+    const values = [...document.querySelectorAll('[data-rgb]')]
+      .map(element => Number(element.value));
+    setPalette(values);
+  });
+});
+
+$('#paletteDark').addEventListener('click', () => setPalette([0, 0, 0]));
+$('#paletteLight').addEventListener('click', () => setPalette([255, 255, 255]));
+UI_PALETTE.subscribe(updatePaletteControls);
+updatePaletteControls();
