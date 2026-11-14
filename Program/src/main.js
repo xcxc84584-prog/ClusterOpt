@@ -194,7 +194,7 @@ function status(msg){
 }
 function updateEditorLock() {
   const operation = active ? storageProgress.get(active) : null;
-  const loading = !!active && (backgroundIndexing.has(active) ||
+  const loading = !!active && (savingDocuments.has(active) || backgroundIndexing.has(active) ||
     rebuildingDocuments.has(active) || syncStates.get(active) === 'LOADING' ||
     (['LOAD', 'INDEX'].includes(operation?.operationType) && operation.state === 'RUNNING'));
   const unavailable = !!active && (rebuildingDocuments.has(active) ||
@@ -520,12 +520,12 @@ if (binaryDocuments.has(id)) {
     data.dirty = false;
     docs.setSaved(id, handle, handle.name, docs.get(id).data.revision);
     syncStates.set(id, 'SYNCED');
-    status('Binary bytes saved without lossy encoding');
+    if (active === id) status('Binary bytes saved without lossy encoding');
     scheduleRecovery();
   } catch (error) {
     syncStates.set(id, 'ERROR');
     omu.emit('FTI', 'BinarySave', 500, String(error), true);
-    status('Binary save failed: ' + String(error));
+    if (active === id) status('Binary save failed: ' + String(error));
   }
   return;
 }
@@ -595,11 +595,11 @@ if (active === id) {
   if (!virtualSessions.has(id)) restorePosition(id);
 }
 scheduleRecovery();
-status(t(res.data.download?'downloaded':'saved'));
+if (active === id) status(t(res.data.download?'downloaded':'saved'));
 }
 else {storageProgress.finish(operationId,'ERROR');
 syncStates.set(id,'ERROR');
-status(res.message||t('saveFailed'));}
+if (active === id) status(res.message||t('saveFailed'));}
 }
 
 async function findOpenDocument(item) {
@@ -764,9 +764,9 @@ async function reconcileLoadedDocument(id) {
 async function renderVirtualSlice(id, center = null) {
   const session = virtualSessions.get(id);
   if (!session) return;
+  if (savingDocuments.has(id) || backgroundIndexing.has(id)) return;
   const generation = (virtualRenderGenerations.get(id) || 0) + 1;
   virtualRenderGenerations.set(id, generation);
-  if (savingDocuments.has(id) || backgroundIndexing.has(id)) return;
   syncStates.set(id, 'LOADING');
   const index = center === null ? session.center : center;
   // Only the requested physical slice is materialized; no neighbor preloading.
@@ -1137,9 +1137,11 @@ function showRecoveryFor(id) {
           const session = new VirtualFileSession(id, blob);
           virtualSessions.set(id, session);
           mapping.set(item.id, id);
+          if (!active) { active = id; refresh(); }
           rebuildingDocuments.add(id);
           backgroundIndexing.add(id);
           const indexing = storageProgress.start(id, 'INDEX', session.sliceCount);
+          syncStates.set(id, 'LOADING');
           try {
             await session.indexLines(progress => {
               storageProgress.update(indexing, progress.completed, 'INDEX');
@@ -1160,6 +1162,7 @@ function showRecoveryFor(id) {
           await session.window(center);
           rebuildingDocuments.delete(id);
           backgroundIndexing.delete(id);
+          if (active === id) renderSyncStatus();
           continue;
         }
         if (typeof item.content !== 'string') continue;
