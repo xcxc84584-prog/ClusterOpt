@@ -856,3 +856,15 @@ footer select { background: var(--ui-control); border-color: var(--ui-border); c
   padding: 8px 10px; border-radius: 6px; background: var(--ui-control);
   color: var(--ui-text); border: 1px solid var(--ui-border); }
 @media (max-width: 650px) { #toolOptions #priority { display: block; } }
+
+/* DFOM: viewport mirror draws dashed tab markers without changing file bytes. */
+#editorPane { position: relative; }
+#editorPane textarea { position: relative; z-index: 1; background: transparent; tab-size: 4; }
+#tabGuide { position: absolute; z-index: 0; inset: 0 0 0 60px;
+  overflow: hidden; pointer-events: none; white-space: pre; tab-size: 4;
+  padding: 16px; font: 14px/22px Consolas,'Microsoft JhengHei',monospace;
+  color: transparent; }
+#tabGuide .dfom-tab { position: relative; }
+#tabGuide .dfom-tab::before { content: ''; position: absolute; top: 2px; bottom: 2px;
+  left: 0; border-left: 1px dashed var(--ui-muted, #8793a6); opacity: .7; }
+@media(max-width:650px) { #tabGuide { left: 43px; } }

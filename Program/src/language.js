@@ -9,7 +9,7 @@ const MESSAGES = Object.freeze({
     done:'完成',closeDialog:'關閉視窗',darkEndpoint:'黑色端點',lightEndpoint:'白色端點',zh:'繁體中文',en:'English',
     empty:'選擇「檔案」建立或開啟文件',ready:'就緒',
     unnamed:'未命名.txt',editor:'文件編輯器',
-    priority:'存儲優先級',internal:'內部優先',external:'外部優先',
+    priority:'儲存優先級',internal:'內部優先',external:'外部優先',
     position:(line,col)=>`行 ${line}, 欄 ${col}`,slices:'切片',
     goLineInvalid:'請輸入有效的正整數行號',goLineOutOfRange:total=>`行號超出文件範圍（共 ${total} 行）`,goLineLoading:'正在載入目標區塊，請稍候…',goLineIndexMissing:'行號索引尚未建立完成',goLineLoadFailed:'區塊載入失敗',
     goLineLabel:'行號',goLineButton:'跳至行',goLineHint:'載入完成後才會跳轉',goLineGroup:'跳轉行工具',
