@@ -168,7 +168,7 @@ function scheduleHighlight(){
   const generation=++highlightGeneration;
   highlightAbort?.abort();
   highlightAbort=new AbortController();
-  if(!TEXT_HIGHLIGHTER.enabled)return;
+  if(!TEXT_HIGHLIGHTER.enabled){highlightRenderer.clear();return;}
   highlightTimer=setTimeout(async()=>{
     const id=active;
     if(!id)return;
