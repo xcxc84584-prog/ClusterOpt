@@ -1,3 +1,6 @@
+import {OverloadRestorer} from './fmc/overload-restorer.js';
+import {LineTree} from './fmc/line-tree.js';
+import {WindowLoader} from './fmc/window-loader.js';
 import {FileManagementCore} from './fmc/file-management-core.js';
 import {SliceLoader} from './fmc/slice-loader.js';
 import {StorageProgressTracker} from './fmc/storage-progress-tracker.js';
@@ -14,6 +17,11 @@ const omu=new OMU();
 const fmc = new FileManagementCore();
 const sliceLoader = new SliceLoader(fmc);
 const storageProgress = new StorageProgressTracker();
+const olr = new OverloadRestorer();
+const windowLoader = new WindowLoader(sliceLoader, fmc);
+const viewPositions = new Map();
+let recoveryTimer = null;
+let restoring = false;
 class ExternalChangeMonitor {
  #baseline=new Map();
 #busy=new Set();
@@ -96,6 +104,40 @@ GLOBALS.register('DOCUMENT_STATUS',syncStates);
 GLOBALS.register('STORAGE_PROGRESS', storageProgress);
 const monitor=new ExternalChangeMonitor(docs,syncStates,GLOBALS);
 let active=null;
+function capturePosition(id = active) {
+  if (!id || editor.dataset.doc !== id) return;
+  viewPositions.set(id, {
+    scrollTop: editor.scrollTop,
+    scrollLeft: editor.scrollLeft,
+    selectionStart: editor.selectionStart,
+    selectionEnd: editor.selectionEnd
+  });
+}
+function restorePosition(id = active) {
+  const position = viewPositions.get(id);
+  if (!position || editor.dataset.doc !== id) return;
+  editor.setSelectionRange(position.selectionStart, position.selectionEnd);
+  editor.scrollTop = position.scrollTop;
+  editor.scrollLeft = position.scrollLeft;
+  $('#gutter').scrollTop = position.scrollTop;
+}
+function scheduleRecovery() {
+  if (restoring) return;
+  clearTimeout(recoveryTimer);
+  recoveryTimer = setTimeout(() => {
+    const snapshots = docs.ids().map(id => {
+      const data = docs.get(id).data;
+      return {id, name: data.name, content: data.content,
+        dirty: data.dirty, position: viewPositions.get(id) || null};
+    });
+    // Recovery snapshots are bounded to avoid filling IndexedDB with huge files.
+    const eligible = snapshots.filter(item => item.content.length <= 2 * 1024 * 1024);
+    olr.save('workspace', {active, documents: eligible}).catch(error => {
+      omu.emit('OLR', 'Persist', 500, String(error), true);
+    });
+  }, 350);
+}
+
 const $=s=>document.querySelector(s),editor=$('#editor');
 function status(msg){$('#status').textContent=msg;
 }
@@ -129,39 +171,84 @@ editor.dataset.doc='';
 }updatePos();
 renderSyncStatus();
 }
-function switchDoc(id){active=id;
-refresh();
-editor.focus();
+function switchDoc(id){
+  capturePosition();
+  active=id;
+  refresh();
+  restorePosition(id);
+  editor.focus({preventScroll:true});
+  scheduleRecovery();
 }
 function create(name=t('unnamed'),content='',handle=null){const res=docs.create(name,content,handle);
 active=res.data.id;
 if(handle)monitor.watch(active,content);
 refresh();
-editor.focus();
+editor.focus({preventScroll:true});
+  scheduleRecovery();
 }
 function closeDoc(id){const d=docs.get(id).data;
 if(!d)return;
 if(d.dirty&&!confirm(t('confirmClose',d.name)))return;
 monitor.unwatch(id);
+viewPositions.delete(id);
 docs.close(id);
 if(active===id)active=docs.ids().at(-1)||null;
 refresh();
+scheduleRecovery();
 }
-function updateLines(){const count=editor.value.split('\n').length;
-$('#gutter').textContent=Array.from({length:count},(_,i)=>i+1).join('\n');
+function updateLines(){
+  const count = editor.value.split('\n').length;
+  const tree = new LineTree([count]);
+  $('#gutter').textContent = Array.from({length: tree.total}, (_, i) => i + 1).join('\n');
 }
 function updatePos(){const p=editor.selectionStart||0,txt=editor.value.slice(0,p),lines=txt.split('\n');
 $('#position').textContent=`Ln ${lines.length}, Col ${lines.at(-1).length+1}`;
 }
-editor.addEventListener('input',()=>{if(!active)return;docs.update(active,editor.value);monitor.onEdit(active);updateLines();updatePos();$('#filename').textContent=docs.get(active).data.name+' *';
+editor.addEventListener('input',()=>{if(!active)return;
+const previous = docs.get(active).data.content;
+if (previous.length < 2 * 1024 * 1024 && editor.value.length < 2 * 1024 * 1024) {
+  olr.record(active, previous, editor.value);
+}
+docs.update(active,editor.value);
+capturePosition();
+scheduleRecovery();monitor.onEdit(active);updateLines();updatePos();$('#filename').textContent=docs.get(active).data.name+' *';
 const activeTab=[...$('#tabs').children].find(tab=>tab.classList.contains('active'));
 if(activeTab)activeTab.querySelector('.name').textContent=docs.get(active).data.name+' ●';status(t('unsaved'));});
-editor.addEventListener('scroll',()=>{$('#gutter').scrollTop=editor.scrollTop;});
-['click','keyup','select'].forEach(ev=>editor.addEventListener(ev,updatePos));
-editor.addEventListener('keydown',e=>{if(e.key==='Tab'){e.preventDefault();
+editor.addEventListener('scroll',()=>{
+  $('#gutter').scrollTop=editor.scrollTop;
+  capturePosition();
+  scheduleRecovery();
+});
+['click','keyup','select'].forEach(ev=>editor.addEventListener(ev,()=>{
+  updatePos();
+  capturePosition();
+  scheduleRecovery();
+}));
+editor.addEventListener('keydown',e=>{
+  if ((e.ctrlKey || e.metaKey) && ['z','y'].includes(e.key.toLowerCase())) {
+    e.preventDefault();
+    if (!active) return;
+    const content = e.key.toLowerCase() === 'y' || e.shiftKey
+      ? olr.redo(active, editor.value) : olr.undo(active, editor.value);
+    if (content === null) return;
+    const position = {scrollTop: editor.scrollTop, scrollLeft: editor.scrollLeft,
+      selectionStart: editor.selectionStart, selectionEnd: editor.selectionEnd};
+    editor.value = content;
+    docs.update(active, content);
+    monitor.onEdit(active);
+    viewPositions.set(active, position);
+    restorePosition(active);
+    updateLines();
+    updatePos();
+    refresh();
+    scheduleRecovery();
+    return;
+  }
+  if(e.key==='Tab'){e.preventDefault();
 const s=editor.selectionStart;editor.setRangeText('    ',s,editor.selectionEnd,'end');editor.dispatchEvent(new Event('input'));}});
 async function doSave(as=false){if(!active)return;
 const id=active;
+capturePosition(id);
 const operationId=storageProgress.start(id,'SAVE',1);
 syncStates.set(id,'SAVING');
 const d=docs.get(id).data;
@@ -176,6 +263,8 @@ if(docs.get(id).data.revision!==revision)monitor.onEdit(id);
 }
 else syncStates.set(id,'UNVERIFIED');
 refresh();
+restorePosition(id);
+scheduleRecovery();
 status(t(res.data.download?'downloaded':'saved'));
 }
 else {storageProgress.finish(operationId,'ERROR');
@@ -271,7 +360,12 @@ const consoleApi=Object.freeze({
   help:()=>Object.freeze(['Cluster.log()','Cluster.log({limit:20})','Cluster.log({code:404})','Cluster.ehu()','Cluster.dep()'])
 });
 Object.defineProperty(window,'Cluster',{value:consoleApi,writable:false,configurable:false});
-window.ClusterOpt=Object.freeze({fmcStatus:()=>({loadedSlices:fmc.loadedSliceCount}),language:()=>LANGUAGE.value,setLanguage:value=>LANGUAGE.set(value),palette:()=>UI_PALETTE.value,setPalette:rgb=>UI_PALETTE.set(rgb),logs:()=>omu.logs(),dependencies:copyDependencies});
+window.ClusterOpt=Object.freeze({fmcStatus:()=>({loadedSlices:fmc.loadedSliceCount}),
+  loadSliceWindow: async (documentId, blob, center = 0) => {
+    const attached = sliceLoader.attach(documentId, blob);
+    if (!attached.ok) return attached;
+    return windowLoader.loadWindow(documentId, center, attached.data.sliceCount);
+  },language:()=>LANGUAGE.value,setLanguage:value=>LANGUAGE.set(value),palette:()=>UI_PALETTE.value,setPalette:rgb=>UI_PALETTE.set(rgb),logs:()=>omu.logs(),dependencies:copyDependencies});
 refresh();
 
 function renderLanguage() {
@@ -395,3 +489,29 @@ $('#paletteDark').addEventListener('click', () => setPalette([0, 0, 0]));
 $('#paletteLight').addEventListener('click', () => setPalette([255, 255, 255]));
 UI_PALETTE.subscribe(updatePaletteControls);
 updatePaletteControls();
+
+// Restore saved small-document sessions after initial UI setup.
+(async () => {
+  try {
+    const records = await olr.restoreAll();
+    const workspace = records.find(record => record.documentId === 'workspace');
+    if (!workspace?.documents?.length || docs.ids().length) return;
+    restoring = true;
+    const mapping = new Map();
+    for (const item of workspace.documents) {
+      const result = docs.create(item.name, item.content);
+      const id = result.data.id;
+      mapping.set(item.id, id);
+      if (item.dirty) docs.update(id, item.content);
+      if (item.position) viewPositions.set(id, item.position);
+    }
+    active = mapping.get(workspace.active) || docs.ids()[0];
+    refresh();
+    restorePosition(active);
+    status('Recovered editor session');
+  } catch (error) {
+    omu.emit('OLR', 'Restore', 500, String(error), true);
+  } finally {
+    restoring = false;
+  }
+})();
