@@ -1,0 +1,3 @@
+# ArcD — v0.0.38
+
+The v0.0.37 editor's `renderRegion` refused updates if `lastScheme` was null. An edit before asynchronous initial Shiki slice tokenization could never paint. `HighlightRenderer.bootstrap` initializes an empty valid token scheme for local-region repaint. It is invoked only when local Shiki returns OK, preserving plain-text fallback. The Explorer import buttons were localized in v0.0.37 source but main.js retained an old versioned import URL (`explorer.js?v=opt027-inline-ui`), allowing the browser to reuse stale code. Update Explorer, LANGUAGE, highlighter, matcher module URLs and main entrypoint version to invalidate browser cache. No service worker/cache storage is deleted.
