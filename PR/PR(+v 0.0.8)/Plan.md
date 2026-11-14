@@ -25,3 +25,11 @@
 - IndexedDB 受瀏覽器儲存額度與清理政策限制。
 - WindowLoader API 目前為獨立接口，尚未取代實際 editor。
 - 每次輸入紀錄完整字串 Undo 有記憶體成本，暫不適用大型文件。
+
+## v0.0.8+1 修補紀錄
+
+- 修補 #3：SliceLoader 以 UTF-8 字元起始位元組對齊 byte-range，使用 fatal TextDecoder 避免靜默替代字元。
+- 部分修補 #5：MVCCU.commitBatch 先驗證全部 baseVersion，再進行同步記憶體提交；仍缺少持久化原子性與 Crash Recovery。
+- 部分修補 #23：OLR Undo/Redo 改存最小差異區段；新增 clearAll 與 ClusterOpt.clearRecovery()。
+- #1、#2、#4、#20、#21、#22、#24、#25 仍需進一步整合與驗收；不得標示 PASS。
+- 下版目標：實際大文件載入、Viewport 切片、記憶體上限、位置恢復及 WTF 整合測試。
