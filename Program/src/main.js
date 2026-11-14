@@ -1,3 +1,4 @@
+import {readStoragePriority, writeStoragePriority, fileSignature} from './storage-priority.js';
 import {createClusterDependencies} from './dependency-registry.js';
 import {VirtualFileSession} from './fmc/virtual-file-session.js';
 import {FileTypeIdentifier} from './fmc/file-type-identifier.js';
@@ -44,11 +45,13 @@ class ExternalChangeMonitor {
 this.states=states;
 this.registry=registry;
 }
- watch(id,content){this.#baseline.set(id,content);
+ watch(id,content,file=null){this.#baseline.set(id,content);
+  if (file) this.#fileSignatures.set(id,fileSignature(file));
 this.#generation.set(id,(this.#generation.get(id)||0)+1);
 this.states.set(id,'SYNCED');
 }
  unwatch(id){this.#baseline.delete(id);
+  this.#fileSignatures.delete(id);
 this.#generation.set(id,(this.#generation.get(id)||0)+1);
 this.states.delete(id);
 }
@@ -58,14 +61,50 @@ else this.states.set(id,'UNVERIFIED');
  async checkNow(id, loopId = null){
   if(this.#busy.has(id))return;
   const handle=this.docs.handle(id);
-if(!handle || virtualSessions.has(id))return;
+if(!handle)return;
   const before=this.docs.get(id);
 if(!before.ok)return;
   const generation=this.#generation.get(id),revision=before.data.revision,previous=this.#baseline.get(id);
   this.#busy.add(id);
 this.states.set(id,'LOADING');
   try{
-   const file=await handle.getFile(),external=await file.text();
+   const file = await handle.getFile();
+   if (virtualSessions.has(id)) {
+     const previousSignature = this.#fileSignatures.get(id);
+     const nextSignature = fileSignature(file);
+     if (previousSignature === undefined) {
+       this.#fileSignatures.set(id, nextSignature);
+       return;
+     }
+     if (previousSignature === nextSignature) {
+       this.states.set(id, virtualSessions.get(id).dirty ? 'DIVERGED' : 'SYNCED');
+       return;
+     }
+     // File metadata is used rather than file.text() to avoid materializing
+     // multi-gigabyte documents on every poll.
+     if (this.registry.get('STORAGE_PRIORITY') !== 'external') {
+       this.states.set(id, 'DIVERGED');
+       return;
+     }
+     const currentSession = virtualSessions.get(id);
+     if (currentSession.dirty || savingDocuments.has(id) ||
+         backgroundIndexing.has(id) || rebuildingDocuments.has(id)) {
+       this.states.set(id, 'DIVERGED');
+       omu.emit('ExternalChangeMonitor', 'ReloadDeferred', 409,
+         'External file changed; unsaved edits or active operation prevent safe replacement',
+         true, loopId);
+       return;
+     }
+     const reloaded = await reloadVirtualFromExternal(id, file, currentSession);
+     if (!reloaded) {
+       this.states.set(id, 'DIVERGED');
+       return;
+     }
+     this.#fileSignatures.set(id, nextSignature);
+     this.states.set(id, 'SYNCED');
+     return;
+   }
+   const external = await file.text();
    if(this.#generation.get(id)!==generation||!this.docs.get(id).ok)return;
    const current=this.docs.get(id).data;
    if(external!==previous){this.#baseline.set(id,external);
@@ -113,7 +152,7 @@ const t=(key,...args)=>LANGUAGE.t(key,...args);
 const docs=new Documents(),files=new FileManager(),GLOBALS=new GlobalPropertyRegistry(),syncStates=new SyncStatus();
 GLOBALS.register('LANGUAGE',LANGUAGE);
 GLOBALS.register('UI_PALETTE', UI_PALETTE);
-GLOBALS.register('STORAGE_PRIORITY','internal');
+GLOBALS.register('STORAGE_PRIORITY', readStoragePriority());
 GLOBALS.register('DOCUMENT_STATUS',syncStates);
 GLOBALS.register('STORAGE_PROGRESS', storageProgress);
 GLOBALS.register('FILE_TYPE_IDENTIFIER', FTI);
@@ -689,6 +728,53 @@ function attachFlagEvents(session) {
     }
   });
 }
+/**
+ * Rebuild a virtual session against the latest on-disk File. Never reuse a
+ * stale Blob after an external edit. The original session remains intact
+ * until indexing succeeds, and dirty sessions are not silently discarded.
+ */
+async function reloadVirtualFromExternal(id, file, previous) {
+  if (virtualSessions.get(id) !== previous) return false;
+  const generation = virtualRenderGenerations.get(id) || 0;
+  const next = new VirtualFileSession(id, file, {forceText: previous.forceText});
+  const center = Math.min(previous.center, next.sliceCount - 1);
+  const position = previous.getPosition(previous.center);
+  if (active === id) {
+    next.setPosition(center, {
+      scrollTop: editor.scrollTop, scrollLeft: editor.scrollLeft,
+      selectionStart: editor.selectionStart, selectionEnd: editor.selectionEnd
+    });
+  } else if (position) {
+    next.setPosition(center, position);
+  }
+  backgroundIndexing.add(id);
+  const operationId = storageProgress.start(id, 'INDEX', next.sliceCount);
+  try {
+    await next.indexLines(progress =>
+      storageProgress.update(operationId, progress.completed, 'INDEX'));
+    if (virtualSessions.get(id) !== previous || previous.dirty ||
+        (virtualRenderGenerations.get(id) || 0) !== generation ||
+        savingDocuments.has(id)) {
+      return false;
+    }
+    attachFlagEvents(next);
+    virtualSessions.set(id, next);
+    virtualRenderGenerations.set(id, generation + 1);
+    omu.emit('ExternalChangeMonitor', 'Reload', 200);
+    scheduleRecovery();
+    return true;
+  } catch (error) {
+    omu.emit('ExternalChangeMonitor', 'Reload', 500, String(error), true);
+    return false;
+  } finally {
+    backgroundIndexing.delete(id);
+    storageProgress.finish(operationId, 'SUCCESS');
+    if (virtualSessions.get(id) === next && active === id) {
+      await renderVirtualSlice(id, center);
+    }
+  }
+}
+
 async function createVirtual(item) {
   let type;
   try {
@@ -717,6 +803,7 @@ async function createVirtual(item) {
   const session = new VirtualFileSession(id, item.blob, {forceText: type.mode === 'FORCE_TEXT'});
   attachFlagEvents(session);
   virtualSessions.set(id, session);
+  if (item.handle) monitor.watch(id, null, item.blob);
   active = id;
   refresh();
   backgroundIndexing.add(id);
@@ -936,7 +1023,16 @@ storageProgress.subscribe(operation => {
 });
 syncStates.subscribe((id)=>{if(id===active)renderSyncStatus();});
 $('#priority').value=GLOBALS.get('STORAGE_PRIORITY');
-$('#priority').addEventListener('change',()=>{GLOBALS.set('STORAGE_PRIORITY',$('#priority').value);omu.emit('STORAGE_PRIORITY','Set',200);monitor.checkAll();});
+$('#priority').addEventListener('change', () => {
+  const value = $('#priority').value;
+  GLOBALS.set('STORAGE_PRIORITY', value);
+  const saved = writeStoragePriority(value);
+  if (!saved.ok) {
+    omu.emit('STORAGE_PRIORITY', 'Persist', saved.code, saved.message, true);
+  }
+  omu.emit('STORAGE_PRIORITY', 'Set', 200, value);
+  monitor.checkAll();
+});
 setInterval(()=>{if(!document.hidden)monitor.checkAll();},2500);
 window.addEventListener('focus',()=>monitor.checkAll());
 // Read-only diagnostics, not a remote HTTP endpoint.
