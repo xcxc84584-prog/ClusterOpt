@@ -157,6 +157,7 @@ function scheduleRecovery() {
               (!docs.handle(id) || session.sourceBlob.size <= 16 * 1024 * 1024)
               ? session.sourceBlob : null,
             edits: session.recoveryEdits,
+            forceText: session.forceText,
             center: session.center,
             position: session.getPosition(session.center) || null
           };
@@ -1132,7 +1133,7 @@ updatePaletteControls();
           if (!blob) continue;
           const created = docs.create(item.name, '', item.handle || null);
           const id = created.data.id;
-          const session = new VirtualFileSession(id, blob);
+          const session = new VirtualFileSession(id, blob, {forceText: item.forceText === true});
           virtualSessions.set(id, session);
           mapping.set(item.id, id);
           if (!active) { active = id; refresh(); }
