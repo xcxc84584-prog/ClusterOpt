@@ -916,3 +916,23 @@ header .menu-wrap { margin-left:auto; }
 #explorerToggle[aria-expanded="true"] { background:var(--ui-hover); }
 @media(max-width:650px) { .header-utility { margin-left:0; }
   #explorerToggle { min-width:0; padding:7px; font-size:11px; } }
+
+/* Explorer v0.0.18: compact Cluster graphite controls, inline editing and menu. */
+#explorerPanel { position:relative; width:290px; flex-basis:290px; }
+.explorer-actions { display:grid; grid-template-columns:1fr 1fr 32px; gap:5px; }
+.explorer-actions button { min-width:0; font-size:11px; padding:7px 4px; border-radius:4px; }
+#explorerRefresh { font-size:17px; }
+.explorer-entry { cursor:default; user-select:none; touch-action:pan-y; }
+.explorer-entry.drag-ready { opacity:.55; }
+.explorer-entry.drag-target { outline:1px solid var(--ui-accent); outline-offset:-2px; }
+.explorer-rename { min-width:0; flex:1; background:var(--ui-control);
+ color:var(--ui-text-on-control); border:1px solid var(--ui-accent);
+ border-radius:2px; font:inherit; padding:2px 4px; }
+.explorer-context { position:absolute; z-index:50; min-width:160px;
+ display:flex; flex-direction:column; padding:5px; border-radius:6px;
+ border:1px solid var(--ui-border); background:var(--ui-panel);
+ box-shadow:0 12px 28px #0008; }
+.explorer-context button { border:0; text-align:left; background:transparent;
+ color:var(--ui-text-on-panel); padding:8px 10px; border-radius:3px; font:inherit; }
+.explorer-context button:hover { background:var(--ui-hover); }
+@media(max-width:650px) { #explorerPanel { width:min(85vw,310px); flex-basis:min(85vw,310px); } }
