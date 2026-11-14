@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>
-      Cluster Opt 1
+      Cluster Opt 6
     </title>
     <link rel="stylesheet" href="./src/style.css">
   </head>
@@ -19,7 +19,7 @@
             Cluster
           </strong>
           <small>
-            v.opt 5
+            v.opt 6
           </small>
         </div>
         <div class="menu-wrap">
@@ -47,23 +47,37 @@
             </button>
             <div class="menu-divider">
             </div>
-            <button id="languageBtn" type="button" aria-expanded="false">
-              語言
-              <span class="menu-arrow">
-                ›
-              </span>
+            <button id="toolBtn" type="button" aria-expanded="false">
+              工具 ›
             </button>
-            <div id="languageOptions" hidden>
-              <button data-locale="zh-Hant" type="button">
-                繁體中文
-                <span class="locale-check">
-                </span>
+            <div id="toolOptions" hidden>
+              <button id="languageBtn" type="button" aria-expanded="false">
+                語言 ›
               </button>
-              <button data-locale="en" type="button">
-                English
-                <span class="locale-check">
-                </span>
+              <div id="languageOptions" hidden>
+                <button data-locale="zh-Hant" type="button">
+                  繁體中文 <span class="locale-check"></span>
+                </button>
+                <button data-locale="en" type="button">
+                  English <span class="locale-check"></span>
+                </button>
+              </div>
+              <button id="paletteBtn" type="button" aria-expanded="false">
+                介面調色盤 ›
               </button>
+              <div id="paletteOptions" hidden>
+                <label for="palettePicker" id="paletteLabel">介面色系 RGB</label>
+                <input id="palettePicker" type="color" value="#000000">
+                <div class="palette-channels">
+                  <label>R <input data-rgb="0" type="number" min="0" max="255"></label>
+                  <label>G <input data-rgb="1" type="number" min="0" max="255"></label>
+                  <label>B <input data-rgb="2" type="number" min="0" max="255"></label>
+                </div>
+                <div class="palette-presets">
+                  <button id="paletteDark" type="button">黑色端點</button>
+                  <button id="paletteLight" type="button">白色端點</button>
+                </div>
+              </div>
             </div>
           </nav>
         </div>
@@ -123,7 +137,7 @@
       </footer>
     </div>
     <input type="file" id="fileInput" multiple hidden>
-    <script type="module" src="./src/main.js?v=opt5-style-2">
+    <script type="module" src="./src/main.js?v=opt6-palette-1">
     </script>
   </body>
 </html>
