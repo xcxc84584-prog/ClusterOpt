@@ -1,8 +1,8 @@
-import {matchingWindow} from './text-highlighter/matching-window.js';
+import {matchingWindow} from './text-highlighter/matching-window.js?v=opt038-matcher';
 import {transcodeToUtf8} from './fmc/chinese-transcoder.js';
-import {TextHighlighter,detectLanguage} from './text-highlighter/text-highlighter.js';
-import {HighlightRenderer} from './text-highlighter/highlight-renderer.js';
-import {Explorer} from './explorer.js?v=opt027-inline-ui';
+import {TextHighlighter,detectLanguage} from './text-highlighter/text-highlighter.js?v=opt038-region';
+import {HighlightRenderer} from './text-highlighter/highlight-renderer.js?v=opt038-bootstrap';
+import {Explorer} from './explorer.js?v=opt038-i18n';
 import {createVTE} from './vte/vte.js';
 import {handleDfomKeydown, handleDfomBeforeInput, buildTabGuideFragment} from './dfom.js';
 import {readStoragePriority, writeStoragePriority, fileSignature} from './storage-priority.js';
@@ -21,7 +21,7 @@ import {createDocumentsClass} from './documents.js';
 import {createFileManagerClass} from './file-manager.js';
 import {createGlobalPropertyRegistryClass} from './global-properties.js';
 import {createSyncStatusClass} from './sync-status.js';
-import {LanguageProperty} from './language.js?v=20261114-i18n-v2';
+import {LanguageProperty} from './language.js?v=opt038-i18n';
 // Cluster Opt 1: object state is private; contracts are the only cross-object channel.
 const contract=(ok,data=null,code=200,message='')=>Object.freeze({ok,code,data,message});
 const omu=new OMU();
@@ -237,7 +237,10 @@ function scheduleLineHighlight(){
       language:detectLanguage(item.name),source,background
     });
     if(generation!==lineHighlightGeneration||active!==id||editor.value!==value)return;
-    highlightRenderer.renderRegion({...scheme,startLine,endLine},value);
+    if(scheme.status==='OK'){
+      highlightRenderer.bootstrap(value);
+      highlightRenderer.renderRegion({...scheme,startLine,endLine},value);
+    }
     if(scheme.error)omu.emit('TextHighlighter','HighlightRegion',500,scheme.error,true);
   },100);
 }
@@ -1367,7 +1370,7 @@ renderTabGuides();
 function renderLanguage() {
   document.documentElement.lang=LANGUAGE.value;
   explorer.setLocale(LANGUAGE.value, t);
-  document.title='Cluster Opt v0.0.37';
+  document.title='Cluster Opt v0.0.38';
   $('#menuBtn').textContent=t('file')+'⌄';
   for (const key of ['new','open','save','saveas','close','closeall']) {
     const button=$('#menu [data-action="'+key+'"]');
