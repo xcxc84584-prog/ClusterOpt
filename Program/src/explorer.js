@@ -28,14 +28,15 @@ async function handleTransaction(mode,callback){
 }
 export class Explorer {
   #roots=[];#documents=[];#active=null;#locale='zh-Hant';
-  #panel;#tree;#search;#openFile;#openDocument;#closeFile;#log;
+  #panel;#tree;#search;#openFile;#openDocument;#closeFile;#closeRoot;#newFile;#log;
   #state=readState();#clipboard=null;#menu=null;#rename=null;
   #hold=null;#drag=null;#selected=null;#revealGeneration=0;#suppressClick=false;
-  constructor({panel,openFile,openDocument,closeFile=async()=>false,log=()=>{}}){
+  constructor({panel,openFile,openDocument,closeFile=async()=>false,closeRoot=async()=>true,newFile=()=>{},log=()=>{}}){
     this.#panel=panel;this.#tree=panel.querySelector('#explorerTree');
     this.#search=panel.querySelector('#explorerSearch');
-    this.#openFile=openFile;this.#openDocument=openDocument;this.#closeFile=closeFile;this.#log=log;
+    this.#openFile=openFile;this.#openDocument=openDocument;this.#closeFile=closeFile;this.#closeRoot=closeRoot;this.#newFile=newFile;this.#log=log;
     this.#search.addEventListener('input',()=>this.render());
+    panel.querySelector('#explorerNewFile')?.addEventListener('click',()=>this.newFile());
     panel.querySelector('#explorerAddFolder').addEventListener('click',()=>this.addDirectory());
     panel.querySelector('#explorerAddFile').addEventListener('click',()=>this.addFile());
     panel.querySelector('#explorerRefresh').addEventListener('click',()=>this.refresh());
@@ -108,6 +109,7 @@ export class Explorer {
     if(changed&&activeId&&!this.#panel.hidden)this.revealDocument(activeId);
     else {if(changed){this.#selected=null;this.#revealGeneration++;}this.render();}
   }
+  newFile(){return this.#newFile();}
   async addDirectory(){
     if(!window.showDirectoryPicker){this.#log('Directory picker unavailable');return;}
     try{const handle=await window.showDirectoryPicker({mode:'readwrite'});
@@ -229,7 +231,10 @@ export class Explorer {
   }
   async #closeEntry(node){
     if(!node.parent){
-      // Closing a workspace root only detaches it from Explorer, never deletes disk data.
+      // Close all tabs belonging to this root before detaching the workspace handle.
+      // If an unsaved editor refuses to close, retain the root.
+      if(!await this.#closeRoot(node.handle))return;
+      // Detach only; never delete disk files.
       this.#roots=this.#roots.filter(root=>root!==node);
       this.#state.rootOrder=this.#roots.map(root=>root.key);
       if(this.#selected===this.#key(node))this.#selected=null;
@@ -359,11 +364,7 @@ export class Explorer {
         if(this.#rename||event.button!==0)return;
         this.#selected=this.#key(node);
         this.render();
-      };
-      row.ondblclick=event=>{
-        event.stopPropagation();
-        if(this.#rename||event.button!==0)return;
-        this.#closeMenu();
+        // A single click opens files; folder expansion remains on the arrow.
         if(node.kind==='file')void this.#expand(node);
       };
       if(node.kind==='directory'){
