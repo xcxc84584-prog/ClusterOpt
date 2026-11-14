@@ -6,19 +6,19 @@ test('Explorer toggle opens, closes, and updates aria-expanded', () => {
   const panel = {hidden:true};
   const button = {attrs:{},setAttribute(key,value){this.attrs[key]=value;}};
   const original = globalThis.document;
-  globalThis.document = {querySelector(selector) {
+  globalThis.document = {addEventListener(){},querySelector(selector) {
     assert.equal(selector,'#explorerToggle');
     return button;
   }};
   try {
     const explorer = Object.create(Explorer.prototype);
     // Private fields require a constructed instance; test with a minimal fake DOM.
-    const tree={replaceChildren(){}};
+    const tree={replaceChildren(){},addEventListener(){}};
     const search={value:'',addEventListener(){}};
     const controls={addEventListener(){}};
     panel.querySelector=selector=>({
       '#explorerTree':tree,'#explorerSearch':search,
-      '#explorerAddFolder':controls,'#explorerAddFile':controls,
+      '#explorerAddFolder':controls,'#explorerAddFile':controls,'#explorerRefresh':controls,
       '#explorerClose':controls
     })[selector];
     button.addEventListener=()=>{};
