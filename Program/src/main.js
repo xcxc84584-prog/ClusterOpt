@@ -694,17 +694,25 @@ async function createVirtual(item) {
   virtualSessions.set(id, session);
   active = id;
   refresh();
+  backgroundIndexing.add(id);
   const initId = storageProgress.start(id, 'INDEX', session.sliceCount);
   syncStates.set(id, 'LOADING');
+  let indexed = false;
   try {
     await session.indexLines(progress => storageProgress.update(initId, progress.completed, 'INDEX'));
     storageProgress.finish(initId, 'SUCCESS');
-    if (active === id) await renderVirtualSlice(id);
-    else await reconcileLoadedDocument(id);
+    indexed = true;
   } catch (error) {
     storageProgress.finish(initId, 'ERROR');
     syncStates.set(id, 'ERROR');
-    status('File indexing failed: ' + String(error));
+    if (active === id) status('File indexing failed: ' + String(error));
+  } finally {
+    backgroundIndexing.delete(id);
+    if (active === id) renderSyncStatus();
+  }
+  if (indexed) {
+    if (active === id) await renderVirtualSlice(id);
+    else await reconcileLoadedDocument(id);
   }
   editor.focus({preventScroll: true});
   scheduleRecovery();
