@@ -1,38 +1,12 @@
+import {createDocumentsClass} from './documents.js';
+import {createFileManagerClass} from './file-manager.js';
+import {createGlobalPropertyRegistryClass} from './global-properties.js';
+import {createSyncStatusClass} from './sync-status.js';
 import {LanguageProperty} from './language.js';
 // Cluster Opt 1: object state is private; contracts are the only cross-object channel.
 const contract=(ok,data=null,code=200,message='')=>Object.freeze({ok,code,data,message});
 class OMU {#events=[];emit(source,action,code,message='',ehu=false){this.#events.push(Object.freeze({id:this.#events.length+1,time:new Date().toISOString(),source,action,code,message,ehu}));if(this.#events.length>500)this.#events.shift();}logs(){return this.#events.map(e=>({...e}));}}
 const omu=new OMU();
-class Documents {
- #docs=new Map();#seq=0;
- create(name='未命名.txt',content='',handle=null){const id='DOC-'+(++this.#seq);this.#docs.set(id,{id,name,content,handle,dirty:false,revision:0});omu.emit('Documents','Create',201);return contract(true,{id});}
- get(id){const d=this.#docs.get(id);return d?contract(true,{id:d.id,name:d.name,content:d.content,dirty:d.dirty,revision:d.revision,hasHandle:!!d.handle}):contract(false,null,404,'Document not found');}
- update(id,content){const d=this.#docs.get(id);if(!d)return contract(false,null,404);d.content=content;d.revision++;d.dirty=true;omu.emit('Documents','Update',200);return contract(true);}
- replaceFromExternal(id,content,expectedRevision){const d=this.#docs.get(id);if(!d)return contract(false,null,404);if(d.revision!==expectedRevision)return contract(false,null,409,'Document changed during read');d.content=content;d.revision++;d.dirty=false;omu.emit('Documents','ExternalReplace',200);return contract(true);}
- setSaved(id,handle=null,name=null,expectedRevision=null){const d=this.#docs.get(id);if(!d)return contract(false,null,404);if(handle)d.handle=handle;if(name)d.name=name;if(expectedRevision===null||d.revision===expectedRevision)d.dirty=false;omu.emit('Documents','Saved',200);return contract(true);}
- handle(id){return this.#docs.get(id)?.handle||null;}
- close(id){if(!this.#docs.has(id))return contract(false,null,404);this.#docs.delete(id);omu.emit('Documents','Close',204);return contract(true);}
- ids(){return [...this.#docs.keys()];}
-}
-class FileManager {
- async open(files){const out=[];for(const f of files){try{out.push({name:f.name,content:await f.text(),handle:null});omu.emit('FileManager','Read',200);}catch(e){omu.emit('FileManager','Read',500,String(e),true);}}return out;}
- async openWithHandle(){const handles=await window.showOpenFilePicker({multiple:true});const out=[];for(const handle of handles){const file=await handle.getFile();out.push({name:file.name,content:await file.text(),handle});}return out;}
- async save(doc,handle,forceAs=false){try{let h=forceAs?null:handle;if(!h&&'showSaveFilePicker'in window)h=await window.showSaveFilePicker({suggestedName:doc.name});if(h){const w=await h.createWritable();await w.write(doc.content);await w.close();omu.emit('FileManager','Write',200);return contract(true,{handle:h,name:h.name});}const blob=new Blob([doc.content],{type:'text/plain;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=doc.name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);omu.emit('FileManager','Download',200);return contract(true,{handle:null,name:doc.name,download:true});}catch(e){const cancel=e.name==='AbortError';omu.emit('FileManager','Write',cancel?400:500,String(e),!cancel);return contract(false,null,cancel?400:500,e.message);}}
-}
-class GlobalPropertyRegistry {
- #values=new Map();#listeners=new Map();
- register(name,value){if(this.#values.has(name))throw Error('Duplicate global property: '+name);this.#values.set(name,value);}
- get(name){return this.#values.get(name);}
- set(name,value){if(!this.#values.has(name))return contract(false,null,404);this.#values.set(name,value);for(const cb of this.#listeners.get(name)||[])cb(value);return contract(true);}
- subscribe(name,cb){if(!this.#listeners.has(name))this.#listeners.set(name,new Set());this.#listeners.get(name).add(cb);return()=>this.#listeners.get(name).delete(cb);}
-}
-class SyncStatus {
- #states=new Map();#listeners=new Set();
- get(id){return this.#states.get(id)||'UNVERIFIED';}
- set(id,state){this.#states.set(id,state);for(const cb of this.#listeners)cb(id,state);}
- delete(id){this.#states.delete(id);}
- subscribe(cb){this.#listeners.add(cb);return()=>this.#listeners.delete(cb);}
-}
 class ExternalChangeMonitor {
  #baseline=new Map();#busy=new Set();#generation=new Map();
  constructor(documents,states,registry){this.docs=documents;this.states=states;this.registry=registry;}
@@ -64,6 +38,10 @@ class ExternalChangeMonitor {
  }
  async checkAll(){for(const id of this.docs.ids())if(this.docs.handle(id))await this.checkNow(id);}
 }
+const Documents = createDocumentsClass(omu, contract);
+const FileManager = createFileManagerClass(omu, contract);
+const GlobalPropertyRegistry = createGlobalPropertyRegistryClass();
+const SyncStatus = createSyncStatusClass();
 const LANGUAGE=new LanguageProperty();
 const t=(key,...args)=>LANGUAGE.t(key,...args);
 const docs=new Documents(),files=new FileManager(),GLOBALS=new GlobalPropertyRegistry(),syncStates=new SyncStatus();GLOBALS.register('LANGUAGE',LANGUAGE);GLOBALS.register('UI_PALETTE','dark');GLOBALS.register('STORAGE_PRIORITY','internal');GLOBALS.register('DOCUMENT_STATUS',syncStates);const monitor=new ExternalChangeMonitor(docs,syncStates,GLOBALS);let active=null;const $=s=>document.querySelector(s),editor=$('#editor');
