@@ -116,6 +116,23 @@ export class HighlightRenderer {
     this.starts=buildLineStarts(next);
     this.windowStart=-1;this.#draw(true);this.sync();
   }
+  renderRange({startLine,endLine,ranges,status},expectedText){
+    if(status!=='OK'||!this.lastScheme||expectedText!==this.editor.value)return false;
+    if(startLine<0||endLine<startLine||endLine>=this.starts.length||
+      endLine-startLine+1>100)return false;
+    const begin=this.starts[startLine];
+    const finish=endLine+1<this.starts.length?
+      this.starts[endLine+1]-1:this.lastText.length;
+    const merged=this.lastScheme.ranges.filter(r=>r.end<=begin||r.start>=finish);
+    this.lastScheme={...this.lastScheme,ranges:[
+      ...merged,...ranges.map(r=>({...r,start:r.start+begin,end:r.end+begin}))
+    ].sort((a,b)=>a.start-b.start)};
+    for(let i=startLine;i<=endLine;i++){
+      const node=this.lineNodes.get(i);
+      if(node)this.#paint(node,i);
+    }
+    return true;
+  }
   renderLine({start,end,ranges,status},expectedText){
     if(status!=='OK'||!this.lastScheme||expectedText!==this.editor.value)return false;
     const index=lineAt(this.starts,start);

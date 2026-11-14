@@ -107,6 +107,36 @@ export class TextHighlighter {
       return {...identity,status:'OK',ranges,paletteVersion:this.#palette.version};
     }catch(error){return {...identity,status:'FALLBACK',ranges:[],error:String(error)};}
   }
+  async highlightRange({documentId,targetSliceId,revision=0,language='text',
+    lines=[],background=[0,0,0],signal}){
+    const identity={documentId,targetSliceId,revision,language};
+    if(lines.length>100)throw new RangeError('Highlight range exceeds 100 lines');
+    if(!this.enabled||language==='text')return {...identity,status:'FALLBACK',ranges:[]};
+    try{
+      const engine=await this.#engine();
+      if(signal?.aborted)return {...identity,status:'STALE',ranges:[]};
+      if(!engine.getLoadedLanguages().includes(language))await engine.loadLanguage(language);
+      if(signal?.aborted)return {...identity,status:'STALE',ranges:[]};
+      const result=engine.codeToTokens(lines.join('\n'),{
+        lang:language,theme:'github-dark',includeExplanation:true
+      });
+      const colors=this.#palette.resolve(background),ranges=[];
+      let cursor=0;
+      for(let i=0;i<result.tokens.length;i++){
+        for(const token of result.tokens[i]){
+          const end=cursor+token.content.length;
+          if(end>cursor){
+            const category=categoryFor(
+              token.explanation?.flatMap(x=>x.scopes?.map(s=>s.scopeName)||[])||[]);
+            ranges.push({start:cursor,end,token:category,color:colors[category]});
+          }
+          cursor=end;
+        }
+        if(i<result.tokens.length-1)cursor++;
+      }
+      return {...identity,status:'OK',ranges,paletteVersion:this.#palette.version};
+    }catch(error){return {...identity,status:'FALLBACK',ranges:[],error:String(error)};}
+  }
   async highlightSlice({documentId,targetSliceId,revision=0,language='text',
     previousSlice='',targetSlice='',nextSlice='',background=[0,0,0],signal}){
     const identity={documentId,targetSliceId,revision,language};
