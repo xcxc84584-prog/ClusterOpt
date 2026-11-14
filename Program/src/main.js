@@ -1,3 +1,5 @@
+import {TextHighlighter,detectLanguage} from './text-highlighter/text-highlighter.js';
+import {HighlightRenderer} from './text-highlighter/highlight-renderer.js';
 import {Explorer} from './explorer.js?v=opt027-inline-ui';
 import {createVTE} from './vte/vte.js';
 import {handleDfomKeydown, handleDfomBeforeInput, buildTabGuideFragment} from './dfom.js';
@@ -154,10 +156,58 @@ const GlobalPropertyRegistry = createGlobalPropertyRegistryClass();
 const SyncStatus = createSyncStatusClass();
 const LANGUAGE=new LanguageProperty();
 const UI_PALETTE = new InterfacePalette();
+const TEXT_HIGHLIGHTER = new TextHighlighter();
+const highlightRenderer = new HighlightRenderer(document.querySelector('#editor'),document.querySelector('#highlightOverlay'));
+let highlightGeneration = 0;
+let highlightTimer = null;
+let highlightAbort = null;
+function scheduleHighlight(){
+  clearTimeout(highlightTimer);
+  highlightRenderer.clear();
+  const generation=++highlightGeneration;
+  highlightAbort?.abort();
+  highlightAbort=new AbortController();
+  if(!TEXT_HIGHLIGHTER.enabled)return;
+  highlightTimer=setTimeout(async()=>{
+    const id=active;
+    if(!id)return;
+    const item=docs.get(id)?.data;
+    if(!item)return;
+    const session=virtualSessions.get(id);
+    const targetIndex=session?session.center:0;
+    const target=editor.value;
+    const signal=highlightAbort.signal;
+    try{
+      // Neighbor indices are relative to TARGET slice, not the viewport.
+      const readNeighbor=async index=>{
+        if(!session||index<0||index>=session.sliceCount)return '';
+        const result=await session.read(index);
+        return result.ok?result.data.content:'';
+      };
+      const previousSlice=await readNeighbor(targetIndex-1);
+      const nextSlice=await readNeighbor(targetIndex+1);
+      if(signal.aborted)return;
+      const bg=getComputedStyle(document.documentElement).getPropertyValue('--ui-editor');
+      const background=(bg.match(/\d+/g)||['0','0','0']).slice(0,3).map(Number);
+      const scheme=await TEXT_HIGHLIGHTER.highlightSlice({documentId:id,
+        targetSliceId:String(targetIndex),revision:generation,
+        language:detectLanguage(item.name),previousSlice,targetSlice:target,nextSlice,
+        background,signal});
+      if(signal.aborted||generation!==highlightGeneration||active!==id||editor.value!==target)return;
+      highlightRenderer.render(scheme);
+      const state=document.querySelector('#highlighterState');
+      if(state)state.textContent=scheme.status==='OK'?'Shiki · '+scheme.language:
+        '純文字模式'+(scheme.error?'（語法引擎不可用）':'');
+      if(scheme.error)omu.emit('TextHighlighter','HighlightSlice',500,scheme.error,true);
+    }catch(error){highlightRenderer.clear();omu.emit('TextHighlighter','HighlightSlice',500,String(error),true);}
+  },180);
+}
+
 const t=(key,...args)=>LANGUAGE.t(key,...args);
 const docs=new Documents(),files=new FileManager(),GLOBALS=new GlobalPropertyRegistry(),syncStates=new SyncStatus();
 GLOBALS.register('LANGUAGE',LANGUAGE);
 GLOBALS.register('UI_PALETTE', UI_PALETTE);
+GLOBALS.register('TEXT_HIGHLIGHTER', TEXT_HIGHLIGHTER);
 GLOBALS.register('STORAGE_PRIORITY', readStoragePriority());
 GLOBALS.register('DOCUMENT_STATUS',syncStates);
 GLOBALS.register('STORAGE_PROGRESS', storageProgress);
@@ -338,6 +388,7 @@ else{$('#filename').textContent=t('unnamed');
 editor.dataset.doc='';
 }updatePos();
 renderTabGuides();
+scheduleHighlight();
 renderSyncStatus();
 }
 function switchDoc(id){
@@ -479,6 +530,7 @@ function renderTabGuides() {
   tabGuide.scrollLeft = editor.scrollLeft;
 }
 editor.addEventListener('input',()=>{
+ scheduleHighlight();
 renderTabGuides();if(!active || editor.readOnly)return;
 const abortSave = saveAbortControllers.get(active);
 if (abortSave && !abortSave.signal.aborted) {
@@ -528,6 +580,7 @@ scheduleRecovery();monitor.onEdit(active);updateLines();updatePos();$('#filename
 const activeTab=[...$('#tabs').children].find(tab=>tab.classList.contains('active'));
 if(activeTab)activeTab.querySelector('.name').textContent=docs.get(active).data.name+' ●';status(t('unsaved'));});
 editor.addEventListener('scroll',()=>{
+ highlightRenderer.sync();
   $('#gutter').scrollTop=editor.scrollTop;
   if (tabGuide) { tabGuide.scrollTop=editor.scrollTop; tabGuide.scrollLeft=editor.scrollLeft; }
   if (active && virtualSessions.has(active)) {
@@ -996,6 +1049,7 @@ async function renderVirtualSlice(id, center = null) {
     }
     editor.value = current.content;
     renderTabGuides();
+    scheduleHighlight();
     editor.dataset.doc = id;
     editor.dataset.sliceReady = 'true';
     const position = session.getPosition(index);
@@ -1283,6 +1337,22 @@ $('#toolBtn').addEventListener('click', event => {
 });
 
 const paletteDialog = $('#paletteDialog');
+const highlighterDialog=$('#highlighterDialog');
+$('#highlighterBtn').addEventListener('click',event=>{
+ event.stopPropagation();$('#menu').hidden=true;$('#toolOptions').hidden=true;
+ $('#highlighterEnabled').checked=TEXT_HIGHLIGHTER.enabled;
+ highlighterDialog.showModal();
+});
+$('#highlighterClose').addEventListener('click',()=>highlighterDialog.close());
+$('#highlighterDone').addEventListener('click',()=>highlighterDialog.close());
+highlighterDialog.addEventListener('click',event=>{if(event.target===highlighterDialog)highlighterDialog.close();});
+$('#highlighterEnabled').addEventListener('change',event=>{
+ TEXT_HIGHLIGHTER.enabled=event.target.checked;
+ try{localStorage.setItem('cluster.textHighlighter.enabled',String(TEXT_HIGHLIGHTER.enabled));}catch(_){}
+ scheduleHighlight();
+});
+try{TEXT_HIGHLIGHTER.enabled=localStorage.getItem('cluster.textHighlighter.enabled')!=='false';}catch(_){}
+UI_PALETTE.subscribe(()=>scheduleHighlight());
 
 $('#paletteBtn').addEventListener('click', event => {
   event.stopPropagation();
