@@ -252,7 +252,7 @@ function switchDoc(id){
   } else capturePosition();
   active=id;
   refresh();
-  if (savingDocuments.has(id) || rebuildingDocuments.has(id)) {
+  if (savingDocuments.has(id) || backgroundIndexing.has(id) || rebuildingDocuments.has(id)) {
     // Keep the original SAVE/INDEX operation and its progress intact.
     // A return to this tab must not start another LOAD operation.
     renderSyncStatus();
@@ -491,7 +491,7 @@ editor.addEventListener('keydown',e=>{
 const s=editor.selectionStart;editor.setRangeText('    ',s,editor.selectionEnd,'end');editor.dispatchEvent(new Event('input'));}});
 async function doSave(as=false){if(!active)return;
 const id=active;
-if (savingDocuments.has(id) || rebuildingDocuments.has(id)) return;
+if (savingDocuments.has(id) || backgroundIndexing.has(id) || rebuildingDocuments.has(id)) return;
 capturePosition(id);
 if (binaryDocuments.has(id)) {
   const data = binaryDocuments.get(id);
