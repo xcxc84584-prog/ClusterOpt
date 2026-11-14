@@ -4,9 +4,9 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>
-      Cluster Opt 0.0.16
+      Cluster Opt 0.0.17
     </title>
-    <link rel="stylesheet" href="./src/style.css?v=opt016-dfom">
+    <link rel="stylesheet" href="./src/style.css?v=opt017-explorer">
   </head>
   <body>
     <div id="app">
@@ -19,10 +19,10 @@
             Cluster
           </strong>
           <small>
-            v0.0.16
+            v0.0.17
           </small>
         </div>
-        <div class="menu-wrap">
+        <button id="explorerToggle" type="button" aria-controls="explorerPanel" aria-expanded="false" title="檔案總管">☰</button><div class="menu-wrap">
           <button id="menuBtn">
             檔案⌄
           </button>
@@ -78,7 +78,7 @@
           </nav>
         </div>
       </header>
-      <div id="tabs">
+      <div id="clusterWorkspaceShell"><aside id="explorerPanel" hidden aria-label="Explorer"><div class="explorer-header"><strong id="explorerTitle">檔案總管</strong><button id="explorerClose" type="button" title="關閉">×</button></div><div class="explorer-actions"><button id="explorerAddFolder" type="button" title="開啟資料夾">▣＋</button><button id="explorerAddFile" type="button" title="開啟文件">◇＋</button></div><input id="explorerSearch" type="search" placeholder="搜尋文件" autocomplete="off" aria-label="搜尋文件"><div id="explorerTree" role="tree"></div></aside><div id="clusterEditorColumn"><div id="tabs">
       </div>
       <main id="workspace">
         <div id="empty">
@@ -100,7 +100,7 @@
           <textarea id="editor" spellcheck="false" wrap="off" aria-label="文件編輯器">
           </textarea>
         </div>
-      </main>
+      </main></div></div>
       <div id="goLineBar" role="group" aria-label="跳轉行工具"><label for="goLineInput">行號</label><input id="goLineInput" type="number" min="1" step="1" value="1"><button id="goLineButton" type="button">跳至行</button><span class="goLineHint">載入完成後才會跳轉</span></div>
       <footer>
         <div class="meter">
@@ -181,7 +181,7 @@
       </div>
     </dialog>
     <input type="file" id="fileInput" multiple hidden>
-    <script type="module" src="./src/main.js?v=opt016-dfom">
+    <script type="module" src="./src/main.js?v=opt017-explorer">
     </script>
   <dialog id="ftiDialog" aria-labelledby="ftiDialogTitle" aria-describedby="ftiReason">
   <div class="fti-dialog-head"><span class="fti-symbol">◇</span><strong id="ftiDialogTitle">文件解析失敗</strong></div>
