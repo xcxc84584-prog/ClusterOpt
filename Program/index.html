@@ -19,7 +19,7 @@
             Cluster
           </strong>
           <small>
-            v0.0.10+9
+            v0.0.10+10
           </small>
         </div>
         <div class="menu-wrap">
@@ -180,14 +180,14 @@
       </div>
     </dialog>
     <input type="file" id="fileInput" multiple hidden>
-    <script type="module" src="./src/main.js?v=opt010-plus9-edit-interrupt-viewport">
+    <script type="module" src="./src/main.js?v=opt010-plus10-tab-close-force-text">
     </script>
   <dialog id="ftiDialog" aria-labelledby="ftiDialogTitle" aria-describedby="ftiReason">
   <div class="fti-dialog-head"><span class="fti-symbol">◇</span><strong id="ftiDialogTitle">文件解析失敗</strong></div>
   <p id="ftiFileName"></p>
   <p id="ftiReason"></p>
-  <p class="fti-note">強制載入將保留原始位元組，不會嘗試文字解碼或修改文件。</p>
-  <div class="fti-actions"><button type="button" id="ftiCancel">取消載入</button><button type="button" id="ftiForce">強制載入（二進位）</button></div>
+  <p class="fti-note">強制以文字模式顯示；無法解碼的位元組會顯示為 �。未修改的切片保留原始位元組，修改後儲存可能改變其編碼。</p>
+  <div class="fti-actions"><button type="button" id="ftiCancel">取消載入</button><button type="button" id="ftiForce">強制載入（文字）</button></div>
 </dialog>
 </body>
 </html>
