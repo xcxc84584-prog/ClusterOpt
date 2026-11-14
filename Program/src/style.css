@@ -967,3 +967,31 @@ header .menu-wrap { margin-left:auto; }
 #explorerPanel .explorer-actions { grid-template-columns:1fr 1fr 32px; }
 #explorerTree .explorer-create-row { display:flex; align-items:center; }
 #explorerTree .explorer-create-input { flex:1; min-width:0; width:auto; background:var(--ui-panel); color:var(--ui-text-on-panel); border:1px solid var(--ui-accent); outline:none; padding:4px 6px; }
+
+/* v0.0.30 — native Cluster palette, read-only syntax overlay. */
+#highlightOverlay {
+  position:absolute; z-index:1; inset:0 0 0 60px; margin:0;
+  padding:16px; overflow:hidden; pointer-events:none; white-space:pre;
+  tab-size:4; font:14px/22px Consolas,'Microsoft JhengHei',monospace;
+  color:var(--ui-text); background:transparent; border:0;
+}
+#editorPane textarea {z-index:2; caret-color:var(--ui-text);}
+#editorPane textarea.highlight-active {
+  color:transparent !important; -webkit-text-fill-color:transparent;
+}
+#editorPane textarea.highlight-active::selection {
+  background:rgba(116,149,255,.35); -webkit-text-fill-color:transparent;
+}
+.highlighter-dialog {
+  border:1px solid var(--ui-border);border-radius:12px;
+  background:var(--ui-panel);color:var(--ui-text-on-panel);
+  width:min(460px,calc(100vw - 24px));padding:0;
+  box-shadow:0 24px 70px #0009;
+}
+.highlighter-dialog::backdrop {background:rgba(0,0,0,.6);}
+.highlighter-dialog .palette-modal-header,
+.highlighter-dialog .palette-modal-footer {padding:18px 22px;}
+.highlighter-content {padding:18px 22px;display:grid;gap:12px;}
+.highlighter-content p {margin:0;color:var(--ui-muted);line-height:1.6;}
+.highlighter-switch {display:flex;align-items:center;gap:10px;font-size:14px;}
+#highlighterState {font-size:11px;}

@@ -6,7 +6,7 @@
     <title>
       Cluster Opt 0.0.27
     </title>
-    <link rel="stylesheet" href="./src/style.css?v=opt027-inline-ui">
+    <link rel="stylesheet" href="./src/style.css?v=opt030-shiki">
   </head>
   <body>
     <div id="app">
@@ -19,7 +19,7 @@
             Cluster
           </strong>
           <small>
-            v0.0.27
+            v0.0.30
           </small>
         </div>
         <div class="header-utility"><button id="explorerToggle" type="button" aria-controls="explorerPanel" aria-expanded="false" title="檔案總管">☰ Explorer</button></div><div class="menu-wrap">
@@ -64,6 +64,7 @@
                   English <span class="locale-check"></span>
                 </button>
               </div>
+              <button id="highlighterBtn" type="button">◇ 文本著色器</button>
               <button id="paletteBtn" type="button" aria-expanded="false">
                 介面調色盤 ›
               </button>
@@ -97,6 +98,7 @@
             1
           </div>
           <div id="tabGuide" aria-hidden="true"></div>
+          <pre id="highlightOverlay" aria-hidden="true"></pre>
           <textarea id="editor" spellcheck="false" wrap="off" aria-label="文件編輯器">
           </textarea>
         </div>
@@ -180,8 +182,13 @@
         <button id="paletteDone" type="button">完成</button>
       </div>
     </dialog>
+    <dialog id="highlighterDialog" aria-labelledby="highlighterTitle" class="highlighter-dialog">
+      <div class="palette-modal-header"><div><div class="palette-eyebrow">CLUSTER / EDITOR</div><h2 id="highlighterTitle">文本著色器</h2></div><button id="highlighterClose" class="palette-close" type="button" aria-label="關閉">×</button></div>
+      <div class="highlighter-content"><label class="highlighter-switch"><input id="highlighterEnabled" type="checkbox" checked> 啟用 Shiki 語法著色</label><p>依檔案類型自動識別語言；色彩跟隨介面調色盤。</p><p>僅處理被著色切片及其相鄰切片，不修改文件。</p><p id="highlighterState">語法引擎按需載入</p></div>
+      <div class="palette-modal-footer"><span>CLUSTER / TEXT</span><button id="highlighterDone" type="button">完成</button></div>
+    </dialog>
     <input type="file" id="fileInput" multiple hidden>
-    <script type="module" src="./src/main.js?v=opt027-inline-ui">
+    <script type="module" src="./src/main.js?v=opt030-shiki">
     </script>
   <dialog id="ftiDialog" aria-labelledby="ftiDialogTitle" aria-describedby="ftiReason">
   <div class="fti-dialog-head"><span class="fti-symbol">◇</span><strong id="ftiDialogTitle">文件解析失敗</strong></div>
