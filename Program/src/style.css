@@ -799,3 +799,44 @@ footer .grow { flex: 1 1 auto; min-width: 0; }
   footer #status { flex-basis: 100px; width: 100px; }
   footer #syncLabel { flex-basis: 100px; width: 100px; }
 }
+
+/* Editor chrome must consume the global UI_PALETTE contract, not local dark constants. */
+#goLineBar {
+  background: var(--ui-surface);
+  border-top-color: var(--ui-border);
+  color: var(--ui-text-on-surface);
+}
+#goLineBar button,
+#goLineInput {
+  background: var(--ui-control);
+  border-color: var(--ui-border);
+  color: var(--ui-text-on-control);
+}
+#goLineBar button:hover:not(:disabled) { background: var(--ui-hover); }
+#goLineBar .goLineHint { color: var(--ui-text-on-surface); opacity: .75; }
+#goLineBar :focus-visible { outline: 2px solid var(--ui-text-on-surface); outline-offset: 2px; }
+footer {
+  background: var(--ui-surface);
+  border-top-color: var(--ui-border);
+  color: var(--ui-text-on-surface);
+}
+footer .meter { border-color: var(--ui-border); background: var(--ui-panel); }
+footer #meterPercent,
+footer #syncLabel,
+footer #status,
+footer #filename,
+footer #position,
+footer #fileType { color: var(--ui-text-on-surface); }
+footer select { background: var(--ui-control); border-color: var(--ui-border); color: var(--ui-text-on-control); }
+#recoveryPrebuild:not([hidden]) { background: var(--ui-background); color: var(--ui-text); }
+#recoveryProgress { accent-color: var(--ui-accent); }
+#ftiDialog {
+  background: var(--ui-surface);
+  color: var(--ui-text-on-surface);
+  border-color: var(--ui-border);
+}
+#ftiDialog .fti-symbol { color: var(--ui-text-on-surface); }
+#ftiDialog .fti-note,
+#ftiDialog #ftiReason { color: var(--ui-text-on-surface); opacity: .78; }
+#ftiDialog .fti-actions button { background: var(--ui-control); border-color: var(--ui-border); color: var(--ui-text-on-control); }
+#ftiDialog #ftiForce { background: var(--ui-hover); color: var(--ui-text-on-control); font-weight: 700; }
