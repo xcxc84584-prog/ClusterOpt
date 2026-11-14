@@ -1,120 +1,137 @@
-// Read-only overlay: textarea owns all editing and selection.
-function lineIndex(text, offset) {
-  let index=0;
-  for(let i=0;i<offset&&i<text.length;i++)if(text[i]==='\n')index++;
-  return index;
+// ClusterOpt v0.0.33: viewport-windowed read-only overlay.
+// CodeMirror's visible-range decorations inspired this approach. The native
+// textarea remains the sole owner of text, selection, IME and undo history.
+export function buildLineStarts(text) {
+  const starts=[0];
+  for(let i=0;i<text.length;i++)if(text.charCodeAt(i)===10)starts.push(i+1);
+  return starts;
 }
-function lineStart(text, offset) {
-  return text.lastIndexOf('\n',Math.max(0,offset-1))+1;
+export function lineAt(starts,offset) {
+  let low=0,high=starts.length-1;
+  while(low<high){
+    const mid=Math.ceil((low+high)/2);
+    if(starts[mid]<=offset)low=mid;
+    else high=mid-1;
+  }
+  return low;
+}
+export function remapRanges(ranges,before,after) {
+  let prefix=0;
+  while(prefix<before.length&&prefix<after.length&&before[prefix]===after[prefix])prefix++;
+  let suffix=0;
+  while(suffix<before.length-prefix&&suffix<after.length-prefix&&
+    before[before.length-1-suffix]===after[after.length-1-suffix])suffix++;
+  const oldEnd=before.length-suffix;
+  const delta=after.length-before.length;
+  return ranges.flatMap(r=>{
+    if(r.end<=prefix)return [r];
+    if(r.start>=oldEnd)return [{...r,start:r.start+delta,end:r.end+delta}];
+    const parts=[];
+    if(r.start<prefix)parts.push({...r,end:prefix});
+    if(r.end>oldEnd)parts.push({...r,start:after.length-suffix,end:r.end+delta});
+    return parts;
+  });
 }
 export class HighlightRenderer {
   constructor(textarea,overlay){
-    this.editor=textarea;this.overlay=overlay;this.lastScheme=null;this.lastText='';
-    this.lines=[];
+    this.editor=textarea;this.overlay=overlay;
+    this.lastScheme=null;this.lastText='';
+    this.starts=[0];this.windowStart=-1;this.windowEnd=-1;
+    this.lineNodes=new Map();
   }
   clear(){
-    this.lastScheme=null;this.lastText='';this.lines=[];
+    this.lastScheme=null;this.lastText='';this.starts=[0];
+    this.windowStart=-1;this.windowEnd=-1;this.lineNodes.clear();
     this.overlay.replaceChildren();this.editor.classList.remove('highlight-active');
   }
-  #paintLine(element,text,ranges){
+  #lineHeight(){
+    return Number.parseFloat(getComputedStyle(this.editor).lineHeight)||22;
+  }
+  #paint(node,index){
+    const start=this.starts[index],end=index+1<this.starts.length?
+      this.starts[index+1]-1:this.lastText.length;
+    const text=this.lastText.slice(start,end);
     const fragment=document.createDocumentFragment();
+    const ranges=this.lastScheme?.ranges||[];
+    // Binary search the first overlapping token, then scan this line only.
+    let lo=0,hi=ranges.length;
+    while(lo<hi){const mid=(lo+hi)>>1;if(ranges[mid].end<=start)lo=mid+1;else hi=mid;}
     let cursor=0;
-    for(const range of ranges){
-      const start=Math.max(cursor,Math.min(text.length,range.start));
-      const end=Math.max(start,Math.min(text.length,range.end));
-      if(start>cursor)fragment.append(document.createTextNode(text.slice(cursor,start)));
-      if(end>start){
+    for(let i=lo;i<ranges.length&&ranges[i].start<end;i++){
+      const r=ranges[i];
+      const from=Math.max(cursor,r.start-start),to=Math.min(text.length,r.end-start);
+      if(from>cursor)fragment.append(document.createTextNode(text.slice(cursor,from)));
+      if(to>from){
         const span=document.createElement('span');
-        span.style.color=range.color;
-        span.textContent=text.slice(start,end);
+        span.style.color=r.color;
+        span.textContent=text.slice(from,to);
         fragment.append(span);
       }
-      cursor=end;
+      cursor=Math.max(cursor,to);
     }
     if(cursor<text.length)fragment.append(document.createTextNode(text.slice(cursor)));
-    // One visual line per element; keep empty and trailing lines measurable.
     if(!text.length)fragment.append(document.createTextNode(' '));
-    element.replaceChildren(fragment);
+    node.replaceChildren(fragment);
   }
-  #lineRanges(ranges,start,end){
-    return ranges.filter(r=>r.end>start&&r.start<end).map(r=>({
-      ...r,start:Math.max(0,r.start-start),end:Math.min(end-start,r.end-start)
-    }));
+  #draw(force=false){
+    if(!this.lastScheme)return;
+    const height=this.#lineHeight();
+    const margin=12;
+    const first=Math.max(0,Math.floor(this.editor.scrollTop/height)-margin);
+    const last=Math.min(this.starts.length,Math.ceil(
+      (this.editor.scrollTop+this.editor.clientHeight)/height)+margin);
+    if(!force&&first===this.windowStart&&last===this.windowEnd)return;
+    this.windowStart=first;this.windowEnd=last;
+    const fragment=document.createDocumentFragment(),nodes=new Map();
+    const top=document.createElement('div');
+    top.style.height=(first*height)+'px';fragment.append(top);
+    for(let i=first;i<last;i++){
+      const node=this.lineNodes.get(i)||document.createElement('div');
+      node.style.height=height+'px';
+      node.style.lineHeight=height+'px';
+      node.style.whiteSpace='pre';
+      if(force||!this.lineNodes.has(i))this.#paint(node,i);
+      fragment.append(node);nodes.set(i,node);
+    }
+    const bottom=document.createElement('div');
+    bottom.style.height=((this.starts.length-last)*height)+'px';
+    fragment.append(bottom);
+    this.overlay.replaceChildren(fragment);this.lineNodes=nodes;
   }
   render(scheme){
     if(scheme.status!=='OK'){this.clear();return;}
-    const value=this.editor.value;
-    const lines=value.split('\n'),fragment=document.createDocumentFragment();
-    let offset=0;this.lines=[];
-    for(const text of lines){
-      const element=document.createElement('div');
-      element.style.height='22px';
-      element.style.whiteSpace='pre';
-      this.#paintLine(element,text,this.#lineRanges(scheme.ranges,offset,offset+text.length));
-      fragment.append(element);this.lines.push(element);
-      offset+=text.length+1;
-    }
-    this.overlay.replaceChildren(fragment);
-    this.lastText=value;this.lastScheme=scheme;
+    this.lastText=this.editor.value;
+    this.starts=buildLineStarts(this.lastText);
+    this.lastScheme={...scheme,ranges:[...scheme.ranges].sort((a,b)=>a.start-b.start)};
+    this.windowStart=-1;this.#draw(true);
     this.editor.classList.add('highlight-active');this.sync();
-  }
-  // Fast path: repaint ONLY the edited line. Other line nodes retain their colors.
-  renderLine({start,end,ranges,status},expectedText){
-    if(status!=='OK'||!this.lastScheme)return false;
-    const value=this.editor.value;
-    if(value!==expectedText)return false;
-    const index=lineIndex(value,start);
-    const element=this.lines[index];
-    if(!element)return false;
-    const begin=lineStart(value,start);
-    const finish=value.indexOf('\n',begin);
-    const lineEnd=finish<0?value.length:finish;
-    if(end>lineEnd)return false;
-    const line=value.slice(begin,lineEnd);
-    this.#paintLine(element,line,ranges);
-    // Preserve old ranges outside the modified line; replace this line's ranges.
-    const old=this.lastScheme.ranges.filter(r=>r.end<=begin||r.start>=lineEnd);
-    this.lastScheme={...this.lastScheme,ranges:[
-      ...old,...ranges.map(r=>({...r,start:r.start+begin,end:r.end+begin}))
-    ].sort((a,b)=>a.start-b.start)};
-    this.lastText=value;this.sync();
-    return true;
   }
   retainDuringEdit(){
     if(!this.lastScheme||!this.editor.classList.contains('highlight-active'))return;
-    const before=this.lastText,after=this.editor.value;
-    if(before===after)return;
-    let prefix=0;
-    while(prefix<before.length&&prefix<after.length&&before[prefix]===after[prefix])prefix++;
-    let suffix=0;
-    while(suffix<before.length-prefix&&suffix<after.length-prefix&&
-      before[before.length-1-suffix]===after[after.length-1-suffix])suffix++;
-    const oldEnd=before.length-suffix,newEnd=after.length-suffix;
-    const oldStart=lineStart(before,prefix),newStart=lineStart(after,prefix);
-    const oldLineEnd=before.indexOf('\n',oldEnd);
-    const newLineEnd=after.indexOf('\n',newEnd);
-    const oldFinish=oldLineEnd<0?before.length:oldLineEnd;
-    const newFinish=newLineEnd<0?after.length:newLineEnd;
-    const first=lineIndex(before,oldStart);
-    const remove=before.slice(oldStart,oldFinish).split('\n').length;
-    const replacement=after.slice(newStart,newFinish).split('\n');
-    const delta=after.length-before.length;
-    const oldRanges=this.lastScheme.ranges;
-    const preserved=oldRanges.filter(r=>r.end<=oldStart||r.start>=oldFinish)
-      .map(r=>r.start>=oldFinish?{...r,start:r.start+delta,end:r.end+delta}:r);
-    const elements=replacement.map(text=>{
-      const node=document.createElement('div');
-      node.style.height='22px';node.style.whiteSpace='pre';
-      this.#paintLine(node,text,[]);return node;
-    });
-    const removed=this.lines.splice(first,remove,...elements);
-    const anchor=this.lines[first+elements.length]||null;
-    for(const node of removed)node.remove();
-    for(const node of elements)this.overlay.insertBefore(node,anchor);
-    this.lastScheme={...this.lastScheme,ranges:preserved};
-    this.lastText=after;this.sync();
+    const next=this.editor.value;
+    if(next===this.lastText)return;
+    this.lastScheme={...this.lastScheme,
+      ranges:remapRanges(this.lastScheme.ranges,this.lastText,next)};
+    this.lastText=next;
+    this.starts=buildLineStarts(next);
+    this.windowStart=-1;this.#draw(true);this.sync();
+  }
+  renderLine({start,end,ranges,status},expectedText){
+    if(status!=='OK'||!this.lastScheme||expectedText!==this.editor.value)return false;
+    const index=lineAt(this.starts,start);
+    const begin=this.starts[index];
+    const finish=index+1<this.starts.length?this.starts[index+1]-1:this.lastText.length;
+    if(end>finish)return false;
+    const existing=this.lastScheme.ranges.filter(r=>r.end<=begin||r.start>=finish);
+    this.lastScheme={...this.lastScheme,ranges:[
+      ...existing,...ranges.map(r=>({...r,start:r.start+begin,end:r.end+begin}))
+    ].sort((a,b)=>a.start-b.start)};
+    const node=this.lineNodes.get(index);
+    if(node)this.#paint(node,index);
+    return true;
   }
   sync(){
+    this.#draw();
     this.overlay.scrollTop=this.editor.scrollTop;
     this.overlay.scrollLeft=this.editor.scrollLeft;
   }
