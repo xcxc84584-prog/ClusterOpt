@@ -1486,7 +1486,7 @@ updatePaletteControls();
           if (!blob) continue;
           const created = docs.create(item.name, '', item.handle || null);
           const id = created.data.id;
-          if(item.sourceEncoding && item.sourceEncoding!=='UTF-8') {
+          if(item.handle && item.sourceEncoding && item.sourceEncoding!=='UTF-8') {
             blob=await transcodeToUtf8(blob,item.sourceEncoding);
           }
           const session = new VirtualFileSession(id, blob, {forceText: item.forceText === true,
