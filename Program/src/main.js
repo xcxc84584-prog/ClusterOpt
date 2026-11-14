@@ -286,6 +286,7 @@ if (virtualSessions.has(active)) {
 else{$('#filename').textContent=t('unnamed');
 editor.dataset.doc='';
 }updatePos();
+renderTabGuides();
 renderSyncStatus();
 }
 function switchDoc(id){
@@ -937,6 +938,7 @@ async function renderVirtualSlice(id, center = null) {
       throw new Error('Requested slice is unavailable');
     }
     editor.value = current.content;
+    renderTabGuides();
     editor.dataset.doc = id;
     editor.dataset.sliceReady = 'true';
     const position = session.getPosition(index);
