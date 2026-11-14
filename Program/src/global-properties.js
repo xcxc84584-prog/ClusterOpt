@@ -11,10 +11,10 @@ this.#values.set(name,value);
 }
  get(name){return this.#values.get(name);
 }
- set(name,value){if(!this.#values.has(name))return contract(false,null,404);
+ set(name,value){if(!this.#values.has(name))return Object.freeze({ok: false, code: 404});
 this.#values.set(name,value);
 for(const cb of this.#listeners.get(name)||[])cb(value);
-return contract(true);
+return Object.freeze({ok: true, code: 200});
 }
  subscribe(name,cb){if(!this.#listeners.has(name))this.#listeners.set(name,new Set());
 this.#listeners.get(name).add(cb);
