@@ -22,7 +22,8 @@ const olr = new OverloadRestorer();
 const windowLoader = new WindowLoader(sliceLoader, fmc);
 const viewPositions = new Map();
 const virtualSessions = new Map();
-let virtualRenderGeneration = 0;
+const virtualRenderGenerations = new Map();
+const rebuildingDocuments = new Set();
 let virtualEditQueue = Promise.resolve();
 let recoveryTimer = null;
 let restoring = false;
@@ -171,8 +172,8 @@ function updateEditorLock() {
   const operation = active ? storageProgress.get(active) : null;
   const loading = !!active && (syncStates.get(active) === 'LOADING' ||
     (['LOAD', 'INDEX'].includes(operation?.operationType) && operation.state === 'RUNNING'));
-  const unavailable = !!active && virtualSessions.has(active) &&
-    editor.dataset.doc !== active;
+  const unavailable = !!active && (rebuildingDocuments.has(active) ||
+    (virtualSessions.has(active) && editor.dataset.doc !== active));
   editor.readOnly = loading || unavailable;
   editor.setAttribute('aria-readonly', String(loading));
   editor.title = loading ? 'Loading slices — editing is disabled' :
@@ -225,7 +226,9 @@ function switchDoc(id){
   } else capturePosition();
   active=id;
   refresh();
-  if (virtualSessions.has(id)) {
+  if (rebuildingDocuments.has(id)) {
+    showRecoveryFor(id);
+  } else if (virtualSessions.has(id)) {
     renderVirtualSlice(id);
   } else {
     restorePosition(id);
@@ -245,6 +248,8 @@ if(!d)return;
 if(d.dirty&&!confirm(t('confirmClose',d.name)))return;
 monitor.unwatch(id);
 virtualSessions.delete(id);
+rebuildingDocuments.delete(id);
+virtualRenderGenerations.delete(id);
 viewPositions.delete(id);
 docs.close(id);
 if(active===id)active=docs.ids().at(-1)||null;
@@ -385,9 +390,26 @@ if (virtualSessions.has(id)) {
       handle = await window.showSaveFilePicker({suggestedName: d.name});
     }
     if (!handle) throw new Error('Streaming save requires a file handle');
-    await virtualSessions.get(id).save(handle, progress => {
+    const session = virtualSessions.get(id);
+    const savedCenter = session.center;
+    const savedPosition = session.getPosition(savedCenter);
+    await session.save(handle, progress => {
       storageProgress.update(operationId, progress.completed, 'FLUSH');
     });
+    const reindexId = storageProgress.start(id, 'INDEX', session.sliceCount);
+    rebuildingDocuments.add(id);
+    syncStates.set(id, 'LOADING');
+    try {
+      await session.indexLines(progress =>
+        storageProgress.update(reindexId, progress.completed, 'INDEX'));
+      storageProgress.finish(reindexId, 'SUCCESS');
+      const center = Math.min(savedCenter, session.sliceCount - 1);
+      if (savedPosition) session.setPosition(center, savedPosition);
+      if (active === id) await renderVirtualSlice(id, center);
+    } finally {
+      rebuildingDocuments.delete(id);
+      if (active === id) recoveryPrebuild.hidden = true;
+    }
     res = contract(true, {handle, name: handle.name});
   } catch (error) {
     res = contract(false, null, 500, String(error));
@@ -403,8 +425,10 @@ if(res.data.handle && !virtualSessions.has(id)){monitor.watch(id,d.content);
 if(docs.get(id).data.revision!==revision)monitor.onEdit(id);
 }
 else syncStates.set(id,'UNVERIFIED');
-refresh();
-restorePosition(id);
+if (active === id) {
+  refresh();
+  if (!virtualSessions.has(id)) restorePosition(id);
+}
 scheduleRecovery();
 status(t(res.data.download?'downloaded':'saved'));
 }
@@ -425,7 +449,7 @@ async function createVirtual(item) {
   try {
     await session.indexLines(progress => storageProgress.update(initId, progress.completed, 'INDEX'));
     storageProgress.finish(initId, 'SUCCESS');
-    await renderVirtualSlice(id);
+    if (active === id) await renderVirtualSlice(id);
   } catch (error) {
     storageProgress.finish(initId, 'ERROR');
     syncStates.set(id, 'ERROR');
@@ -438,7 +462,8 @@ async function createVirtual(item) {
 async function renderVirtualSlice(id, center = null) {
   const session = virtualSessions.get(id);
   if (!session) return;
-  const generation = ++virtualRenderGeneration;
+  const generation = (virtualRenderGenerations.get(id) || 0) + 1;
+  virtualRenderGenerations.set(id, generation);
   syncStates.set(id, 'LOADING');
   const index = center === null ? session.center : center;
   // Only the requested physical slice is materialized; no neighbor preloading.
@@ -447,11 +472,11 @@ async function renderVirtualSlice(id, center = null) {
   let succeeded = false;
   try {
     await virtualEditQueue;
-    if (generation !== virtualRenderGeneration || active !== id) return;
+    if (generation !== virtualRenderGenerations.get(id) || active !== id) return;
     const result = await session.window(index, progress => {
       storageProgress.update(operationId, progress.completed, 'READ');
     });
-    if (generation !== virtualRenderGeneration || active !== id) return;
+    if (generation !== virtualRenderGenerations.get(id) || active !== id) return;
     if (!result.ok) throw new Error(result.message || 'Slice load failed');
     const current = result.data.slices.find(item => item.index === index);
     if (!current || typeof current.content !== 'string') {
@@ -485,14 +510,14 @@ async function renderVirtualSlice(id, center = null) {
     succeeded = true;
     syncStates.set(id, session.dirty ? 'DIVERGED' : 'UNVERIFIED');
   } catch (error) {
-    if (generation === virtualRenderGeneration && active === id) {
+    if (generation === virtualRenderGenerations.get(id) && active === id) {
       syncStates.set(id, 'ERROR');
       status('Slice load failed: ' + String(error));
       omu.emit('VirtualEditor', 'Load', 500, String(error), true);
     }
   } finally {
     storageProgress.finish(operationId, succeeded ? 'SUCCESS' : 'ERROR');
-    if (generation === virtualRenderGeneration && active === id &&
+    if (generation === virtualRenderGenerations.get(id) && active === id &&
         syncStates.get(id) === 'LOADING') syncStates.set(id, 'ERROR');
     updateEditorLock();
   }
@@ -536,7 +561,7 @@ function renderSyncStatus() {
   const bar = $('#meterFill');
   const percent = progress && progress.state === 'RUNNING'
     ? progress.progressPercent : null;
-  const saving = state === 'SAVING' || state === 'LOADING';
+  const saving = state === 'SAVING' || state === 'LOADING' || progress?.state === 'RUNNING';
   updateEditorLock();
   bar.style.width = saving && percent !== null ? percent + '%' : '100%';
   bar.style.background = colors[state] || colors.UNVERIFIED;
@@ -562,7 +587,10 @@ function renderSyncStatus() {
   updateEditorLock();
 }
 storageProgress.subscribe(operation => {
-  if (operation.documentId === active) renderSyncStatus();
+  if (operation.documentId === active) {
+    renderSyncStatus();
+    if (rebuildingDocuments.has(active)) showRecoveryFor(active);
+  }
 });
 syncStates.subscribe((id)=>{if(id===active)renderSyncStatus();});
 $('#priority').value=GLOBALS.get('STORAGE_PRIORITY');
@@ -743,6 +771,12 @@ function recoveryDisplay(name, completed = 0, total = 1, stage = '建立切片�
   document.querySelector('#recoveryCount').textContent =
     completed + ' / ' + total + ' slices (' + percent + '%)';
 }
+function showRecoveryFor(id) {
+  if (id !== active || !rebuildingDocuments.has(id)) return;
+  const operation = storageProgress.get(id);
+  recoveryDisplay(docs.get(id).data?.name || '文件',
+    operation?.completedUnits || 0, operation?.totalUnits || 1, '視窗重建中');
+}
 // Restore virtual drafts and small documents after reload.
 (async () => {
   try {
@@ -772,6 +806,7 @@ function recoveryDisplay(name, completed = 0, total = 1, stage = '建立切片�
           virtualSessions.set(id, session);
           mapping.set(item.id, id);
           recoveryDisplay(item.name, 0, session.sliceCount);
+          rebuildingDocuments.add(id);
           const indexing = storageProgress.start(id, 'INDEX', session.sliceCount);
           try {
             await session.indexLines(progress => {
@@ -791,6 +826,7 @@ function recoveryDisplay(name, completed = 0, total = 1, stage = '建立切片�
             scrollTop: 0, scrollLeft: 0, selectionStart: 0, selectionEnd: 0
           });
           await session.window(center);
+          rebuildingDocuments.delete(id);
           continue;
         }
         if (typeof item.content !== 'string') continue;
@@ -813,6 +849,7 @@ function recoveryDisplay(name, completed = 0, total = 1, stage = '建立切片�
     omu.emit('OLR', 'Restore', 500, String(error), true);
   } finally {
     restoring = false;
+    rebuildingDocuments.clear();
     recoveryPrebuild.hidden = true;
   }
 })();
