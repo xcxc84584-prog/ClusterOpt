@@ -98,6 +98,7 @@ export class FileManagementCore {
     if (!current.ok || current.data.versionId !== versionId) {
       return {ok: false, code: 409};
     }
+    if (!this.#mvcc.markPersisted(sliceId, versionId)) return {ok: false, code: 409};
     this.#slices.get(sliceId).dirty = false;
     return {ok: true, code: 200};
   }
