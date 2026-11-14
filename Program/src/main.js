@@ -225,6 +225,7 @@ function switchDoc(id){
     });
   } else capturePosition();
   active=id;
+  recoveryPrebuild.hidden = true;
   refresh();
   if (rebuildingDocuments.has(id)) {
     showRecoveryFor(id);
@@ -396,6 +397,7 @@ if (virtualSessions.has(id)) {
     await session.save(handle, progress => {
       storageProgress.update(operationId, progress.completed, 'FLUSH');
     });
+    storageProgress.finish(operationId, 'SUCCESS');
     const reindexId = storageProgress.start(id, 'INDEX', session.sliceCount);
     rebuildingDocuments.add(id);
     syncStates.set(id, 'LOADING');
@@ -406,6 +408,9 @@ if (virtualSessions.has(id)) {
       const center = Math.min(savedCenter, session.sliceCount - 1);
       if (savedPosition) session.setPosition(center, savedPosition);
       if (active === id) await renderVirtualSlice(id, center);
+    } catch (error) {
+      storageProgress.finish(reindexId, 'ERROR');
+      throw error;
     } finally {
       rebuildingDocuments.delete(id);
       if (active === id) recoveryPrebuild.hidden = true;
@@ -805,20 +810,20 @@ function showRecoveryFor(id) {
           const session = new VirtualFileSession(id, blob);
           virtualSessions.set(id, session);
           mapping.set(item.id, id);
-          recoveryDisplay(item.name, 0, session.sliceCount);
+          if (active === id) recoveryDisplay(item.name, 0, session.sliceCount);
           rebuildingDocuments.add(id);
           const indexing = storageProgress.start(id, 'INDEX', session.sliceCount);
           try {
             await session.indexLines(progress => {
               storageProgress.update(indexing, progress.completed, 'INDEX');
-              recoveryDisplay(item.name, progress.completed, progress.total);
+              if (active === id) recoveryDisplay(item.name, progress.completed, progress.total);
             });
             storageProgress.finish(indexing, 'SUCCESS');
           } catch (indexError) {
             storageProgress.finish(indexing, 'ERROR');
             throw indexError;
           }
-          recoveryDisplay(item.name, session.sliceCount, session.sliceCount, '正在還原未提交編輯…');
+          if (active === id) recoveryDisplay(item.name, session.sliceCount, session.sliceCount, '正在還原未提交編輯…');
           await session.restoreEdits(item.edits);
           if (item.edits?.length) docs.update(id, '');
           const center = Math.min(Math.max(0, item.center || 0), session.sliceCount - 1);
