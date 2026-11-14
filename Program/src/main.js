@@ -1,4 +1,5 @@
 import {createVTE} from './vte/vte.js';
+import {handleDfomKeydown, buildTabGuideFragment} from './dfom.js';
 import {readStoragePriority, writeStoragePriority, fileSignature} from './storage-priority.js';
 import {createClusterDependencies} from './dependency-registry.js';
 import {VirtualFileSession} from './fmc/virtual-file-session.js';
@@ -417,7 +418,15 @@ $('#goLineInput').addEventListener('keydown', event => {
 function updatePos(){const p=editor.selectionStart||0,txt=editor.value.slice(0,p),lines=txt.split('\n');
 $('#position').textContent=t('position',lines.length,lines.at(-1).length+1);
 }
-editor.addEventListener('input',()=>{if(!active || editor.readOnly)return;
+const tabGuide = $('#tabGuide');
+function renderTabGuides() {
+  if (!tabGuide) return;
+  tabGuide.replaceChildren(buildTabGuideFragment(document, editor.value));
+  tabGuide.scrollTop = editor.scrollTop;
+  tabGuide.scrollLeft = editor.scrollLeft;
+}
+editor.addEventListener('input',()=>{
+renderTabGuides();if(!active || editor.readOnly)return;
 const abortSave = saveAbortControllers.get(active);
 if (abortSave && !abortSave.signal.aborted) {
   abortSave.abort();
@@ -467,6 +476,7 @@ const activeTab=[...$('#tabs').children].find(tab=>tab.classList.contains('activ
 if(activeTab)activeTab.querySelector('.name').textContent=docs.get(active).data.name+' ●';status(t('unsaved'));});
 editor.addEventListener('scroll',()=>{
   $('#gutter').scrollTop=editor.scrollTop;
+  if (tabGuide) { tabGuide.scrollTop=editor.scrollTop; tabGuide.scrollLeft=editor.scrollLeft; }
   if (active && virtualSessions.has(active)) {
     virtualSessions.get(active).setPosition(
       virtualSessions.get(active).center,
@@ -539,8 +549,10 @@ editor.addEventListener('keydown',e=>{
     scheduleRecovery();
     return;
   }
-  if(e.key==='Tab'){e.preventDefault();
-const s=editor.selectionStart;editor.setRangeText('    ',s,editor.selectionEnd,'end');editor.dispatchEvent(new Event('input'));}});
+  if (handleDfomKeydown(e, editor)) {
+    editor.dispatchEvent(new Event('input', {bubbles: true}));
+  }
+});
 async function doSave(as=false){if(!active)return;
 const id=active;
 if (savingDocuments.has(id) || backgroundIndexing.has(id) || rebuildingDocuments.has(id)) return;
@@ -1110,6 +1122,7 @@ window.ClusterOpt=Object.freeze({clearRecovery:()=>olr.clearAll(),fmcStatus:()=>
     return windowLoader.loadWindow(documentId, center, attached.data.sliceCount);
   },language:()=>LANGUAGE.value,setLanguage:value=>LANGUAGE.set(value),palette:()=>UI_PALETTE.value,setPalette:rgb=>UI_PALETTE.set(rgb),logs:()=>omu.logs(),dependencies:copyDependencies});
 refresh();
+renderTabGuides();
 
 function renderLanguage() {
   document.documentElement.lang=LANGUAGE.value;
