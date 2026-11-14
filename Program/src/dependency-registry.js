@@ -57,7 +57,9 @@ export class DependencyRegistry {
           ...o, properties: [...o.properties]
         })),
         relations: edges.map(e => ({
-          ...e, dyda: this.#direction(e.from, e.to)
+          ...e, dyda: name === null
+            ? this.#direction(e.from, e.to)
+            : this.#direction(name, e.from === name ? e.to : e.from)
         })),
         totalObjects: this.#objects.size,
         totalRelations: this.#edges.size
