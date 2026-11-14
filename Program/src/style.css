@@ -950,14 +950,14 @@ header .menu-wrap { margin-left:auto; }
  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--ui-accent) 42%,transparent);
 }
 #explorerTree .explorer-entry.active:hover { background:color-mix(in srgb,var(--ui-accent) 30%,var(--ui-panel)); }
-#explorerPanel .explorer-context { border-radius:12px; padding:6px; }
-#explorerPanel .explorer-context button { border-radius:8px; }
+.explorer-context { border-radius:12px; padding:6px; }
+.explorer-context button { border-radius:8px; }
 #explorerPanel .explorer-rename { border-radius:7px; }
 
 /* v0.0.22 — separate folder disclosure from left-click action menu. */
 #explorerTree .explorer-disclosure { cursor:pointer; display:inline-flex; align-items:center; justify-content:center; min-width:20px; min-height:24px; border-radius:6px; }
 #explorerTree .explorer-disclosure:hover { background:var(--ui-hover); }
-#explorerPanel .explorer-context { z-index:100; }
+.explorer-context { z-index:100; }
 
 /* Explorer v0.0.24: New, Folder, Open and Refresh share the action rail. */
 #explorerPanel .explorer-actions { grid-template-columns:1fr 1.2fr 1.2fr 32px; gap:4px; }
@@ -1021,7 +1021,7 @@ header .menu-wrap { margin-left:auto; }
 #tabGuide .tab-guide-content { box-sizing:border-box; padding:16px; width:max-content; min-width:100%; white-space:pre; font:inherit; tab-size:4; will-change:transform; }
 
 /* v0.0.42 — compact, grouped Explorer context actions. */
-#explorerPanel .explorer-context {
+.explorer-context {
   box-sizing:border-box; width:224px; min-width:0; max-width:calc(100% - 16px);
   max-height:calc(100% - 16px); overflow-y:auto; overscroll-behavior:contain;
   padding:6px; gap:0; border-radius:12px;
@@ -1036,18 +1036,23 @@ header .menu-wrap { margin-left:auto; }
 .explorer-context-title { font-size:12px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .explorer-context-subtitle { margin-top:2px; font-size:10px; color:var(--ui-muted); }
 .explorer-context-separator { height:1px; margin:5px 6px; background:var(--ui-border); }
-#explorerPanel .explorer-context-item { display:flex; align-items:center; width:100%; gap:10px;
+.explorer-context-item { display:flex; align-items:center; width:100%; gap:10px;
   padding:9px 10px; min-height:35px; border:0; border-radius:7px;
   background:transparent; color:var(--ui-text-on-panel); font:inherit; font-size:12px;
   cursor:pointer; transition:background-color .12s ease; }
-#explorerPanel .explorer-context-item:hover,
-#explorerPanel .explorer-context-item:focus-visible {
+.explorer-context-item:hover,
+.explorer-context-item:focus-visible {
   background:var(--ui-hover); outline:none;
 }
 .explorer-context-icon { width:17px; flex:0 0 17px; text-align:center; font-size:14px; opacity:.85; }
 .explorer-context-label { flex:1; text-align:left; }
-#explorerPanel .explorer-context-item.is-danger { color:#e87878; }
-#explorerPanel .explorer-context-item.is-danger:hover,
-#explorerPanel .explorer-context-item.is-danger:focus-visible {
+.explorer-context-item.is-danger { color:#e87878; }
+.explorer-context-item.is-danger:hover,
+.explorer-context-item.is-danger:focus-visible {
   background:color-mix(in srgb,#d84c4c 18%,var(--ui-panel));
 }
+
+/* v0.0.43 — context menu is portaled beside, never on top of, Explorer. */
+body > .explorer-context { position:fixed; z-index:2000; min-width:0; box-sizing:border-box;
+  overflow-x:hidden; overflow-y:auto; max-height:calc(100dvh - 16px); }
+body > .explorer-context .explorer-context-label { overflow-wrap:anywhere; }
