@@ -677,6 +677,17 @@ async function createBinary(item, type) {
     ' bytes editable; remaining bytes preserved)');
   scheduleRecovery();
 }
+function attachFlagEvents(session) {
+  session.onFlagEvent(event => {
+    // OMU owns the event stream; never log lease tokens or raw slice content.
+    if (event.code >= 400 || event.type === 'FLAG_REVOKED_BY_USER' ||
+        event.type === 'ORF_REVOKED') {
+      omu.emit('FlagUnit', event.type, event.code,
+        [event.sliceId, event.ownerType, event.ownerId, event.reason].filter(Boolean).join(' | '),
+        true);
+    }
+  });
+}
 async function createVirtual(item) {
   let type;
   try {
@@ -703,6 +714,7 @@ async function createVirtual(item) {
   const result = docs.create(item.name, '', item.handle);
   const id = result.data.id;
   const session = new VirtualFileSession(id, item.blob, {forceText: type.mode === 'FORCE_TEXT'});
+  attachFlagEvents(session);
   virtualSessions.set(id, session);
   active = id;
   refresh();
@@ -1134,6 +1146,7 @@ updatePaletteControls();
           const created = docs.create(item.name, '', item.handle || null);
           const id = created.data.id;
           const session = new VirtualFileSession(id, blob, {forceText: item.forceText === true});
+          attachFlagEvents(session);
           virtualSessions.set(id, session);
           mapping.set(item.id, id);
           if (!active) { active = id; refresh(); }

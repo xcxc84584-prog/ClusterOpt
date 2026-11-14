@@ -8,6 +8,20 @@ export class FileManagementCore {
   #mvcc = new MVCCUnit();
   #loaderKey = Symbol('SliceLoader');
   #recoveryProtected = new Set();
+  #flagEvents = new Set();
+  constructor() {
+    this.#flags.subscribe(event => {
+      for (const callback of this.#flagEvents) {
+        try { callback(event); } catch { /* observer isolation */ }
+      }
+    });
+  }
+
+  onFlagEvent(callback) {
+    if (typeof callback !== 'function') throw new TypeError('callback');
+    this.#flagEvents.add(callback);
+    return () => this.#flagEvents.delete(callback);
+  }
 
   get loaderAccess() {
     return Object.freeze({
@@ -49,17 +63,72 @@ export class FileManagementCore {
     return this.#mvcc.read(sliceId, versionId);
   }
 
+  /** USER editing preempts all AGENT leases on this slice. */
+  userWrite(sliceId, userId = 'USER') {
+    if (!this.#slices.has(sliceId)) return {ok: false, code: 404};
+    return this.#flags.userTakeover(sliceId, userId);
+  }
+
+  /** AGENT write does not preempt readers or another writer. */
   acquireWTF(sliceId, ownerId) {
     if (!this.#slices.has(sliceId)) return {ok: false, code: 404};
     return this.#flags.acquire(sliceId, ownerId);
   }
 
-  renewWTF(sliceId, leaseId, token) {
-    return this.#flags.renew(sliceId, leaseId, token);
+  renewWTF(sliceId, leaseId, token, ownerId) {
+    return this.#flags.renew(sliceId, leaseId, token, Date.now(), ownerId);
   }
 
-  releaseWTF(sliceId, leaseId, token) {
-    return this.#flags.release(sliceId, leaseId, token);
+  releaseWTF(sliceId, leaseId, token, ownerId) {
+    return this.#flags.release(sliceId, leaseId, token, ownerId);
+  }
+
+  acquireORF(sliceId, agentId) {
+    if (!this.#slices.has(sliceId)) return {ok: false, code: 404};
+    return this.#flags.acquireRead(sliceId, agentId);
+  }
+  releaseORF(sliceId, leaseId, token, agentId) {
+    return this.#flags.releaseRead(sliceId, leaseId, token, agentId);
+  }
+  renewORF(sliceId, leaseId, token, agentId) {
+    return this.#flags.renewRead(sliceId, leaseId, token, agentId);
+  }
+  getFlagStatus(sliceId) {
+    if (!this.#slices.has(sliceId)) return {ok: false, code: 404};
+    return this.#flags.status(sliceId);
+  }
+  listOwnedFlags(ownerId) { return this.#flags.owned(ownerId); }
+
+  /** A read is accepted only if the ORF remains valid and MVCC is unchanged. */
+  readWithORF(sliceId, leaseId, token, agentId, versionId = null) {
+    if (!this.#flags.validateRead(sliceId, leaseId, token, agentId))
+      return {ok: false, code: 403, ehu: 'ORF_REVOKED'};
+    const before = this.#mvcc.read(sliceId);
+    if (!before.ok) return before;
+    if (versionId !== null && before.data.versionId !== versionId)
+      return {ok: false, code: 409, ehu: 'FLAG_VERSION_CONFLICT'};
+    const result = this.#mvcc.read(sliceId, before.data.versionId);
+    if (!this.#flags.validateRead(sliceId, leaseId, token, agentId))
+      return {ok: false, code: 403, ehu: 'ORF_REVOKED'};
+    const after = this.#mvcc.read(sliceId);
+    if (!after.ok || after.data.versionId !== before.data.versionId)
+      return {ok: false, code: 409, ehu: 'FLAG_VERSION_CONFLICT'};
+    return result;
+  }
+
+  /** Only the authenticated owner may commit using an AGENT lease. */
+  agentCommit(sliceId, agentId, leaseId, token, baseVersionId, content) {
+    if (!this.#flags.validate(sliceId, leaseId, token, Date.now(), agentId)) {
+      this.#flags.reportEHU(sliceId, agentId, 'FLAG_PERMISSION_DENIED');
+      return {ok: false, code: 403, ehu: 'FLAG_PERMISSION_DENIED'};
+    }
+    return this.commit(sliceId, leaseId, token, baseVersionId, content);
+  }
+
+  /** Caller must enforce administrator authorization before using this method. */
+  administrativeRevoke(sliceId, authorized) {
+    if (authorized !== true) return {ok: false, code: 403};
+    return this.#flags.revoke(sliceId);
   }
 
   commit(sliceId, leaseId, token, baseVersionId, content) {
