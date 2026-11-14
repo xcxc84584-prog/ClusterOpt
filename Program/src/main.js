@@ -230,6 +230,25 @@ const $=s=>document.querySelector(s),editor=$('#editor');
 const explorer = new Explorer({
   panel: $('#explorerPanel'),
   openDocument: id => switchDoc(id),
+  closeFile: async (handle, name) => {
+    const matches = [];
+    for (const id of docs.ids()) {
+      const opened = docs.handle(id);
+      if (!opened) continue;
+      try {
+        if (opened === handle || (typeof opened.isSameEntry === 'function' &&
+            await opened.isSameEntry(handle))) matches.push(id);
+      } catch (error) {
+        omu.emit('EXPLORER', 'MatchOpenFile', 500, String(error), true);
+      }
+    }
+    // Never close a different file solely because it shares the same basename.
+    if (!matches.length) return false;
+    for (const id of matches) {
+      closeDoc(id);
+    }
+    return matches.every(id => !docs.ids().includes(id));
+  },
   openFile: async handle => {
     const file = await handle.getFile();
     await createVirtual({name: file.name, blob: file, content: null, handle});
