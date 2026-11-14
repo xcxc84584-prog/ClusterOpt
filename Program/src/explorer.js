@@ -30,7 +30,7 @@ export class Explorer {
   #roots=[];#documents=[];#active=null;#locale='zh-Hant';
   #panel;#tree;#search;#openFile;#openDocument;#closeFile;#log;
   #state=readState();#clipboard=null;#menu=null;#rename=null;
-  #hold=null;#drag=null;#selected=null;#revealGeneration=0;
+  #hold=null;#drag=null;#selected=null;#revealGeneration=0;#suppressClick=false;
   constructor({panel,openFile,openDocument,closeFile=async()=>false,log=()=>{}}){
     this.#panel=panel;this.#tree=panel.querySelector('#explorerTree');
     this.#search=panel.querySelector('#explorerSearch');
@@ -41,8 +41,8 @@ export class Explorer {
     panel.querySelector('#explorerRefresh').addEventListener('click',()=>this.refresh());
     panel.querySelector('#explorerClose').addEventListener('click',()=>this.toggle(false));
     document.querySelector('#explorerToggle').addEventListener('click',()=>this.toggle());
-    // Right mouse is reserved for sibling reordering, never the action menu.
-    this.#tree.addEventListener('contextmenu',e=>{if(e.target.closest('.explorer-entry'))e.preventDefault();});
+    // Right click opens the action menu; left-button hold and drag reorders siblings.
+    this.#tree.addEventListener('contextmenu',e=>this.#context(e));
     this.#tree.addEventListener('pointerdown',e=>this.#pointerDown(e));
     document.addEventListener('pointermove',e=>this.#pointerMove(e));
     document.addEventListener('pointerup',e=>this.#pointerUp(e));
@@ -294,12 +294,15 @@ export class Explorer {
   }
   #clearHold(){if(this.#hold){clearTimeout(this.#hold.timer);this.#hold=null;}}
   #pointerDown(e){
-    if(e.button!==2)return;
+    if(e.button!==0||e.target.closest('.explorer-disclosure,.explorer-rename'))return;
     const row=e.target.closest('.explorer-entry[data-path]');if(!row)return;
-    e.preventDefault();this.#clearHold();this.#drag=null;
+    this.#clearHold();this.#drag=null;
     const node=this.#nodeAt(row);if(!node)return;
-    this.#hold={node,x:e.clientX,y:e.clientY,ready:true,timer:null};
-    row.classList.add('drag-ready');
+    const hold={node,x:e.clientX,y:e.clientY,ready:false,timer:null};
+    hold.timer=setTimeout(()=>{
+      if(this.#hold===hold){hold.ready=true;row.classList.add('drag-ready');}
+    },200);
+    this.#hold=hold;
   }
   #pointerMove(e){
     if(!this.#hold)return;
@@ -317,7 +320,8 @@ export class Explorer {
     if(!this.#hold)return;
     const {node,ready}=this.#hold;this.#clearHold();
     this.#tree.querySelectorAll('.drag-ready,.drag-target').forEach(el=>el.classList.remove('drag-ready','drag-target'));
-    if(!ready||e.button!==2||!this.#drag){this.#drag=null;return;}
+    if(ready)this.#suppressClick=true;
+    if(!ready||e.button!==0||!this.#drag){this.#drag=null;return;}
     const target=this.#allNodes().find(n=>this.#key(n)===this.#drag);this.#drag=null;
     if(!target||node===target||node.parent!==target.parent)return;
     const siblings=node.parent?node.parent.children:this.#roots;
@@ -348,14 +352,13 @@ export class Explorer {
       row.dataset.path=this.#key(node);
       if(row.dataset.path===this.#selected)row.classList.add('active');
       row.querySelector('.explorer-arrow').textContent=node.kind==='directory'?(node.expanded?'⌄':'›'):'';
-      // Left click opens the action menu only. The disclosure arrow controls
-      // folder expansion, and double click opens a file in the editor.
+      // Left click selects only; context actions belong exclusively to right click.
       row.onclick=event=>{
         event.stopPropagation();
+        if(this.#suppressClick){this.#suppressClick=false;return;}
         if(this.#rename||event.button!==0)return;
         this.#selected=this.#key(node);
         this.render();
-        this.#openMenu(node,event.clientX,event.clientY);
       };
       row.ondblclick=event=>{
         event.stopPropagation();
