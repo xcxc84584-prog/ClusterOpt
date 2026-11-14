@@ -428,3 +428,253 @@ nav button:hover {
   text-align: center;
   font-size: 11px;
 }
+
+/* Opt 6 +1: Cluster-style modal, inheriting the live global palette. */
+#paletteDialog {
+  width: min(480px, calc(100vw - 28px));
+  max-height: min(760px, calc(100vh - 28px));
+  padding: 0;
+  overflow: auto;
+  border: 1px solid var(--ui-border);
+  border-radius: 12px;
+  background: var(--ui-surface);
+  color: var(--ui-text-on-surface);
+  box-shadow: 0 28px 90px rgb(0 0 0 / 35%);
+}
+
+#paletteDialog:not([open]) {
+  display: none;
+}
+
+#paletteDialog::backdrop {
+  background: rgb(0 0 0 / 66%);
+  backdrop-filter: blur(3px);
+}
+
+.palette-modal-header,
+.palette-modal-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 22px;
+}
+
+.palette-modal-header {
+  border-bottom: 1px solid var(--ui-border);
+}
+
+.palette-modal-header h2 {
+  margin: 4px 0 0;
+  font-size: 19px;
+  font-weight: 600;
+}
+
+.palette-eyebrow,
+.palette-preview-caption {
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  opacity: 0.8;
+}
+
+.palette-close {
+  min-width: 34px;
+  padding: 5px 9px;
+  font-size: 22px;
+}
+
+.palette-modal-body {
+  display: grid;
+  gap: 16px;
+  padding: 20px 22px;
+}
+
+.palette-preview {
+  height: 122px;
+  overflow: hidden;
+  border: 1px solid var(--ui-border);
+  border-radius: 8px;
+  background: var(--ui-background);
+  color: var(--ui-text);
+}
+
+.palette-preview-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--ui-border);
+  background: var(--ui-surface);
+  color: var(--ui-text-on-surface);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.palette-preview-dot {
+  width: 10px;
+  height: 10px;
+  border: 1px solid currentColor;
+  transform: rotate(45deg);
+}
+
+.palette-preview-caption {
+  margin-left: auto;
+}
+
+.palette-preview-content {
+  display: flex;
+  height: 90px;
+}
+
+.palette-preview-sidebar {
+  width: 30%;
+  border-right: 1px solid var(--ui-border);
+  background: var(--ui-panel);
+}
+
+.palette-preview-editor {
+  flex: 1;
+  padding: 16px;
+}
+
+.palette-preview-line {
+  width: 80%;
+  height: 5px;
+  margin-bottom: 12px;
+  border-radius: 4px;
+  background: var(--ui-muted);
+  opacity: 0.7;
+}
+
+.palette-preview-line.short {
+  width: 35%;
+}
+
+.palette-preview-line.medium {
+  width: 60%;
+}
+
+.palette-section-title {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+#paletteHex,
+#paletteMode {
+  font-family: Consolas, monospace;
+  font-size: 12px;
+  opacity: 0.85;
+}
+
+.palette-picker-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+}
+
+#palettePicker {
+  flex: 0 0 76px;
+  width: 76px;
+  height: 42px;
+  padding: 3px;
+  border: 1px solid var(--ui-border);
+  border-radius: 6px;
+  background: var(--ui-control);
+}
+
+.palette-channels,
+.palette-presets {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.palette-presets {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.palette-channels label {
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.palette-channels input {
+  width: 100%;
+  min-width: 0;
+  padding: 9px;
+  border: 1px solid var(--ui-border);
+  border-radius: 6px;
+  background: var(--ui-control);
+  color: var(--ui-text-on-control);
+}
+
+#paletteDialog button {
+  color: var(--ui-text-on-control);
+}
+
+.palette-presets button {
+  padding: 11px 8px;
+  text-align: center;
+}
+
+.palette-modal-footer {
+  border-top: 1px solid var(--ui-border);
+  font-size: 11px;
+}
+
+#paletteDone {
+  min-width: 88px;
+}
+
+#paletteDialog :focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+/* Ensure each text surface uses its own contrast-checked foreground. */
+header,
+footer,
+nav,
+#languageOptions,
+#toolOptions {
+  color: var(--ui-text-on-surface);
+}
+
+#tabs,
+.tab,
+#toolOptions {
+  color: var(--ui-text-on-panel);
+}
+
+button,
+select,
+footer select {
+  color: var(--ui-text-on-control);
+}
+
+nav button {
+  color: var(--ui-text-on-surface);
+}
+
+.brand strong,
+#filename,
+#position,
+#status {
+  color: var(--ui-text-on-surface);
+}
+
+.tab .name {
+  color: inherit;
+}
+
+#paletteDialog .palette-modal-header,
+#paletteDialog .palette-modal-footer {
+  color: var(--ui-text-on-surface);
+}
