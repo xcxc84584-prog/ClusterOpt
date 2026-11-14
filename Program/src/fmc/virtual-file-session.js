@@ -17,6 +17,7 @@ export class VirtualFileSession {
   #positions = new Map();
   #center = 0;
   #generation = 0;
+  #pending = new Map();
 
   constructor(documentId, blob) {
     this.#documentId = documentId;
@@ -50,7 +51,25 @@ export class VirtualFileSession {
     this.#positions.set(index, {...position});
   }
 
-  async window(center) {
+  /** A demand-driven slice request; concurrent callers share one read. */
+  async requestSlice(index) {
+    if (!Number.isInteger(index) || index < 0 || index >= this.#count) {
+      return {ok: false, code: 416};
+    }
+    if (this.#dirty.has(index)) {
+      return {ok: true, code: 200, data: {...this.#dirty.get(index)}};
+    }
+    if (this.#pending.has(index)) return this.#pending.get(index);
+    const request = this.#loader.load(this.#documentId, index);
+    this.#pending.set(index, request);
+    try {
+      return await request;
+    } finally {
+      if (this.#pending.get(index) === request) this.#pending.delete(index);
+    }
+  }
+
+  async window(center, onProgress = () => {}) {
     if (!Number.isInteger(center) || center < 0 || center >= this.#count) {
       return {ok: false, code: 416};
     }
@@ -58,20 +77,28 @@ export class VirtualFileSession {
     const start = Math.max(0, center - 1);
     const end = Math.min(this.#count - 1, center + 1);
     const slices = [];
-    for (let index = start; index <= end; index++) {
+    const requested = [center];
+    for (let distance = 1; distance <= 1; distance++) {
+      if (center - distance >= start) requested.push(center - distance);
+      if (center + distance <= end) requested.push(center + distance);
+    }
+    onProgress({completed: 0, total: requested.length, center});
+    for (const index of requested) {
       const sliceId = this.#documentId + ':' + index;
-      const result = this.#dirty.has(index)
-        ? {ok: true, data: this.#dirty.get(index)}
-        : await this.#loader.load(this.#documentId, index);
+      const result = await this.requestSlice(index);
       if (!result.ok) return result;
       slices.push({index, sliceId, ...result.data});
+      if (generation === this.#generation) {
+        onProgress({completed: slices.length, total: requested.length, center});
+      }
     }
     if (generation !== this.#generation) {
       return {ok: false, code: 409, message: 'Stale viewport'};
     }
     const next = new Set(slices.map(item => item.index));
     for (const index of this.#resident) {
-      if (!next.has(index) && !this.#dirty.has(index)) {
+      if (!next.has(index) && !this.#dirty.has(index) &&
+          !this.#pending.has(index)) {
         this.#loader.unload(this.#documentId, index);
       }
     }
@@ -81,10 +108,7 @@ export class VirtualFileSession {
   }
 
   async read(index) {
-    if (this.#dirty.has(index)) {
-      return {ok: true, code: 200, data: {...this.#dirty.get(index)}};
-    }
-    return this.#loader.load(this.#documentId, index);
+    return this.requestSlice(index);
   }
 
   async edit(index, content, ownerId = 'USER') {
@@ -113,16 +137,19 @@ export class VirtualFileSession {
    * Stream ordered slices into a writable file. Never concatenate the file.
    * The caller must not mark saved if the writer fails or is canceled.
    */
-  async save(handle) {
+  async save(handle, onProgress = () => {}) {
     const writer = await handle.createWritable();
     try {
       for (let index = 0; index < this.#count; index++) {
-        const result = await this.read(index);
-        if (!result.ok) throw new Error('Slice read failed: ' + index);
-        await writer.write(result.data.content);
-        if (!this.#dirty.has(index) && !this.#resident.has(index)) {
-          this.#loader.unload(this.#documentId, index);
+        if (this.#dirty.has(index)) {
+          await writer.write(this.#dirty.get(index).content);
+        } else {
+          // Copy unchanged source bytes without decoding or allocating a JS string.
+          const start = index * 256 * 1024;
+          const end = Math.min(this.#blob.size, start + 256 * 1024);
+          await writer.write(this.#blob.slice(start, end));
         }
+        onProgress({completed: index + 1, total: this.#count});
       }
       await writer.close();
     } catch (error) {
