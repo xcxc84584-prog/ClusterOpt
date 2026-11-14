@@ -476,6 +476,42 @@ const s=editor.selectionStart;editor.setRangeText('    ',s,editor.selectionEnd,'
 async function doSave(as=false){if(!active)return;
 const id=active;
 capturePosition(id);
+if (binaryDocuments.has(id)) {
+  const data = binaryDocuments.get(id);
+  try {
+    const bytes = new Uint8Array(data.content.length);
+    for (let i = 0; i < bytes.length; i++) {
+      const value = data.content.charCodeAt(i);
+      if (value > 255) throw new Error('Byte view requires U+0000–U+00FF at offset ' + i);
+      bytes[i] = value;
+    }
+    let handle = as ? null : docs.handle(id);
+    if (!handle && 'showSaveFilePicker' in window)
+      handle = await window.showSaveFilePicker({suggestedName: docs.get(id).data.name});
+    if (!handle) throw new Error('Binary save requires a writable file handle');
+    const writable = await handle.createWritable();
+    try {
+      await writable.write(bytes);
+      if (data.blob.size > data.previewBytes) await writable.write(data.blob.slice(data.previewBytes));
+      await writable.close();
+    } catch (error) {
+      await writable.abort().catch(() => {});
+      throw error;
+    }
+    data.blob = await handle.getFile();
+    data.previewBytes = bytes.length;
+    data.dirty = false;
+    docs.setSaved(id, handle, handle.name, docs.get(id).data.revision);
+    syncStates.set(id, 'SYNCED');
+    status('Binary bytes saved without lossy encoding');
+    scheduleRecovery();
+  } catch (error) {
+    syncStates.set(id, 'ERROR');
+    omu.emit('FTI', 'BinarySave', 500, String(error), true);
+    status('Binary save failed: ' + String(error));
+  }
+  return;
+}
 const operationId=storageProgress.start(
   id, 'SAVE', virtualSessions.has(id) ? virtualSessions.get(id).sliceCount : 1
 );
@@ -1032,6 +1068,23 @@ function showRecoveryFor(id) {
     const mapping = new Map();
     for (const item of workspace.documents) {
       try {
+        if (item.binary) {
+          let blob = item.blob;
+          if (!blob && item.handle) {
+            const permission = await item.handle.queryPermission({mode: 'read'});
+            if (permission !== 'granted') continue;
+            blob = await item.handle.getFile();
+          }
+          if (!blob) continue;
+          const created = docs.create(item.name, '', item.handle || null);
+          const id = created.data.id;
+          binaryDocuments.set(id, {blob, type: {kind: 'BINARY', mode: 'BINARY'},
+            content: item.content || '', previewBytes: item.previewBytes ?? Math.min(blob.size, 256 * 1024),
+            dirty: !!item.dirty});
+          if (item.dirty) docs.update(id, '');
+          mapping.set(item.id, id);
+          continue;
+        }
         if (item.virtual) {
           let blob = item.blob;
           if (!blob && item.handle) {
