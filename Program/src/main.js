@@ -360,7 +360,7 @@ const consoleApi=Object.freeze({
   help:()=>Object.freeze(['Cluster.log()','Cluster.log({limit:20})','Cluster.log({code:404})','Cluster.ehu()','Cluster.dep()'])
 });
 Object.defineProperty(window,'Cluster',{value:consoleApi,writable:false,configurable:false});
-window.ClusterOpt=Object.freeze({fmcStatus:()=>({loadedSlices:fmc.loadedSliceCount}),
+window.ClusterOpt=Object.freeze({clearRecovery:()=>olr.clearAll(),fmcStatus:()=>({loadedSlices:fmc.loadedSliceCount}),
   loadSliceWindow: async (documentId, blob, center = 0) => {
     const attached = sliceLoader.attach(documentId, blob);
     if (!attached.ok) return attached;
