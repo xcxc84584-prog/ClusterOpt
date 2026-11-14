@@ -46,7 +46,7 @@ this.states.set(id,'LOADING');
    if(external!==previous){this.#baseline.set(id,external);
 omu.emit('ExternalChangeMonitor','ExternalChange',200);
 }
-    if(this.registry.get('STORAGE_PRIORITY')==='external' && current.content!==external){
+if(this.registry.get('STORAGE_PRIORITY')==='external' && current.content!==external){
      const replaced=this.docs.replaceFromExternal(id,external,current.revision);
      if(!replaced.ok)throw Error(replaced.message);
      if(active===id){editor.value=external;
@@ -54,7 +54,7 @@ editor.dataset.doc=id;
 refresh();
 }
     }
-   const latest=this.docs.get(id).data;
+const latest=this.docs.get(id).data;
    this.states.set(id,latest.content===external?'SYNCED':'DIVERGED');
   }catch(e){
    if(this.#generation.get(id)===generation){this.states.set(id,'ERROR');
@@ -81,7 +81,8 @@ const monitor=new ExternalChangeMonitor(docs,syncStates,GLOBALS);
 let active=null;
 const $=s=>document.querySelector(s),editor=$('#editor');
 function status(msg){$('#status').textContent=msg;
-}function refresh(){const d=active?docs.get(active).data:null;
+}
+function refresh(){const d=active?docs.get(active).data:null;
 $('#empty').hidden=!!d;
 $('#editorPane').hidden=!d;
 $('#tabs').replaceChildren();
@@ -100,11 +101,13 @@ closeDoc(id);
 tab.append(name,close);
 tab.onclick=()=>switchDoc(id);
 $('#tabs').append(tab);
-}if(d){if(editor.dataset.doc!==active){editor.value=d.content;
+}
+if(d){if(editor.dataset.doc!==active){editor.value=d.content;
 editor.dataset.doc=active;
 }$('#filename').textContent=d.name+(d.dirty?' *':'');
 updateLines();
-}else{$('#filename').textContent=t('unnamed');
+}
+else{$('#filename').textContent=t('unnamed');
 editor.dataset.doc='';
 }updatePos();
 renderSyncStatus();
@@ -112,7 +115,8 @@ renderSyncStatus();
 function switchDoc(id){active=id;
 refresh();
 editor.focus();
-}function create(name=t('unnamed'),content='',handle=null){const res=docs.create(name,content,handle);
+}
+function create(name=t('unnamed'),content='',handle=null){const res=docs.create(name,content,handle);
 active=res.data.id;
 if(handle)monitor.watch(active,content);
 refresh();
@@ -128,13 +132,17 @@ refresh();
 }
 function updateLines(){const count=editor.value.split('\n').length;
 $('#gutter').textContent=Array.from({length:count},(_,i)=>i+1).join('\n');
-}function updatePos(){const p=editor.selectionStart||0,txt=editor.value.slice(0,p),lines=txt.split('\n');
+}
+function updatePos(){const p=editor.selectionStart||0,txt=editor.value.slice(0,p),lines=txt.split('\n');
 $('#position').textContent=`Ln ${lines.length}, Col ${lines.at(-1).length+1}`;
 }
-editor.addEventListener('input',()=>{if(!active)return;docs.update(active,editor.value);monitor.onEdit(active);updateLines();updatePos();$('#filename').textContent=docs.get(active).data.name+' *';const activeTab=[...$('#tabs').children].find(tab=>tab.classList.contains('active'));if(activeTab)activeTab.querySelector('.name').textContent=docs.get(active).data.name+' ●';status(t('unsaved'));});
+editor.addEventListener('input',()=>{if(!active)return;docs.update(active,editor.value);monitor.onEdit(active);updateLines();updatePos();$('#filename').textContent=docs.get(active).data.name+' *';
+const activeTab=[...$('#tabs').children].find(tab=>tab.classList.contains('active'));
+if(activeTab)activeTab.querySelector('.name').textContent=docs.get(active).data.name+' ●';status(t('unsaved'));});
 editor.addEventListener('scroll',()=>{$('#gutter').scrollTop=editor.scrollTop;});
 ['click','keyup','select'].forEach(ev=>editor.addEventListener(ev,updatePos));
-editor.addEventListener('keydown',e=>{if(e.key==='Tab'){e.preventDefault();const s=editor.selectionStart;editor.setRangeText('    ',s,editor.selectionEnd,'end');editor.dispatchEvent(new Event('input'));}});
+editor.addEventListener('keydown',e=>{if(e.key==='Tab'){e.preventDefault();
+const s=editor.selectionStart;editor.setRangeText('    ',s,editor.selectionEnd,'end');editor.dispatchEvent(new Event('input'));}});
 async function doSave(as=false){if(!active)return;
 const id=active;
 const d=docs.get(id).data;
@@ -144,10 +152,12 @@ if(res.ok){if(!docs.get(id).ok)return;
 docs.setSaved(id,res.data.handle,res.data.name,revision);
 if(res.data.handle){monitor.watch(id,d.content);
 if(docs.get(id).data.revision!==revision)monitor.onEdit(id);
-}else syncStates.set(id,'UNVERIFIED');
+}
+else syncStates.set(id,'UNVERIFIED');
 refresh();
 status(t(res.data.download?'downloaded':'saved'));
-}else status(res.message||t('saveFailed'));
+}
+else status(res.message||t('saveFailed'));
 }
 const actions={new:()=>create(),open:()=>openFiles(),save:()=>doSave(),saveas:()=>doSave(true),close:()=>active&&closeDoc(active),closeall:()=>{for(const id of docs.ids())closeDoc(id);
 }};
@@ -162,7 +172,9 @@ $('#fileInput').onchange=async e=>{const items=await files.open(e.target.files);
 items.forEach(x=>create(x.name,x.content,x.handle));
 e.target.value='';
 };
-document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();doSave(e.shiftKey);}if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='n'){e.preventDefault();create();}if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='o'){e.preventDefault();openFiles();}});
+document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();doSave(e.shiftKey);}
+if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='n'){e.preventDefault();create();}
+if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='o'){e.preventDefault();openFiles();}});
 window.addEventListener('beforeunload',e=>{if(docs.ids().some(id=>docs.get(id).data.dirty)){e.preventDefault();e.returnValue='';}});
 async function openFiles(){if('showOpenFilePicker' in window){try{const items=await files.openWithHandle();
 items.forEach(x=>create(x.name,x.content,x.handle));
@@ -235,7 +247,7 @@ function renderLanguage() {
       button.dataset.locale===LANGUAGE.value?'✓':'';
     button.setAttribute('aria-pressed',String(button.dataset.locale===LANGUAGE.value));
   }
-  const statusText=$('#status').dataset.statusKey||'ready';
+const statusText=$('#status').dataset.statusKey||'ready';
   status(t(statusText));
   refresh();
 }
