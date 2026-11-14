@@ -209,16 +209,21 @@ export class VirtualFileSession {
 
   async edit(index, content, ownerId = 'USER') {
     const sliceId = this.#documentId + ':' + index;
-    const read = await this.read(index);
-    if (!read.ok) return read;
+    // Load the slice before acquiring a lease, but do not read its data until
+    // the WTF is held. AGENT reads outside ORF/WTF are forbidden.
+    const loaded = await this.requestSlice(index);
+    if (!loaded.ok) return loaded;
     const lease = ownerId === 'USER' ? this.#core.userWrite(sliceId, ownerId) :
       this.#core.acquireWTF(sliceId, ownerId);
     if (!lease.ok) return lease;
     const {leaseId, fencingToken} = lease.data;
     try {
-      const result = this.#core.commit(
-        sliceId, leaseId, fencingToken, read.data.versionId, content
-      );
+      const read = this.#core.read(sliceId);
+      if (!read.ok) return read;
+      const result = ownerId === 'USER'
+        ? this.#core.commit(sliceId, leaseId, fencingToken, read.data.versionId, content)
+        : this.#core.agentCommit(sliceId, ownerId, leaseId, fencingToken,
+            read.data.versionId, content);
       if (result.ok) {
         if (this.lineStarts) {
           const lineCount = text => (text.match(/\n/g) || []).length;
@@ -237,7 +242,7 @@ export class VirtualFileSession {
       }
       return result;
     } finally {
-      this.#core.releaseWTF(sliceId, leaseId, fencingToken);
+      this.#core.releaseWTF(sliceId, leaseId, fencingToken, ownerId);
     }
   }
 
