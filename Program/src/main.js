@@ -161,9 +161,12 @@ function updateEditorLock() {
   const operation = active ? storageProgress.get(active) : null;
   const loading = !!active && (syncStates.get(active) === 'LOADING' ||
     (operation?.operationType === 'LOAD' && operation.state === 'RUNNING'));
-  editor.readOnly = loading;
+  const unavailable = !!active && virtualSessions.has(active) &&
+    editor.dataset.doc !== active;
+  editor.readOnly = loading || unavailable;
   editor.setAttribute('aria-readonly', String(loading));
-  editor.title = loading ? 'Loading slices — editing is disabled' : '';
+  editor.title = loading ? 'Loading slices — editing is disabled' :
+    unavailable ? 'Slice not ready — editing is disabled' : '';
 }
 function refresh(){const d=active?docs.get(active).data:null;
 $('#empty').hidden=!!d;
@@ -382,7 +385,8 @@ async function renderVirtualSlice(id, center = null) {
   const generation = ++virtualRenderGeneration;
   syncStates.set(id, 'LOADING');
   const index = center === null ? session.center : center;
-  const total = 1 + Number(index > 0) + Number(index < session.sliceCount - 1);
+  // Only the requested physical slice is materialized; no neighbor preloading.
+  const total = 1;
   const operationId = storageProgress.start(id, 'LOAD', total);
   let succeeded = false;
   try {
@@ -475,7 +479,7 @@ if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='n'){e.preventDefault();create(
 if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='o'){e.preventDefault();openFiles();}});
 window.addEventListener('beforeunload',e=>{if(docs.ids().some(id=>docs.get(id).data.dirty)){e.preventDefault();e.returnValue='';}});
 async function openFiles(){if('showOpenFilePicker' in window){try{const items=await files.openWithHandle();
-items.forEach(x=>create(x.name,x.content,x.handle));
+for (const item of items) await createVirtual(item);
 return;
 }catch(e){if(e.name==='AbortError')return;
 omu.emit('FileManager','Open',500,String(e),true);
@@ -500,9 +504,12 @@ function renderSyncStatus() {
   bar.style.background = colors[state] || colors.UNVERIFIED;
   bar.parentElement.classList.toggle('indeterminate', saving && percent === null);
   const label = state === 'LOADING' && progress?.state === 'RUNNING'
-    ? 'LOADING ' + (percent ?? 0) + '% (' + progress.completedUnits +
-      '/' + (progress.totalUnits ?? '?') + ' slices)'
+    ? 'LOADING (' + progress.completedUnits + '/' +
+      (progress.totalUnits ?? '?') + ' slices)'
     : saving && percent !== null ? state + ' ' + percent + '%' : state;
+  const percentage = $('#meterPercent');
+  percentage.hidden = !saving;
+  percentage.textContent = percent === null ? '…' : percent + '%';
   bar.parentElement.title = label;
   bar.parentElement.setAttribute('role', 'progressbar');
   bar.parentElement.setAttribute('aria-label', label);
@@ -514,6 +521,7 @@ function renderSyncStatus() {
     bar.parentElement.setAttribute('aria-valuenow', String(percent ?? 100));
   }
   $('#syncLabel').textContent = label;
+  updateEditorLock();
 }
 storageProgress.subscribe(operation => {
   if (operation.documentId === active) renderSyncStatus();
