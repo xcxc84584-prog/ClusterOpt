@@ -4,9 +4,11 @@
  */
 export const DFOM_PAIRS = Object.freeze({
   '"': '"', "'": "'", '`': '`',
-  '(': ')', '[': ']', '{': '}',
+  '(': ')', '[': ']', '{': '}', '<': '>',
   '（': '）', '［': '］', '｛': '｝',
-  '「': '」', '『': '』', '“': '”', '‘': '’'
+  '「': '」', '『': '』', '“': '”', '‘': '’',
+  '〈': '〉', '《': '》', '【': '】', '〔': '〕', '〖': '〗',
+  '｢': '｣', '«': '»', '‹': '›', '＜': '＞'
 });
 
 export function dfomEdit(value, start, end, key, options = {}) {
@@ -35,7 +37,7 @@ export function dfomEdit(value, start, end, key, options = {}) {
   if (start === end && DFOM_PAIRS[key]) {
     const next = value[start] || '';
     // Avoid duplicating a closing pair inside existing identifiers or punctuation.
-    if (next && !/[\s\)\]\}\uff09\uff3d\uff5d,;:]/u.test(next)) return null;
+    if (next && !/[\s\)\]\}\uff09\uff3d\uff5d,;:.>＞〉》】〕〗»›]/u.test(next)) return null;
     return {start, end, text: key + DFOM_PAIRS[key], caret: start + key.length};
   }
   if (start === end && Object.values(DFOM_PAIRS).includes(key) &&
