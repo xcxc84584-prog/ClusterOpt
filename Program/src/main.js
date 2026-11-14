@@ -1040,21 +1040,25 @@ async function renderVirtualSlice(id, center = null) {
 }
 
 
-const actions={new:()=>explorer.newFile(),open:()=>explorer.addFile(),save:()=>doSave(),saveas:()=>doSave(true),close:()=>active&&closeDoc(active),closeall:()=>{for(const id of docs.ids())closeDoc(id);
+const actions={new:()=>create(),open:()=>explorer.addFile(),save:()=>doSave(),saveas:()=>doSave(true),close:()=>active&&closeDoc(active),closeall:()=>{for(const id of docs.ids())closeDoc(id);
 }};
 $('#menuBtn').onclick=()=>{$('#menu').hidden=!$('#menu').hidden;
 };
-$('#menu').onclick=e=>{const key=e.target.dataset.action;
-if(actions[key]){actions[key]();
-$('#menu').hidden=true;
-}};
+$('#menu').onclick=e=>{
+  const button=e.target.closest('button[data-action]');
+  if(!button||!$('#menu').contains(button))return;
+  const action=actions[button.dataset.action];
+  if(action){$('#menu').hidden=true;Promise.resolve().then(action).catch(error=>{
+    omu.emit('FileManager','Action',500,String(error),true);status(String(error));
+  });}
+};
 document.addEventListener('click',e=>{if(!e.target.closest('.menu-wrap'))$('#menu').hidden=true;});
 $('#fileInput').onchange=async e=>{const items=await files.open(e.target.files);
 for (const item of items) await createVirtual(item);
 e.target.value='';
 };
 document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();doSave(e.shiftKey);}
-if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='n'){e.preventDefault();explorer.newFile();}
+if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='n'){e.preventDefault();create();}
 if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='o'){e.preventDefault();explorer.addFile();}});
 window.addEventListener('beforeunload',e=>{if(docs.ids().some(id=>docs.get(id).data.dirty)){e.preventDefault();e.returnValue='';}});
 async function openFiles(){if('showOpenFilePicker' in window){try{const items=await files.openWithHandle();
