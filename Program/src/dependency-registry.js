@@ -129,7 +129,6 @@ export function createClusterDependencies() {
     ['VirtualFileSession', 'UserFlagGateway', 'REQUEST'],
     ['AgentFlagGateway', 'VirtualFileSession', 'REQUEST'],
     ['UserFlagGateway', 'VirtualFileSession', 'REQUEST'],
-    ['VirtualFileSession', 'OverloadRestorer', 'REQUEST'],
   ];
   for (const [from, to, type] of edges) {
     const result = registry.relate(from, to, type);
