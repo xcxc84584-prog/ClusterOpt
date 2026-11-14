@@ -27,6 +27,7 @@ const binaryDocuments = new Map();
 const FTI = new FileTypeIdentifier();
 const virtualRenderGenerations = new Map();
 const savingDocuments = new Set();
+const saveAbortControllers = new Map();
 const backgroundIndexing = new Set();
 const rebuildingDocuments = new Set();
 let virtualEditQueue = Promise.resolve();
@@ -129,9 +130,9 @@ function capturePosition(id = active) {
 function restorePosition(id = active) {
   const position = viewPositions.get(id);
   if (!position || editor.dataset.doc !== id) return;
-  editor.setSelectionRange(position.selectionStart, position.selectionEnd);
-  editor.scrollTop = position.scrollTop;
-  editor.scrollLeft = position.scrollLeft;
+  editor.setSelectionRange(position.selectionStart ?? 0, position.selectionEnd ?? 0);
+  editor.scrollTop = position.scrollTop ?? 0;
+  editor.scrollLeft = position.scrollLeft ?? 0;
   $('#gutter').scrollTop = position.scrollTop;
 }
 function scheduleRecovery() {
@@ -194,15 +195,13 @@ function status(msg){
 }
 function updateEditorLock() {
   const operation = active ? storageProgress.get(active) : null;
-  const loading = !!active && (savingDocuments.has(active) || backgroundIndexing.has(active) ||
-    rebuildingDocuments.has(active) || syncStates.get(active) === 'LOADING' ||
-    (['LOAD', 'INDEX'].includes(operation?.operationType) && operation.state === 'RUNNING'));
-  const unavailable = !!active && (rebuildingDocuments.has(active) ||
-    (virtualSessions.has(active) && editor.dataset.doc !== active));
-  editor.readOnly = loading || unavailable;
-  editor.setAttribute('aria-readonly', String(loading));
-  editor.title = loading ? 'Loading slices — editing is disabled' :
-    unavailable ? 'Slice not ready — editing is disabled' : '';
+  // A blue operation is advisory, not a blanket editing lock. Editing an
+  // already materialized slice interrupts its active save safely.
+  const unavailable = !!active && virtualSessions.has(active) &&
+    (editor.dataset.doc !== active || !editor.dataset.sliceReady);
+  editor.readOnly = unavailable;
+  editor.setAttribute('aria-readonly', String(unavailable));
+  editor.title = unavailable ? 'Waiting for the first editable slice' : '';
 }
 function refresh(){const d=active?docs.get(active).data:null;
 $('#empty').hidden=!!d;
@@ -228,6 +227,7 @@ if(d){const changedDocument = editor.dataset.doc !== active;
 if(changedDocument){
   editor.value = binaryDocuments.has(active) ? binaryDocuments.get(active).content : virtualSessions.has(active) ? '' : d.content;
   editor.dataset.doc=active;
+  editor.dataset.sliceReady = virtualSessions.has(active) ? '' : 'true';
 }
 $('#filename').textContent=d.name+(d.dirty?' *':'');
 if (virtualSessions.has(active)) {
@@ -253,8 +253,7 @@ function switchDoc(id){
   active=id;
   refresh();
   if (savingDocuments.has(id) || backgroundIndexing.has(id) || rebuildingDocuments.has(id)) {
-    // Keep the original SAVE/INDEX operation and its progress intact.
-    // A return to this tab must not start another LOAD operation.
+    // Preserve operation progress. A slice will be displayed after the operation.
     renderSyncStatus();
   } else if (virtualSessions.has(id)) {
     renderVirtualSlice(id);
@@ -371,6 +370,11 @@ function updatePos(){const p=editor.selectionStart||0,txt=editor.value.slice(0,p
 $('#position').textContent=t('position',lines.length,lines.at(-1).length+1);
 }
 editor.addEventListener('input',()=>{if(!active || editor.readOnly)return;
+const abortSave = saveAbortControllers.get(active);
+if (abortSave && !abortSave.signal.aborted) {
+  abortSave.abort();
+  omu.emit('Storage', 'SaveInterruptedByEdit', 409, 'User edited during save');
+}
 if (binaryDocuments.has(active)) {
   const record = binaryDocuments.get(active);
   record.content = editor.value;
@@ -532,6 +536,8 @@ if (binaryDocuments.has(id)) {
 const operationId=storageProgress.start(
   id, 'SAVE', virtualSessions.has(id) ? virtualSessions.get(id).sliceCount : 1
 );
+const saveController = new AbortController();
+saveAbortControllers.set(id, saveController);
 savingDocuments.add(id);
 syncStates.set(id,'SAVING');
 const d=docs.get(id).data;
@@ -550,7 +556,7 @@ if (virtualSessions.has(id)) {
     const savedPosition = session.getPosition(savedCenter);
     await session.save(handle, progress => {
       storageProgress.update(operationId, progress.completed, 'FLUSH');
-    });
+    }, saveController.signal);
     storageProgress.finish(operationId, 'SUCCESS');
     savingDocuments.delete(id);
     const reindexId = storageProgress.start(id, 'INDEX', session.sliceCount);
@@ -582,6 +588,7 @@ if (virtualSessions.has(id)) {
   res = await files.save(d, docs.handle(id), as);
 }
 savingDocuments.delete(id);
+if (saveAbortControllers.get(id) === saveController) saveAbortControllers.delete(id);
 if(res.ok){storageProgress.update(operationId,1,'FLUSH');
 storageProgress.finish(operationId,'SUCCESS');
 if(!docs.get(id).ok)return;
@@ -597,9 +604,9 @@ if (active === id) {
 scheduleRecovery();
 if (active === id) status(t(res.data.download?'downloaded':'saved'));
 }
-else {storageProgress.finish(operationId,'ERROR');
-syncStates.set(id,'ERROR');
-if (active === id) status(res.message||t('saveFailed'));}
+else {storageProgress.finish(operationId, saveController.signal.aborted ? 'ABORTED' : 'ERROR');
+syncStates.set(id, saveController.signal.aborted ? 'DIVERGED' : 'ERROR');
+if (active === id) status(saveController.signal.aborted ? 'Save interrupted by editing; unsaved edits retained' : (res.message||t('saveFailed')));}
 }
 
 async function findOpenDocument(item) {
@@ -795,14 +802,16 @@ async function renderVirtualSlice(id, center = null) {
     }
     editor.value = current.content;
     editor.dataset.doc = id;
+    editor.dataset.sliceReady = 'true';
     const position = session.getPosition(index);
     if (position) {
+      // Restore the viewport first. Caret position must never dictate the view.
       editor.setSelectionRange(
-        Math.min(position.selectionStart, editor.value.length),
-        Math.min(position.selectionEnd, editor.value.length)
+        Math.min(position.selectionStart ?? 0, editor.value.length),
+        Math.min(position.selectionEnd ?? 0, editor.value.length)
       );
-      editor.scrollTop = position.scrollTop;
-      editor.scrollLeft = position.scrollLeft;
+      editor.scrollTop = position.scrollTop ?? 0;
+      editor.scrollLeft = position.scrollLeft ?? 0;
     } else {
       editor.setSelectionRange(0, 0);
       editor.scrollTop = 0;
