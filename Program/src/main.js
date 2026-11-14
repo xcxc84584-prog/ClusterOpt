@@ -1,3 +1,4 @@
+import {OMU} from './omu.js';
 import {InterfacePalette} from './interface-palette.js';
 import {createDocumentsClass} from './documents.js';
 import {createFileManagerClass} from './file-manager.js';
@@ -6,11 +7,6 @@ import {createSyncStatusClass} from './sync-status.js';
 import {LanguageProperty} from './language.js';
 // Cluster Opt 1: object state is private; contracts are the only cross-object channel.
 const contract=(ok,data=null,code=200,message='')=>Object.freeze({ok,code,data,message});
-class OMU {#events=[];
-emit(source,action,code,message='',ehu=false){this.#events.push(Object.freeze({id:this.#events.length+1,time:new Date().toISOString(),source,action,code,message,ehu}));
-if(this.#events.length>500)this.#events.shift();
-}logs(){return this.#events.map(e=>({...e}));
-}}
 const omu=new OMU();
 class ExternalChangeMonitor {
  #baseline=new Map();
@@ -31,7 +27,7 @@ this.states.delete(id);
  onEdit(id){if(this.#baseline.has(id))this.states.set(id,'DIVERGED');
 else this.states.set(id,'UNVERIFIED');
 }
- async checkNow(id){
+ async checkNow(id, loopId = null){
   if(this.#busy.has(id))return;
   const handle=this.docs.handle(id);
 if(!handle)return;
@@ -45,7 +41,7 @@ this.states.set(id,'LOADING');
    if(this.#generation.get(id)!==generation||!this.docs.get(id).ok)return;
    const current=this.docs.get(id).data;
    if(external!==previous){this.#baseline.set(id,external);
-omu.emit('ExternalChangeMonitor','ExternalChange',200);
+omu.emit('ExternalChangeMonitor','ExternalChange',200, '', false, loopId);
 }
 if(this.registry.get('STORAGE_PRIORITY')==='external' && current.content!==external){
      const replaced=this.docs.replaceFromExternal(id,external,current.revision);
@@ -59,13 +55,25 @@ const latest=this.docs.get(id).data;
    this.states.set(id,latest.content===external?'SYNCED':'DIVERGED');
   }catch(e){
    if(this.#generation.get(id)===generation){this.states.set(id,'ERROR');
-omu.emit('ExternalChangeMonitor','Read',e.name==='NotAllowedError'?403:500,String(e),true);
+omu.emit('ExternalChangeMonitor','Read',e.name==='NotAllowedError'?403:500,String(e),true,loopId);
 }
   }finally{this.#busy.delete(id);
 }
  }
- async checkAll(){for(const id of this.docs.ids())if(this.docs.handle(id))await this.checkNow(id);
-}
+ async checkAll() {
+    const ids = this.docs.ids().filter(id => this.docs.handle(id));
+    if (ids.length === 0) return;
+    const loopId = omu.startLoop('ExternalChangeMonitor', 'CheckAll');
+    try {
+      for (const id of ids) {
+        await this.checkNow(id, loopId);
+      }
+      omu.endLoop(loopId);
+    } catch (error) {
+      omu.emit('ExternalChangeMonitor', 'CheckAll', 500, String(error), true, loopId);
+      omu.endLoop(loopId, 'ABORTED');
+    }
+  }
 }
 const Documents = createDocumentsClass(omu, contract);
 const FileManager = createFileManagerClass(omu, contract);
