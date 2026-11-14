@@ -196,8 +196,8 @@ function scheduleHighlight(){
       if(signal.aborted||generation!==highlightGeneration||active!==id||editor.value!==target)return;
       highlightRenderer.render(scheme);
       const state=document.querySelector('#highlighterState');
-      if(state)state.textContent=scheme.status==='OK'?'Shiki · '+scheme.language:
-        '純文字模式'+(scheme.error?'（語法引擎不可用）':'');
+      if(state)state.textContent=scheme.status==='OK'?t('highlighterActive',scheme.language):
+        t('highlighterFallback')+(scheme.error?' ('+t('highlighterUnavailable')+')':'');
       if(scheme.error)omu.emit('TextHighlighter','HighlightSlice',500,scheme.error,true);
     }catch(error){omu.emit('TextHighlighter','HighlightSlice',500,String(error),true);}
   },180);
@@ -1254,6 +1254,14 @@ function renderLanguage() {
   $('#languageBtn').textContent=t('language')+' ›';
   $('#toolBtn').textContent=t('tool')+' ›';
   $('#paletteBtn').textContent=t('palette')+' ›';
+  $('#highlighterBtn').textContent='◇ '+t('highlighter');
+  $('#highlighterTitle').textContent=t('highlighter');
+  $('#highlighterEnabled').parentElement.lastChild.textContent=' '+t('highlighterEnabled');
+  const highlighterText=document.querySelectorAll('.highlighter-content p');
+  highlighterText[0].textContent=t('highlighterHint');
+  highlighterText[1].textContent=t('highlighterSlices');
+  $('#highlighterDone').textContent=t('done');
+  $('#highlighterClose').setAttribute('aria-label',t('closeDialog'));
   $('#paletteLabel').textContent=t('paletteRGB');
   $('#paletteTitle').textContent=t('palette');
   $('#paletteDark').textContent=t('darkEndpoint');
