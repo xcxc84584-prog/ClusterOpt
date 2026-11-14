@@ -19,14 +19,19 @@ export class VirtualFileSession {
   #generation = 0;
   #pending = new Map();
   #recoveryProtected = new Set();
+  #forceText = false;
 
-  constructor(documentId, blob) {
+  constructor(documentId, blob, options = {}) {
+    this.#forceText = options.forceText === true;
+    this.#loader = new SliceLoader(this.#core, 256 * 1024, options);
     this.#documentId = documentId;
     this.#blob = blob;
     const attached = this.#loader.attach(documentId, blob);
     if (!attached.ok) throw new Error('Could not attach file');
     this.#count = attached.data.sliceCount;
   }
+
+  get forceText() { return this.#forceText; }
 
   get sliceCount() {
     return this.#count;

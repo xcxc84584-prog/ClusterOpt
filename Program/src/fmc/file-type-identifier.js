@@ -25,7 +25,12 @@ export class FileTypeIdentifier {
     }
   }
 
-  /** Explicit override means safe binary mode, never lossy text decoding. */
+  /** Explicit text override: invalid UTF-8 is displayed with replacement characters. */
+  forceText() {
+    return {kind: 'TEXT', format: 'UTF-8-REPLACE', mode: 'FORCE_TEXT', ehu: 'FTI_FORCED_TEXT'};
+  }
+
+  /** Raw byte view remains available for recognized binary files. */
   forceBinary() {
     return {kind: 'BINARY', format: 'RAW', mode: 'BINARY', ehu: 'FTI_FORCED_BINARY'};
   }

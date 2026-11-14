@@ -8,8 +8,10 @@ export class SliceLoader {
   #sources = new Map();
   #loaded = new Map();
   #size;
+  #forceText = false;
 
-  constructor(core, sliceSize = 256 * 1024) {
+  constructor(core, sliceSize = 256 * 1024, options = {}) {
+    this.#forceText = options.forceText === true;
     if (!Number.isSafeInteger(sliceSize) || sliceSize < 4) {
       throw new RangeError('sliceSize must be >= 4 bytes');
     }
@@ -72,7 +74,7 @@ export class SliceLoader {
         source, Math.min(rawStart + this.#size, source.size)
       );
       const bytes = await source.slice(startOffset, endOffset).arrayBuffer();
-      const content = new TextDecoder('utf-8', {fatal: true}).decode(bytes);
+      const content = new TextDecoder('utf-8', {fatal: !this.#forceText}).decode(bytes);
       const registered = this.#access.register({
         documentId, sliceId, startOffset, endOffset, content
       });

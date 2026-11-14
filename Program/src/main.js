@@ -157,6 +157,7 @@ function scheduleRecovery() {
               (!docs.handle(id) || session.sourceBlob.size <= 16 * 1024 * 1024)
               ? session.sourceBlob : null,
             edits: session.recoveryEdits,
+            forceText: session.forceText,
             center: session.center,
             position: session.getPosition(session.center) || null
           };
@@ -280,8 +281,11 @@ rebuildingDocuments.delete(id);
 virtualRenderGenerations.delete(id);
 viewPositions.delete(id);
 docs.close(id);
-if(active===id)active=docs.ids().at(-1)||null;
-refresh();
+if(active===id){
+  active=docs.ids().at(-1)||null;
+  if(active) switchDoc(active);
+  else refresh();
+} else refresh();
 scheduleRecovery();
 }
 function updateLines(){
@@ -680,12 +684,12 @@ async function createVirtual(item) {
   } catch (error) {
     omu.emit('FTI', 'Identify', 500, String(error), true);
     if (!await askForceBinary(item.name, String(error))) return;
-    type = FTI.forceBinary();
+    type = FTI.forceText();
   }
   if (type.mode === 'PROMPT') {
     omu.emit('FTI', 'Parse', 422, type.ehu, true);
-    if (!await askForceBinary(item.name, '無法確認 UTF-8 編碼，是否以原始二進位方式載入？')) return;
-    type = FTI.forceBinary();
+    if (!await askForceBinary(item.name, '無法確認 UTF-8 編碼，是否以文字模式強制載入？無法解碼的字元會顯示為替代符號。')) return;
+    type = FTI.forceText();
   }
   if (type.mode === 'BINARY') {
     await createBinary(item, type);
@@ -698,7 +702,7 @@ async function createVirtual(item) {
   }
   const result = docs.create(item.name, '', item.handle);
   const id = result.data.id;
-  const session = new VirtualFileSession(id, item.blob);
+  const session = new VirtualFileSession(id, item.blob, {forceText: type.mode === 'FORCE_TEXT'});
   virtualSessions.set(id, session);
   active = id;
   refresh();
@@ -1129,7 +1133,7 @@ updatePaletteControls();
           if (!blob) continue;
           const created = docs.create(item.name, '', item.handle || null);
           const id = created.data.id;
-          const session = new VirtualFileSession(id, blob);
+          const session = new VirtualFileSession(id, blob, {forceText: item.forceText === true});
           virtualSessions.set(id, session);
           mapping.set(item.id, id);
           if (!active) { active = id; refresh(); }
