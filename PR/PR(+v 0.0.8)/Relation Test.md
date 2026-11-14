@@ -14,3 +14,13 @@
 | RT-10 | 大文件 OLR 恢復 | 切片級 Journal | NOT IMPLEMENTED |
 | RT-11 | GoToLine | 全文件 Tree 精確定位 | NOT IMPLEMENTED |
 | RT-12 | UTF-8 切片邊界 | 正確解碼 | NOT IMPLEMENTED |
+
+## v0.0.8+1 補充測試（尚未執行）
+
+| ID | 測試 | 預期 | 狀態 |
+|---|---|---|---|
+| RT-13 | UTF-8 字元跨原始 byte boundary | 不損毀文字 | NOT RUN |
+| RT-14 | 批次交易其中一片版本衝突 | 全部拒絕提交 | NOT RUN |
+| RT-15 | OLR 差異 Undo/Redo | 內容完全還原 | NOT RUN |
+| RT-16 | OLR clearRecovery | IndexedDB 恢復資料被清除 | NOT RUN |
+| RT-17 | 1GiB 大文件 viewport | 不讀取整份文件 | NOT IMPLEMENTED |
