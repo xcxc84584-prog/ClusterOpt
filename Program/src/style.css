@@ -886,7 +886,7 @@ footer select { background: var(--ui-control); border-color: var(--ui-border); c
   color:var(--ui-text-on-control); border:1px solid var(--ui-border); }
 #explorerSearch { width:calc(100% - 20px); margin:0 10px 8px; padding:8px 10px;
   border:1px solid var(--ui-border); border-radius:5px; outline-offset:1px;
-  background:var(--ui-control); color:var(--ui-text-on-control); font:12px inherit; }
+  background:var(--ui-control); color:var(--ui-text-on-control); font-size:12px; font-family:inherit; }
 #explorerSearch::placeholder { color:var(--ui-muted); }
 #explorerTree { flex:1; min-height:0; overflow:auto; padding-bottom:12px; }
 .explorer-section { padding:11px 12px 6px; font-size:10px; font-weight:700;
