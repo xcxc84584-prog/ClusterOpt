@@ -98,6 +98,8 @@ export class Explorer {
       else if(key==='explorerTitle')el.textContent=translate(key);
       else{el.title=translate(key);el.setAttribute('aria-label',translate(key));}
     }
+    const newButton=this.#panel.querySelector('#explorerNewFile');
+    if(newButton){newButton.textContent=this.#say('＋ 新建','＋ New');newButton.title=this.#say('建立新文件','New file');}
     const refresh=this.#panel.querySelector('#explorerRefresh');
     refresh.title=this.#say('重新整理','Refresh');refresh.setAttribute('aria-label',refresh.title);
     document.querySelector('#explorerToggle').title=translate('explorerTitle');
