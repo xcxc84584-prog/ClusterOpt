@@ -62,7 +62,7 @@ export class Explorer {
     try{
       const records=await handleTransaction('readonly',store=>store.getAll());
       const saved=this.#state.rootOrder||[];
-      records.sort((a,b)=>saved.indexOf(a.key)-saved.indexOf(b.key));
+      records.sort((a,b)=>{const ai=saved.indexOf(a.key),bi=saved.indexOf(b.key);return (ai<0?Infinity:ai)-(bi<0?Infinity:bi);});
       for(const record of records)if(!this.#roots.some(n=>n.key===record.key))
         this.#roots.push(this.#node(record.handle,null,record.key));
       this.render();
@@ -104,7 +104,7 @@ export class Explorer {
   syncDocuments(documents,activeId){
     this.#documents=documents.map(item=>({...item}));
     const changed=this.#active!==activeId;this.#active=activeId;
-    if(changed&&activeId)this.revealDocument(activeId);
+    if(changed&&activeId&&!this.#panel.hidden)this.revealDocument(activeId);
     else this.render();
   }
   async addDirectory(){
@@ -224,7 +224,7 @@ export class Explorer {
     }catch(error){this.#log('Rename failed: '+error);this.#cancelRename();}
   }
   async #delete(node){
-    if(!node.parent){this.#log('Cannot delete imported root; remove it from workspace instead');return;}
+    if(!node.parent){this.#roots=this.#roots.filter(n=>n!==node);this.#state.rootOrder=this.#roots.map(n=>n.key);this.#save();try{await handleTransaction('readwrite',store=>store.delete(node.key));}catch(error){this.#log(String(error));}this.render();return;}
     try{
       await node.parent.handle.removeEntry(node.name,{recursive:node.kind==='directory'});
       node.parent.children=node.parent.children.filter(n=>n!==node);
