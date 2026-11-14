@@ -279,6 +279,7 @@ async function goToLine(lineNumber) {
     return;
   }
   const session = virtualSessions.get(id);
+  if (binaryDocuments.has(id)) { status('二進位文件不支援行號跳轉'); return; }
   const totalLines = session ? session.totalLines : editor.value.split('\n').length;
   if (lineNumber > totalLines) {
     status('行號超出文件範圍（共 ' + totalLines + ' 行）');
@@ -851,7 +852,7 @@ refresh();
 
 function renderLanguage() {
   document.documentElement.lang=LANGUAGE.value;
-  document.title='Cluster Opt v0.0.10+4';
+  document.title='Cluster Opt v0.0.10+5';
   $('#menuBtn').textContent=t('file')+'⌄';
   for (const key of ['new','open','save','saveas','close','closeall']) {
     const button=$('#menu [data-action="'+key+'"]');
