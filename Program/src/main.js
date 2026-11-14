@@ -121,6 +121,7 @@ let active=null;
 function capturePosition(id = active) {
   if (!id || editor.dataset.doc !== id) return;
   viewPositions.set(id, {
+    // OLR viewport coordinate: scroll offset, not caret line.
     scrollTop: editor.scrollTop,
     scrollLeft: editor.scrollLeft,
     selectionStart: editor.selectionStart,
@@ -194,7 +195,6 @@ function status(msg){
   el.title = el.textContent;
 }
 function updateEditorLock() {
-  const operation = active ? storageProgress.get(active) : null;
   // A blue operation is advisory, not a blanket editing lock. Editing an
   // already materialized slice interrupts its active save safely.
   const unavailable = !!active && virtualSessions.has(active) &&
@@ -559,6 +559,7 @@ if (virtualSessions.has(id)) {
     }, saveController.signal);
     storageProgress.finish(operationId, 'SUCCESS');
     savingDocuments.delete(id);
+    saveAbortControllers.delete(id);
     const reindexId = storageProgress.start(id, 'INDEX', session.sliceCount);
     rebuildingDocuments.add(id);
     backgroundIndexing.add(id);
