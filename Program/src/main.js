@@ -88,11 +88,11 @@ this.states.set(id,'LOADING');
        return;
      }
      const currentSession = virtualSessions.get(id);
-     if (currentSession.dirty || savingDocuments.has(id) ||
+     if (savingDocuments.has(id) ||
          backgroundIndexing.has(id) || rebuildingDocuments.has(id)) {
        this.states.set(id, 'DIVERGED');
        omu.emit('ExternalChangeMonitor', 'ReloadDeferred', 409,
-         'External file changed; unsaved edits or active operation prevent safe replacement',
+         'External file changed; active save or indexing prevents replacement',
          true, loopId);
        return;
      }
@@ -737,7 +737,7 @@ function attachFlagEvents(session) {
 /**
  * Rebuild a virtual session against the latest on-disk File. Never reuse a
  * stale Blob after an external edit. The original session remains intact
- * until indexing succeeds, and dirty sessions are not silently discarded.
+ * until indexing succeeds. Under external priority, unsaved edits are discarded.
  */
 async function reloadVirtualFromExternal(id, file, previous) {
   if (virtualSessions.get(id) !== previous) return false;
@@ -759,10 +759,18 @@ async function reloadVirtualFromExternal(id, file, previous) {
   try {
     await next.indexLines(progress =>
       storageProgress.update(operationId, progress.completed, 'INDEX'));
-    if (virtualSessions.get(id) !== previous || previous.dirty ||
+    // Drain edits already queued before replacing the session. The external
+    // file wins, including over any unsaved edits in the previous session.
+    await virtualEditQueue;
+    if (virtualSessions.get(id) !== previous ||
         (virtualRenderGenerations.get(id) || 0) !== generation ||
-        savingDocuments.has(id)) {
+        savingDocuments.has(id) ||
+        GLOBALS.get('STORAGE_PRIORITY') !== 'external') {
       return false;
+    }
+    if (previous.dirty) {
+      omu.emit('ExternalChangeMonitor', 'DiscardUnsavedEdits', 200,
+        'External priority applied; previous unsaved edits discarded');
     }
     attachFlagEvents(next);
     virtualSessions.set(id, next);
