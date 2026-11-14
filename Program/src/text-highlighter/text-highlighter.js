@@ -79,6 +79,34 @@ export class TextHighlighter {
   invalidate(documentId){
     for(const key of this.#tokenCache.keys())if(key.startsWith(documentId+':'))this.#tokenCache.delete(key);
   }
+  // Bypass highlighter: never reads adjacent slices and never retokenizes the slice.
+  // A lexical line context is used only when available; multiline grammar state
+  // remains a checkpoint problem and is not silently propagated to other lines.
+  async highlightLine({documentId,targetSliceId,revision=0,language='text',
+    line='',background=[0,0,0],signal}){
+    const identity={documentId,targetSliceId,revision,language};
+    if(!this.enabled||language==='text')return {...identity,status:'FALLBACK',ranges:[]};
+    try{
+      const engine=await this.#engine();
+      if(signal?.aborted)return {...identity,status:'STALE',ranges:[]};
+      if(!engine.getLoadedLanguages().includes(language))await engine.loadLanguage(language);
+      if(signal?.aborted)return {...identity,status:'STALE',ranges:[]};
+      const result=engine.codeToTokens(line,{lang:language,theme:'github-dark',
+        includeExplanation:true});
+      const colors=this.#palette.resolve(background);
+      const ranges=[];let cursor=0;
+      for(const token of result.tokens[0]||[]){
+        const end=cursor+token.content.length;
+        if(end>cursor){
+          const category=categoryFor(
+            token.explanation?.flatMap(x=>x.scopes?.map(s=>s.scopeName)||[])||[]);
+          ranges.push({start:cursor,end,token:category,color:colors[category]});
+        }
+        cursor=end;
+      }
+      return {...identity,status:'OK',ranges,paletteVersion:this.#palette.version};
+    }catch(error){return {...identity,status:'FALLBACK',ranges:[],error:String(error)};}
+  }
   async highlightSlice({documentId,targetSliceId,revision=0,language='text',
     previousSlice='',targetSlice='',nextSlice='',background=[0,0,0],signal}){
     const identity={documentId,targetSliceId,revision,language};
