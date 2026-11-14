@@ -995,9 +995,37 @@ status(String(e));
 return;
 }}$('#fileInput').click();
 }
+// The visual state is delayed, not the underlying sync state or EHU events.
+const STATUS_COOLDOWN_MS = 200;
+let displayedStatusKey = null;
+let pendingStatusKey = null;
+let statusCooldownTimer = null;
 function renderSyncStatus() {
   const state = active ? syncStates.get(active) : 'UNVERIFIED';
   const progress = active ? storageProgress.get(active) : null;
+  const running = progress?.state === 'RUNNING';
+  const nextKey = [active || '', state, running ? progress.operationType : ''].join(':');
+  if (displayedStatusKey !== nextKey) {
+    if (displayedStatusKey === null) {
+      displayedStatusKey = nextKey;
+    } else {
+      if (pendingStatusKey !== nextKey) {
+        clearTimeout(statusCooldownTimer);
+        pendingStatusKey = nextKey;
+        statusCooldownTimer = setTimeout(() => {
+          displayedStatusKey = pendingStatusKey;
+          pendingStatusKey = null;
+          statusCooldownTimer = null;
+          renderSyncStatus();
+        }, STATUS_COOLDOWN_MS);
+      }
+      return;
+    }
+  } else if (pendingStatusKey !== null) {
+    clearTimeout(statusCooldownTimer);
+    statusCooldownTimer = null;
+    pendingStatusKey = null;
+  }
   const colors = {
     SYNCED: '#22C55E', DIVERGED: '#EAB308', ERROR: '#EF4444',
     LOADING: '#3B82F6', SAVING: '#3B82F6',
@@ -1085,7 +1113,7 @@ refresh();
 
 function renderLanguage() {
   document.documentElement.lang=LANGUAGE.value;
-  document.title='Cluster Opt v0.0.12';
+  document.title='Cluster Opt v0.0.12+2';
   $('#menuBtn').textContent=t('file')+'⌄';
   for (const key of ['new','open','save','saveas','close','closeall']) {
     const button=$('#menu [data-action="'+key+'"]');
