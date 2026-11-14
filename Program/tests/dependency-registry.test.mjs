@@ -58,3 +58,20 @@ test('OMU loop stores START, ERROR, EHU and END, suppressing normal repetitions'
   assert.deepEqual(logs.map(e => e.type), ['START', 'ERROR', 'EHU', 'END']);
   assert.equal(logs[3].suppressed, 100);
 });
+
+test('v0.0.45 inventory includes current Explorer, VTE, editor and property contracts', () => {
+  const registry = createClusterDependencies();
+  const objects = registry.list();
+  for (const name of ['Explorer', 'VTE', 'DFOM', 'TextHighlighter',
+    'HighlightRenderer', 'MatchingWindow', 'TextContrast', 'StoragePriority',
+    'ChineseTranscoder']) {
+    assert.ok(objects.some(object => object.name === name), name);
+  }
+  const global = objects.find(object => object.name === 'GlobalPropertyRegistry');
+  for (const property of ['LANGUAGE', 'UI_PALETTE', 'TEXT_HIGHLIGHTER',
+    'STORAGE_PRIORITY', 'DOCUMENT_STATUS', 'STORAGE_PROGRESS',
+    'FILE_TYPE_IDENTIFIER']) {
+    assert.ok(global.properties.includes(property), property);
+  }
+  assert.ok(registry.edges().some(edge => edge.from === 'UI' && edge.to === 'Explorer'));
+});
