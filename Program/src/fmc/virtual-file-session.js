@@ -173,6 +173,20 @@ export class VirtualFileSession {
       this.#core.markPersisted(this.#documentId + ':' + index, record.versionId);
     }
     this.#dirty.clear();
+    // Rebind to the saved file: the original Blob is immutable and may now
+    // differ in size and slice boundaries after editing.
+    const savedBlob = await handle.getFile();
+    for (const index of this.#resident) {
+      this.#loader.unload(this.#documentId, index);
+    }
+    const detached = this.#loader.detach(this.#documentId);
+    if (!detached.ok) throw new Error('Cannot release old slice registry');
+    this.#blob = savedBlob;
+    const attached = this.#loader.attach(this.#documentId, savedBlob);
+    if (!attached.ok) throw new Error('Cannot attach saved file');
+    this.#count = attached.data.sliceCount;
+    this.#resident.clear();
+    this.#center = Math.min(this.#center, this.#count - 1);
     return {ok: true, code: 200};
   }
 }
