@@ -177,6 +177,7 @@ function scheduleRecovery() {
 
 const $=s=>document.querySelector(s),editor=$('#editor');
 function status(msg){$('#status').textContent=msg;
+$('#status').title=msg;
 }
 function updateEditorLock() {
   const operation = active ? storageProgress.get(active) : null;
@@ -863,6 +864,7 @@ function renderSyncStatus() {
     bar.parentElement.setAttribute('aria-valuenow', String(percent ?? 100));
   }
   $('#syncLabel').textContent = label;
+  $('#syncLabel').title = label;
   updateEditorLock();
 }
 storageProgress.subscribe(operation => {
