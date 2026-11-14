@@ -26,6 +26,12 @@ export class WindowLoader {
       slices.push({index, ...result.data});
     }
     if (generation !== this.#generation.get(documentId)) {
+      const retained = this.#active.get(documentId) || new Set();
+      for (const slice of slices) {
+        if (!retained.has(slice.index)) {
+          this.#loader.unload(documentId, slice.index);
+        }
+      }
       return {ok: false, code: 409, message: 'Superseded viewport'};
     }
 
