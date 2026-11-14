@@ -683,3 +683,16 @@ nav button {
 .sync-label { font-size: 11px; font-weight: 700; min-width: 65px; }
 .meter.indeterminate #meterFill { width: 40% !important; animation: fmc-loading 1.4s ease-in-out infinite alternate; }
 @keyframes fmc-loading { from { transform: translateX(-75%); } to { transform: translateX(180%); } }
+
+/* v0.0.10: recovery prebuild overlay; no additional slice navigation UI. */
+#recoveryPrebuild:not([hidden]) {
+  position: absolute; inset: 0; z-index: 20;
+  display: flex; flex-direction: column; justify-content: center;
+  align-items: center; gap: 14px; padding: 24px;
+  background: var(--bg, #101116); color: var(--text, #e9edf4);
+  text-align: center;
+}
+#workspace { position: relative; }
+#recoveryName { font-size: 18px; overflow-wrap: anywhere; }
+#recoveryStage, #recoveryCount { font-size: 13px; opacity: .85; }
+#recoveryProgress { width: min(460px, 90%); height: 14px; accent-color: #32b9aa; }
