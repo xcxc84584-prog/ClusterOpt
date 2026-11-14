@@ -8,7 +8,7 @@
 | localStorage unavailable | safe fallback + EHU | Node for fallback; browser pending |
 | External file changes, clean virtual session | new file indexed and editor rerendered | Browser pending |
 | Internal priority, external change | preserve editor, DIVERGED | Browser pending |
-| External priority with unsaved edits | preserve edits, EHU, DIVERGED | Browser pending |
+| External priority with unsaved edits | discard edits, reload latest file | Browser pending |
 | External file change during save/index | deferred | Browser pending |
 | 1 GiB+ file monitor | no whole-file read | Browser pending |
 | Existing nonvirtual monitor | no regression | Browser pending |
