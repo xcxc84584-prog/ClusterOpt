@@ -26,3 +26,9 @@ test('unmatched text falls back to edited line',()=>{
  const w=matchingWindow(value,value.indexOf('second'));
  assert.deepEqual([w.startLine,w.endLine],[1,1]);
 });
+
+test('angle brackets enclose edited template content',()=>{
+ const value='before\nTemplate<\n  Value\n>\nafter';
+ const w=matchingWindow(value,value.indexOf('Value'));
+ assert.deepEqual([w.startLine,w.endLine],[1,3]);
+});
