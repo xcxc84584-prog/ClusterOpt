@@ -953,3 +953,8 @@ header .menu-wrap { margin-left:auto; }
 #explorerPanel .explorer-context { border-radius:12px; padding:6px; }
 #explorerPanel .explorer-context button { border-radius:8px; }
 #explorerPanel .explorer-rename { border-radius:7px; }
+
+/* v0.0.22 — separate folder disclosure from left-click action menu. */
+#explorerTree .explorer-disclosure { cursor:pointer; display:inline-flex; align-items:center; justify-content:center; min-width:20px; min-height:24px; border-radius:6px; }
+#explorerTree .explorer-disclosure:hover { background:var(--ui-hover); }
+#explorerPanel .explorer-context { z-index:100; }
