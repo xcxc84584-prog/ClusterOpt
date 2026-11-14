@@ -3,7 +3,8 @@ const MESSAGES = Object.freeze({
   'zh-Hant': Object.freeze({
     file:'檔案',new:'建立新檔',open:'開啟檔案',save:'儲存',
     saveas:'另存新檔',close:'關閉分頁',closeall:'關閉全部',
-    language:'語言',zh:'繁體中文',en:'English',
+    language:'語言',tool:'工具',palette:'介面調色盤',
+    paletteRGB:'介面色系 RGB',darkEndpoint:'黑色端點',lightEndpoint:'白色端點',zh:'繁體中文',en:'English',
     empty:'選擇「檔案」建立或開啟文件',ready:'就緒',
     unnamed:'未命名.txt',editor:'文件編輯器',
     priority:'存儲優先級',internal:'內部優先',external:'外部優先',
@@ -14,7 +15,8 @@ const MESSAGES = Object.freeze({
   en: Object.freeze({
     file:'File',new:'New File',open:'Open File',save:'Save',
     saveas:'Save As',close:'Close Tab',closeall:'Close All',
-    language:'Language',zh:'繁體中文',en:'English',
+    language:'Language',tool:'Tool',palette:'Interface Color Palette',
+    paletteRGB:'Interface RGB',darkEndpoint:'Black endpoint',lightEndpoint:'White endpoint',zh:'繁體中文',en:'English',
     empty:'Choose File to create or open a document',ready:'Ready',
     unnamed:'Untitled.txt',editor:'Document editor',
     priority:'Storage priority',internal:'Internal first',external:'External first',
