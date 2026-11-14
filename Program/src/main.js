@@ -12,7 +12,7 @@ import {createDocumentsClass} from './documents.js';
 import {createFileManagerClass} from './file-manager.js';
 import {createGlobalPropertyRegistryClass} from './global-properties.js';
 import {createSyncStatusClass} from './sync-status.js';
-import {LanguageProperty} from './language.js';
+import {LanguageProperty} from './language.js?v=20261114-i18n-v2';
 // Cluster Opt 1: object state is private; contracts are the only cross-object channel.
 const contract=(ok,data=null,code=200,message='')=>Object.freeze({ok,code,data,message});
 const omu=new OMU();
