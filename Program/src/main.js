@@ -157,9 +157,15 @@ function scheduleRecovery() {
             position: session.getPosition(session.center) || null
           };
         }
+        if (binaryDocuments.has(id)) {
+          const binary = binaryDocuments.get(id);
+          return {id, name: data.name, binary: true, handle: docs.handle(id) || null,
+            blob: !docs.handle(id) && binary.blob.size <= 16 * 1024 * 1024 ? binary.blob : null,
+            content: binary.content, previewBytes: binary.previewBytes, dirty: binary.dirty};
+        }
         return {id, name: data.name, content: data.content,
           dirty: data.dirty, position: viewPositions.get(id) || null};
-      }).filter(item => item.virtual ||
+      }).filter(item => item.virtual || item.binary ||
         (typeof item.content === 'string' && item.content.length <= 2 * 1024 * 1024));
       await olr.save('workspace', {active, documents: snapshots});
     } catch (error) {
@@ -178,7 +184,7 @@ function updateEditorLock() {
     (['LOAD', 'INDEX'].includes(operation?.operationType) && operation.state === 'RUNNING'));
   const unavailable = !!active && (rebuildingDocuments.has(active) ||
     (virtualSessions.has(active) && editor.dataset.doc !== active));
-  editor.readOnly = loading || unavailable || binaryDocuments.has(active);
+  editor.readOnly = loading || unavailable;
   editor.setAttribute('aria-readonly', String(loading));
   editor.title = loading ? 'Loading slices — editing is disabled' :
     unavailable ? 'Slice not ready — editing is disabled' : '';
@@ -205,7 +211,7 @@ $('#tabs').append(tab);
 }
 if(d){const changedDocument = editor.dataset.doc !== active;
 if(changedDocument){
-  editor.value = binaryDocuments.has(active) ? 'Binary file — content is preserved without text decoding.' : virtualSessions.has(active) ? '' : d.content;
+  editor.value = binaryDocuments.has(active) ? binaryDocuments.get(active).content : virtualSessions.has(active) ? '' : d.content;
   editor.dataset.doc=active;
 }
 $('#filename').textContent=d.name+(d.dirty?' *':'');
@@ -279,7 +285,6 @@ async function goToLine(lineNumber) {
     return;
   }
   const session = virtualSessions.get(id);
-  if (binaryDocuments.has(id)) { status('二進位文件不支援行號跳轉'); return; }
   const totalLines = session ? session.totalLines : editor.value.split('\n').length;
   if (lineNumber > totalLines) {
     status('行號超出文件範圍（共 ' + totalLines + ' 行）');
@@ -350,6 +355,17 @@ function updatePos(){const p=editor.selectionStart||0,txt=editor.value.slice(0,p
 $('#position').textContent=`Ln ${lines.length}, Col ${lines.at(-1).length+1}`;
 }
 editor.addEventListener('input',()=>{if(!active || editor.readOnly)return;
+if (binaryDocuments.has(active)) {
+  const record = binaryDocuments.get(active);
+  record.content = editor.value;
+  record.dirty = true;
+  docs.update(active, '');
+  syncStates.set(active, 'DIVERGED');
+  updateLines(); updatePos();
+  $('#filename').textContent = docs.get(active).data.name + ' *';
+  scheduleRecovery();
+  return;
+}
 if (virtualSessions.has(active)) {
   const id = active;
   const session = virtualSessions.get(id);
@@ -460,6 +476,42 @@ const s=editor.selectionStart;editor.setRangeText('    ',s,editor.selectionEnd,'
 async function doSave(as=false){if(!active)return;
 const id=active;
 capturePosition(id);
+if (binaryDocuments.has(id)) {
+  const data = binaryDocuments.get(id);
+  try {
+    const bytes = new Uint8Array(data.content.length);
+    for (let i = 0; i < bytes.length; i++) {
+      const value = data.content.charCodeAt(i);
+      if (value > 255) throw new Error('Byte view requires U+0000–U+00FF at offset ' + i);
+      bytes[i] = value;
+    }
+    let handle = as ? null : docs.handle(id);
+    if (!handle && 'showSaveFilePicker' in window)
+      handle = await window.showSaveFilePicker({suggestedName: docs.get(id).data.name});
+    if (!handle) throw new Error('Binary save requires a writable file handle');
+    const writable = await handle.createWritable();
+    try {
+      await writable.write(bytes);
+      if (data.blob.size > data.previewBytes) await writable.write(data.blob.slice(data.previewBytes));
+      await writable.close();
+    } catch (error) {
+      await writable.abort().catch(() => {});
+      throw error;
+    }
+    data.blob = await handle.getFile();
+    data.previewBytes = bytes.length;
+    data.dirty = false;
+    docs.setSaved(id, handle, handle.name, docs.get(id).data.revision);
+    syncStates.set(id, 'SYNCED');
+    status('Binary bytes saved without lossy encoding');
+    scheduleRecovery();
+  } catch (error) {
+    syncStates.set(id, 'ERROR');
+    omu.emit('FTI', 'BinarySave', 500, String(error), true);
+    status('Binary save failed: ' + String(error));
+  }
+  return;
+}
 const operationId=storageProgress.start(
   id, 'SAVE', virtualSessions.has(id) ? virtualSessions.get(id).sliceCount : 1
 );
@@ -573,11 +625,20 @@ async function createBinary(item, type) {
   if (existing) { switchDoc(existing); return; }
   const created = docs.create(item.name, '', item.handle);
   const id = created.data.id;
-  binaryDocuments.set(id, {blob: item.blob, type});
+  // Byte-to-codepoint mapping is reversible (0x00–0xFF), unlike UTF-8 replacement.
+  // Only materialize the first 256 KiB; preserve the untouched tail as raw Blob.
+  const previewBytes = Math.min(item.blob.size, 256 * 1024);
+  const bytes = new Uint8Array(await item.blob.slice(0, previewBytes).arrayBuffer());
+  let content = '';
+  for (let i = 0; i < bytes.length; i += 8192) {
+    content += String.fromCharCode(...bytes.subarray(i, i + 8192));
+  }
+  binaryDocuments.set(id, {blob: item.blob, type, content, previewBytes, dirty: false});
   active = id;
   syncStates.set(id, item.handle ? 'SYNCED' : 'UNVERIFIED');
   refresh();
-  status(type.kind + ' · ' + item.blob.size + ' bytes · raw binary, read-only');
+  status(type.kind + ' · byte view (first ' + previewBytes +
+    ' bytes editable; remaining bytes preserved)');
   scheduleRecovery();
 }
 async function createVirtual(item) {
@@ -852,7 +913,7 @@ refresh();
 
 function renderLanguage() {
   document.documentElement.lang=LANGUAGE.value;
-  document.title='Cluster Opt v0.0.10+5';
+  document.title='Cluster Opt v0.0.10+6';
   $('#menuBtn').textContent=t('file')+'⌄';
   for (const key of ['new','open','save','saveas','close','closeall']) {
     const button=$('#menu [data-action="'+key+'"]');
@@ -1007,6 +1068,23 @@ function showRecoveryFor(id) {
     const mapping = new Map();
     for (const item of workspace.documents) {
       try {
+        if (item.binary) {
+          let blob = item.blob;
+          if (!blob && item.handle) {
+            const permission = await item.handle.queryPermission({mode: 'read'});
+            if (permission !== 'granted') continue;
+            blob = await item.handle.getFile();
+          }
+          if (!blob) continue;
+          const created = docs.create(item.name, '', item.handle || null);
+          const id = created.data.id;
+          binaryDocuments.set(id, {blob, type: {kind: 'BINARY', mode: 'BINARY'},
+            content: item.content || '', previewBytes: item.previewBytes ?? Math.min(blob.size, 256 * 1024),
+            dirty: !!item.dirty});
+          if (item.dirty) docs.update(id, '');
+          mapping.set(item.id, id);
+          continue;
+        }
         if (item.virtual) {
           let blob = item.blob;
           if (!blob && item.handle) {
