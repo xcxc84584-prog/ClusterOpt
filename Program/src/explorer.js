@@ -28,13 +28,13 @@ async function handleTransaction(mode,callback){
 }
 export class Explorer {
   #roots=[];#documents=[];#active=null;#locale='zh-Hant';
-  #panel;#tree;#search;#openFile;#openDocument;#log;
+  #panel;#tree;#search;#openFile;#openDocument;#closeFile;#log;
   #state=readState();#clipboard=null;#menu=null;#rename=null;
   #hold=null;#drag=null;#selected=null;#revealGeneration=0;
-  constructor({panel,openFile,openDocument,log=()=>{}}){
+  constructor({panel,openFile,openDocument,closeFile=async()=>false,log=()=>{}}){
     this.#panel=panel;this.#tree=panel.querySelector('#explorerTree');
     this.#search=panel.querySelector('#explorerSearch');
-    this.#openFile=openFile;this.#openDocument=openDocument;this.#log=log;
+    this.#openFile=openFile;this.#openDocument=openDocument;this.#closeFile=closeFile;this.#log=log;
     this.#search.addEventListener('input',()=>this.render());
     panel.querySelector('#explorerAddFolder').addEventListener('click',()=>this.addDirectory());
     panel.querySelector('#explorerAddFile').addEventListener('click',()=>this.addFile());
@@ -198,7 +198,8 @@ export class Explorer {
       [this.#say('刪除','Delete'),()=>this.#delete(node)],
       [this.#say('剪下','Cut'),()=>this.#clipboard={node,cut:true}],
       [this.#say('複製','Copy'),()=>this.#clipboard={node,cut:false}],
-      [this.#say('貼上','Paste'),()=>this.#paste(node)]
+      [this.#say('貼上','Paste'),()=>this.#paste(node)],
+      [this.#say('關閉','Close'),()=>this.#closeEntry(node)]
     ];
     for(const [label,action] of items){
       const button=document.createElement('button');button.type='button';button.textContent=label;
@@ -210,6 +211,23 @@ export class Explorer {
     const rect=this.#panel.getBoundingClientRect();
     menu.style.left=Math.max(0,Math.min(clientX-rect.left,rect.width-160))+'px';
     menu.style.top=Math.max(0,Math.min(clientY-rect.top,rect.height-190))+'px';
+  }
+  async #closeEntry(node){
+    if(!node.parent){
+      // Closing a workspace root only detaches it from Explorer, never deletes disk data.
+      this.#roots=this.#roots.filter(root=>root!==node);
+      this.#state.rootOrder=this.#roots.map(root=>root.key);
+      if(this.#selected===this.#key(node))this.#selected=null;
+      this.#save();
+      try{await handleTransaction('readwrite',store=>store.delete(node.key));}
+      catch(error){this.#log('Explorer root detach: '+error);}
+      this.render();
+      return;
+    }
+    // Non-root Close affects the editor tab only; it must not delete the file.
+    const closed=await this.#closeFile(node.handle,node.name);
+    if(closed&&this.#selected===this.#key(node))this.#selected=null;
+    this.render();
   }
   #cancelRename(){this.#rename=null;this.render();}
   #startRename(node){this.#rename=this.#key(node);this.render();
