@@ -33,3 +33,29 @@ test('angle brackets, Chinese typography and skip closing', () => {
     assert.equal(dfomEdit(open+close,1,1,close).caret,2);
   }
 });
+
+test('angle bracket pairs before identifier and whitespace', () => {
+  assert.deepEqual(dfomEdit('vector',0,0,'<'),
+    {start:0,end:0,text:'<>',caret:1});
+  assert.equal(dfomEdit('vector<>',7,7,'>').caret,8);
+});
+test('space and Enter expand an empty brace pair into indented block', () => {
+  for (const key of [' ', 'Enter']) {
+    const edit=dfomEdit('if (x) {}',8,8,key);
+    assert.equal(edit.text,'\n\t\n');
+    assert.equal(edit.caret,10);
+    const nested=dfomEdit('\t{}',2,2,key);
+    assert.equal(nested.text,'\n\t\t\n\t');
+    assert.equal(nested.caret,5);
+  }
+});
+test('Enter keeps indentation and indents after opening brackets', () => {
+  assert.equal(dfomEdit('\tcall(',6,6,'Enter').text,'\n\t\t');
+  assert.equal(dfomEdit('\tfoo',4,4,'Enter').text,'\n\t');
+});
+test('Shift Tab unindents a line and Backspace removes indentation stop', () => {
+  assert.deepEqual(dfomEdit('\tfoo',1,1,'Tab',{shift:true}),
+    {start:0,end:1,text:'',caret:0});
+  assert.deepEqual(dfomEdit('    foo',4,4,'Backspace'),
+    {start:0,end:4,text:'',caret:0});
+});
