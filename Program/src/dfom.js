@@ -105,6 +105,17 @@ export function dfomEdit(value, start, end, key, options = {}) {
   return null;
 }
 
+function applyDfomEdit(editor, edit) {
+  if (!edit) return false;
+  editor.setRangeText(edit.text, edit.start, edit.end, 'end');
+  if (edit.selectStart !== undefined) {
+    editor.setSelectionRange(edit.selectStart, edit.selectEnd);
+  } else {
+    editor.setSelectionRange(edit.caret, edit.caret);
+  }
+  return true;
+}
+
 export function handleDfomKeydown(event, editor) {
   if (event.defaultPrevented || editor.readOnly || event.isComposing ||
       event.key === 'Process' || event.ctrlKey || event.metaKey || event.altKey) {
@@ -114,13 +125,28 @@ export function handleDfomKeydown(event, editor) {
     editor.selectionEnd, event.key, {shift: event.shiftKey});
   if (!edit) return false;
   event.preventDefault();
-  editor.setRangeText(edit.text, edit.start, edit.end, 'end');
-  if (edit.selectStart !== undefined) {
-    editor.setSelectionRange(edit.selectStart, edit.selectEnd);
-  } else {
-    editor.setSelectionRange(edit.caret, edit.caret);
+  return applyDfomEdit(editor, edit);
+}
+
+/**
+ * beforeinput is essential for IME, virtual keyboards, and input paths that
+ * do not produce a reliable keydown. Avoid interfering with composition.
+ */
+export function handleDfomBeforeInput(event, editor) {
+  if (event.defaultPrevented || !event.cancelable || editor.readOnly ||
+      event.isComposing || event.inputType === 'insertCompositionText') return false;
+  let key = null;
+  if (event.inputType === 'insertLineBreak' ||
+      event.inputType === 'insertParagraph') key = 'Enter';
+  else if (event.inputType === 'insertText' && event.data?.length === 1) {
+    key = event.data;
   }
-  return true;
+  if (!key) return false;
+  const edit = dfomEdit(editor.value, editor.selectionStart,
+    editor.selectionEnd, key);
+  if (!edit) return false;
+  event.preventDefault();
+  return applyDfomEdit(editor, edit);
 }
 
 /** A text-only mirror. Only tab spans have a visible guide. */

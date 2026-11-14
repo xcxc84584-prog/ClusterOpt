@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {dfomEdit, DFOM_PAIRS} from '../src/dfom.js';
+import {dfomEdit, DFOM_PAIRS, handleDfomBeforeInput} from '../src/dfom.js';
 
 test('Tab inserts one literal tab and Backspace deletes it atomically', () => {
   assert.deepEqual(dfomEdit('ab', 1, 1, 'Tab'),
@@ -58,4 +58,33 @@ test('Shift Tab unindents a line and Backspace removes indentation stop', () => 
     {start:0,end:1,text:'',caret:0});
   assert.deepEqual(dfomEdit('    foo',4,4,'Backspace'),
     {start:0,end:4,text:'',caret:0});
+});
+
+test('beforeinput supports angle bracket typing without keydown', () => {
+  const editor = {
+    value:'vector', selectionStart:0, selectionEnd:0, readOnly:false,
+    setRangeText(text,start,end) {
+      this.value=this.value.slice(0,start)+text+this.value.slice(end);
+    },
+    setSelectionRange(start,end) {this.selectionStart=start;this.selectionEnd=end;}
+  };
+  let prevented=false;
+  const event={inputType:'insertText',data:'<',cancelable:true,
+    preventDefault(){prevented=true;}};
+  assert.equal(handleDfomBeforeInput(event,editor),true);
+  assert.equal(prevented,true);
+  assert.equal(editor.value,'<>vector');
+  assert.equal(editor.selectionStart,1);
+});
+test('beforeinput Enter indents a brace block', () => {
+  const editor={
+    value:'int main(){}',selectionStart:11,selectionEnd:11,readOnly:false,
+    setRangeText(text,start,end) {
+      this.value=this.value.slice(0,start)+text+this.value.slice(end);
+    },
+    setSelectionRange(start,end){this.selectionStart=start;this.selectionEnd=end;}
+  };
+  const event={inputType:'insertLineBreak',cancelable:true,preventDefault(){}};
+  assert.equal(handleDfomBeforeInput(event,editor),true);
+  assert.equal(editor.value,'int main(){\n\t\n}');
 });
