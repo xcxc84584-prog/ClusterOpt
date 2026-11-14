@@ -1,4 +1,4 @@
-import {Explorer} from './explorer.js';
+import {Explorer} from './explorer.js?v=opt027-inline-ui';
 import {createVTE} from './vte/vte.js';
 import {handleDfomKeydown, handleDfomBeforeInput, buildTabGuideFragment} from './dfom.js';
 import {readStoragePriority, writeStoragePriority, fileSignature} from './storage-priority.js';
