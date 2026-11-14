@@ -71,14 +71,14 @@ export class DependencyRegistry {
   edges() { return this.dep().data.relations; }
 }
 
-/** Single source of truth for the current v0.0.12 static OCDA declarations. */
+/** Single source of truth for the current v0.0.45 static OCDA declarations. */
 export function createClusterDependencies() {
   const registry = new DependencyRegistry();
   const objects = [
-    ['UI', 'main.js', 'Browser interaction and coordination', ['LANGUAGE', 'UI_PALETTE']],
+    ['UI', 'main.js', 'Browser interaction and coordination', ['LANGUAGE', 'UI_PALETTE', 'TEXT_HIGHLIGHTER', 'STORAGE_PRIORITY', 'DOCUMENT_STATUS', 'FILE_TYPE_IDENTIFIER']],
     ['Documents', 'documents.js', 'Document metadata and tabs', ['DOCUMENT_STATUS']],
     ['FileManager', 'file-manager.js', 'File operations', []],
-    ['GlobalPropertyRegistry', 'global-properties.js', 'Global property values', []],
+    ['GlobalPropertyRegistry', 'global-properties.js', 'Global property values', ['LANGUAGE', 'UI_PALETTE', 'TEXT_HIGHLIGHTER', 'STORAGE_PRIORITY', 'DOCUMENT_STATUS', 'STORAGE_PROGRESS', 'FILE_TYPE_IDENTIFIER']],
     ['InterfacePalette', 'interface-palette.js', 'Theme color calculation', ['UI_PALETTE']],
     ['LanguageProperty', 'language.js', 'Localized strings', ['LANGUAGE']],
     ['OMU', 'omu.js', 'Event and EHU log collector', []],
@@ -97,6 +97,15 @@ export function createClusterDependencies() {
     ['LineTree', 'fmc/line-tree.js', 'Line offset indexing', []],
     ['ExternalChangeMonitor', 'main.js', 'External file change observation', ['DOCUMENT_STATUS']],
     ['FILE_MENU', 'main.js', 'File menu UI', ['LANGUAGE']],
+    ['Explorer', 'explorer.js', 'Workspace tree, context menu and file actions', ['LANGUAGE']],
+    ['VTE', 'vte/vte.js', 'Isolated virtual test environment', []],
+    ['DFOM', 'dfom.js', 'Editor indentation and tab guide rendering', []],
+    ['TextHighlighter', 'text-highlighter/text-highlighter.js', 'Syntax tokenization', ['TEXT_HIGHLIGHTER']],
+    ['HighlightRenderer', 'text-highlighter/highlight-renderer.js', 'Editor highlight overlay', ['TEXT_HIGHLIGHTER']],
+    ['MatchingWindow', 'text-highlighter/matching-window.js', 'Incremental highlight matching', []],
+    ['TextContrast', 'text-highlighter/text-contrast.js', 'Syntax color contrast', ['UI_PALETTE']],
+    ['StoragePriority', 'storage-priority.js', 'Storage priority configuration', ['STORAGE_PRIORITY']],
+    ['ChineseTranscoder', 'fmc/chinese-transcoder.js', 'Text encoding conversion', []],
   ];
   for (const [name, module, role, properties] of objects) {
     registry.register(name, {module, role, properties});
@@ -110,6 +119,13 @@ export function createClusterDependencies() {
     ['UI', 'OverloadRestorer', 'REQUEST'],
     ['UI', 'StorageProgressTracker', 'REQUEST'],
     ['UI', 'OMU', 'LOG'], ['Documents', 'OMU', 'LOG'],
+    ['UI', 'Explorer', 'REQUEST'], ['UI', 'VTE', 'REQUEST'],
+    ['UI', 'DFOM', 'REQUEST'], ['UI', 'TextHighlighter', 'REQUEST'],
+    ['UI', 'HighlightRenderer', 'REQUEST'], ['UI', 'MatchingWindow', 'REQUEST'],
+    ['UI', 'StoragePriority', 'REQUEST'], ['UI', 'ChineseTranscoder', 'REQUEST'],
+    ['Explorer', 'OMU', 'LOG'], ['Explorer', 'LanguageProperty', 'REQUEST'],
+    ['HighlightRenderer', 'TextHighlighter', 'REQUEST'],
+    ['TextHighlighter', 'TextContrast', 'REQUEST'],
     ['FileManager', 'OMU', 'LOG'], ['FILE_MENU', 'LanguageProperty', 'REQUEST'],
     ['LanguageProperty', 'UI', 'SUBSCRIBE'],
     ['InterfacePalette', 'UI', 'SUBSCRIBE'],
@@ -117,6 +133,9 @@ export function createClusterDependencies() {
     ['GlobalPropertyRegistry', 'InterfacePalette', 'PROPERTY'],
     ['GlobalPropertyRegistry', 'SyncStatus', 'PROPERTY'],
     ['GlobalPropertyRegistry', 'StorageProgressTracker', 'PROPERTY'],
+    ['GlobalPropertyRegistry', 'TextHighlighter', 'PROPERTY'],
+    ['GlobalPropertyRegistry', 'StoragePriority', 'PROPERTY'],
+    ['GlobalPropertyRegistry', 'FileTypeIdentifier', 'PROPERTY'],
     ['ExternalChangeMonitor', 'Documents', 'REQUEST'],
     ['ExternalChangeMonitor', 'SyncStatus', 'REQUEST'],
     ['FileManagementCore', 'FlagUnit', 'IMPORT'],
