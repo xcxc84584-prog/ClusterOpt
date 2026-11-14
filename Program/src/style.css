@@ -958,3 +958,7 @@ header .menu-wrap { margin-left:auto; }
 #explorerTree .explorer-disclosure { cursor:pointer; display:inline-flex; align-items:center; justify-content:center; min-width:20px; min-height:24px; border-radius:6px; }
 #explorerTree .explorer-disclosure:hover { background:var(--ui-hover); }
 #explorerPanel .explorer-context { z-index:100; }
+
+/* Explorer v0.0.24: New, Folder, Open and Refresh share the action rail. */
+#explorerPanel .explorer-actions { grid-template-columns:1fr 1.2fr 1.2fr 32px; gap:4px; }
+#explorerPanel .explorer-actions button { font-size:10px; padding:7px 2px; white-space:nowrap; }
