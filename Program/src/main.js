@@ -576,6 +576,20 @@ function renderTabGuides() {
   tabGuide.scrollTop = editor.scrollTop;
   tabGuide.scrollLeft = editor.scrollLeft;
 }
+let lineStructureChanged=true;
+editor.addEventListener('beforeinput',event=>{
+  const from=editor.selectionStart,to=editor.selectionEnd;
+  const removed=editor.value.slice(from,to);
+  const backward=from>0?editor.value[from-1]:'';
+  const forward=editor.value[to]||'';
+  const inserted=event.data;
+  lineStructureChanged=event.inputType==='insertLineBreak'||
+    event.inputType==='insertParagraph'||
+    inserted===null||inserted===undefined||inserted.includes('\n')||
+    removed.includes('\n')||
+    (event.inputType==='deleteContentBackward'&&from===to&&backward==='\n')||
+    (event.inputType==='deleteContentForward'&&from===to&&forward==='\n');
+},true);
 editor.addEventListener('input',()=>{
  scheduleLineHighlight();
 renderTabGuides();if(!active || editor.readOnly)return;
@@ -615,7 +629,8 @@ if (virtualSessions.has(active)) {
     omu.emit('VirtualEditor', 'Commit', 500, String(error), true);
   });
   $('#filename').textContent = docs.get(id).data.name + ' *';
-  updateLines();updatePos();
+  if(lineStructureChanged)updateLines();
+  updatePos();
   return;
 }
 const previous = docs.get(active).data.content;
