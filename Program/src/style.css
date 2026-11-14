@@ -748,3 +748,54 @@ nav button {
 .fti-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
 .fti-actions button { padding: 8px 12px; border: 1px solid var(--border, #414754); border-radius: 6px; background: var(--panel, #262c36); color: inherit; }
 #ftiForce { background: #246db5; color: white; }
+
+/* Stable footer: progress and status never resize adjacent controls. */
+footer { min-width: 0; overflow: hidden; }
+footer > * { flex-shrink: 0; }
+footer .meter { flex: 0 0 100px; width: 100px; box-sizing: border-box; }
+footer #meterPercent {
+  display: inline-block !important;
+  flex: 0 0 4.5em;
+  width: 4.5em;
+  min-width: 4.5em;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+footer #meterPercent[hidden] { visibility: hidden; }
+footer #syncLabel {
+  flex: 0 0 180px;
+  width: 180px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+footer #status {
+  flex: 0 1 240px;
+  width: 240px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+footer #filename {
+  flex: 0 1 160px;
+  width: 160px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+footer #position { flex: 0 0 110px; width: 110px; white-space: nowrap; }
+footer .grow { flex: 1 1 auto; min-width: 0; }
+@media (max-width: 850px) {
+  footer #syncLabel { flex-basis: 125px; width: 125px; }
+  footer #status { flex-basis: 140px; width: 140px; }
+  footer #filename { flex-basis: 110px; width: 110px; }
+}
+@media (max-width: 650px) {
+  footer .meter { display: none; }
+  footer #status { flex-basis: 100px; width: 100px; }
+  footer #syncLabel { flex-basis: 100px; width: 100px; }
+}
