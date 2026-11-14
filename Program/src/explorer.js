@@ -207,6 +207,7 @@ export class Explorer {
   #openMenu(node,clientX,clientY){
     this.#closeMenu();
     const menu=document.createElement('div');menu.className='explorer-context';menu.setAttribute('role','menu');
+    menu.addEventListener('click',event=>event.stopPropagation());
     const items=[
       [this.#say('重新命名','Rename'),()=>this.#startRename(node)],
       [this.#say('刪除','Delete'),()=>this.#delete(node)],
@@ -347,14 +348,30 @@ export class Explorer {
       row.dataset.path=this.#key(node);
       if(row.dataset.path===this.#selected)row.classList.add('active');
       row.querySelector('.explorer-arrow').textContent=node.kind==='directory'?(node.expanded?'⌄':'›'):'';
+      // Left click opens the action menu only. The disclosure arrow controls
+      // folder expansion, and double click opens a file in the editor.
       row.onclick=event=>{
         event.stopPropagation();
-        if(this.#rename)return;
-        this.#selected=this.#key(node);this.render();
-        if(node.kind==='directory')this.#expand(node);
-        else this.#expand(node);
+        if(this.#rename||event.button!==0)return;
+        this.#selected=this.#key(node);
+        this.render();
         this.#openMenu(node,event.clientX,event.clientY);
       };
+      row.ondblclick=event=>{
+        event.stopPropagation();
+        if(this.#rename||event.button!==0)return;
+        this.#closeMenu();
+        if(node.kind==='file')void this.#expand(node);
+      };
+      if(node.kind==='directory'){
+        const arrow=row.querySelector('.explorer-arrow');
+        arrow.classList.add('explorer-disclosure');
+        arrow.onclick=event=>{
+          event.stopPropagation();
+          this.#closeMenu();
+          void this.#expand(node);
+        };
+      }
       if(this.#rename===this.#key(node)){
         const input=document.createElement('input');input.className='explorer-rename';
         input.value=node.name;row.querySelector('.explorer-name').replaceWith(input);
