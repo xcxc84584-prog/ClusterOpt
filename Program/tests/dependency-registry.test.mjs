@@ -23,6 +23,7 @@ test('DYDA is direction-sensitive and bidirectional where appropriate', () => {
   registry.register('B');
   assert.equal(registry.relate('A', 'B', 'REQUEST').ok, true);
   assert.equal(registry.dep('A').data.relations[0].dyda, '01');
+  assert.equal(registry.dep('B').data.relations[0].dyda, '10');
   assert.equal(registry.relate('B', 'A', 'RESPONSE').ok, true);
   assert.ok(registry.dep('A').data.relations.every(e => e.dyda === '11'));
 });
