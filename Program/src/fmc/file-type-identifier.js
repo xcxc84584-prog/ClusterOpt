@@ -18,7 +18,7 @@ export class FileTypeIdentifier {
     }
     // Legacy Chinese encodings overlap. Validate candidates on bounded samples;
     // never silently guess when more than one encoding remains plausible.
-    const sample = header.length > 4 ? header.slice(0, header.length - 4) : header;
+    const sample = header.length === 4096 ? header.slice(0, -4) : header;
     const highBytes = sample.some(byte => byte >= 0x80);
     if (highBytes) {
       try {
@@ -39,8 +39,7 @@ export class FileTypeIdentifier {
       }
     }
     try {
-      const text = new TextDecoder('utf-8', {fatal: true}).decode(header.slice(0,
-        header.length > 4 ? header.length - 4 : header.length));
+      const text = new TextDecoder('utf-8', {fatal: true}).decode(sample);
       const cjk = /[\u3400-\u9fff\uf900-\ufaff]/u.test(text);
       return {kind: 'TEXT', format: 'UTF-8', mode: 'TEXT',
         script: cjk ? 'CJK' : 'GENERAL', ehu: 'FTI_TEXT_LOAD'};
