@@ -24,3 +24,15 @@
 | RT-15 | OLR 差異 Undo/Redo | 內容完全還原 | NOT RUN |
 | RT-16 | OLR clearRecovery | IndexedDB 恢復資料被清除 | NOT RUN |
 | RT-17 | 1GiB 大文件 viewport | 不讀取整份文件 | NOT IMPLEMENTED |
+
+## v0.0.8+2：下一版大文件載入驗收項目
+
+| ID | 行為 | 預期 | 狀態 |
+|---|---|---|---|
+| RT-18 | 以 FileManager 開啟 1GiB Blob | 不執行 file.text() | NOT RUN |
+| RT-19 | 中心切片切換 | 僅中心及 ±1 常駐，Dirty 不丟失 | NOT RUN |
+| RT-20 | UTF-8 邊界含 emoji / CJK | 逐片及儲存後位元組正確 | NOT RUN |
+| RT-21 | WTF 競爭與 MVCC | 拒絕無權限與過期寫入 | NOT RUN |
+| RT-22 | 連續編輯與儲存後重開 | 內容完全一致 | NOT RUN |
+| RT-23 | 保存位置 | 切換切片及文件後保持游標與捲動 | NOT RUN |
+| RT-24 | 無 FileSystemHandle | 明確告知不支援，不丟資料 | NOT RUN |
