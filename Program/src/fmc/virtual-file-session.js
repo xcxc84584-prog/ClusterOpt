@@ -18,6 +18,7 @@ export class VirtualFileSession {
   #center = 0;
   #generation = 0;
   #pending = new Map();
+  #recoveryProtected = new Set();
 
   constructor(documentId, blob) {
     this.#documentId = documentId;
@@ -49,6 +50,14 @@ export class VirtualFileSession {
     return [...this.#dirty].map(([index, data]) => ({
       index, content: data.content
     }));
+  }
+
+  /** OLR recovery references must remain resident until resolved. */
+  protectRecovery(index, enabled = true) {
+    const sliceId = this.#documentId + ':' + index;
+    if (enabled) this.#recoveryProtected.add(index);
+    else this.#recoveryProtected.delete(index);
+    this.#core.setRecoveryProtection(sliceId, enabled);
   }
 
   async restoreEdits(edits) {
@@ -117,9 +126,12 @@ export class VirtualFileSession {
       return {ok: false, code: 416};
     }
     const generation = ++this.#generation;
-    // Demand-load the visible slice only. Neighbors stay as metadata until requested.
+    // Retain the viewport triplet: previous, current and next.
+    // Only the center is displayed; neighbors are loaded as resident slices.
     const slices = [];
     const requested = [center];
+    const protectedWindow = new Set([center - 1, center, center + 1]
+      .filter(index => index >= 0 && index < this.#count));
     onProgress({completed: 0, total: requested.length, center});
     for (const index of requested) {
       const sliceId = this.#documentId + ':' + index;
@@ -133,14 +145,19 @@ export class VirtualFileSession {
     if (generation !== this.#generation) {
       return {ok: false, code: 409, message: 'Stale viewport'};
     }
-    const next = new Set(slices.map(item => item.index));
-    for (const index of this.#resident) {
-      if (!next.has(index) && !this.#dirty.has(index) &&
-          !this.#pending.has(index)) {
-        this.#loader.unload(this.#documentId, index);
+    // Load neighbor slices without blocking the center render.
+    // Older requests are not evicted while still pending.
+    for (const index of protectedWindow) {
+      if (index !== center && !this.#dirty.has(index)) {
+        this.requestSlice(index).catch(() => {});
       }
     }
-    this.#resident = next;
+    for (const index of this.#loader.loadedIndices(this.#documentId)) {
+      if (protectedWindow.has(index) || this.#dirty.has(index) ||
+          this.#recoveryProtected.has(index) || this.#pending.has(index)) continue;
+      this.#loader.unload(this.#documentId, index);
+    }
+    this.#resident = protectedWindow;
     this.#center = center;
     return {ok: true, code: 200, data: {slices, center}};
   }
@@ -174,6 +191,7 @@ export class VirtualFileSession {
         this.#dirty.set(index, {
           content, versionId: result.data.versionId
         });
+        this.protectRecovery(index, true);
       }
       return result;
     } finally {
@@ -221,6 +239,7 @@ export class VirtualFileSession {
       this.#core.markPersisted(this.#documentId + ':' + index, record.versionId);
     }
     this.#dirty.clear();
+    for (const index of this.#recoveryProtected) this.protectRecovery(index, false);
     // Rebind to the saved file: the original Blob is immutable and may now
     // differ in size and slice boundaries after editing.
     const savedBlob = await handle.getFile();
