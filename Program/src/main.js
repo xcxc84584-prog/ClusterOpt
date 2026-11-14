@@ -1128,7 +1128,7 @@ renderTabGuides();
 
 function renderLanguage() {
   document.documentElement.lang=LANGUAGE.value;
-  document.title='Cluster Opt v0.0.14';
+  document.title='Cluster Opt v0.0.15';
   $('#menuBtn').textContent=t('file')+'⌄';
   for (const key of ['new','open','save','saveas','close','closeall']) {
     const button=$('#menu [data-action="'+key+'"]');
