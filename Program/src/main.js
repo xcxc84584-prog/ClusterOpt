@@ -411,6 +411,8 @@ $('#tabs').append(tab);
 }
 if(d){const changedDocument = editor.dataset.doc !== active;
 if(changedDocument){
+  highlightRenderer.clear();
+  lastGutterSignature='';
   editor.value = binaryDocuments.has(active) ? binaryDocuments.get(active).content : virtualSessions.has(active) ? '' : d.content;
   editor.dataset.doc=active;
   editor.dataset.sliceReady = virtualSessions.has(active) ? '' : 'true';
@@ -476,10 +478,16 @@ if(active===id){
 scheduleRecovery();
 return true;
 }
+let lastGutterSignature='';
 function updateLines(){
-  const count = editor.value.split('\n').length;
-  const tree = new LineTree([count]);
-  $('#gutter').textContent = Array.from({length: tree.total}, (_, i) => i + 1).join('\n');
+  const count=editor.value.split('\n').length;
+  const session=active?virtualSessions.get(active):null;
+  const first=session?(session.lineStarts?.[session.center]||1):1;
+  const signature=active+':'+session?.center+':'+first+':'+count;
+  if(signature===lastGutterSignature)return;
+  lastGutterSignature=signature;
+  $('#gutter').textContent=Array.from({length:count},(_,i)=>String(first+i)).join('\n');
+  $('#gutter').scrollTop=editor.scrollTop;
 }
 /**
  * Navigate only after the target physical slice has finished loading.
@@ -607,6 +615,7 @@ if (virtualSessions.has(active)) {
     omu.emit('VirtualEditor', 'Commit', 500, String(error), true);
   });
   $('#filename').textContent = docs.get(id).data.name + ' *';
+  updateLines();updatePos();
   return;
 }
 const previous = docs.get(active).data.content;
@@ -1150,9 +1159,8 @@ async function renderVirtualSlice(id, center = null) {
     }
     const firstLine = current.content.split('\n').length;
     const lineStart = session.lineStarts?.[index] || 1;
-    $('#gutter').textContent = Array.from(
-      {length: firstLine}, (_, i) => String(lineStart + i)
-    ).join('\n');
+    lastGutterSignature='';
+    updateLines();
     status('Loaded slice ' + (index + 1) + ' / ' + session.sliceCount);
     $('#gutter').scrollTop = editor.scrollTop;
     updatePos();
