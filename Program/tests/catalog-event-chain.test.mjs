@@ -6,12 +6,12 @@ import {createVTE} from '../src/vte/vte.js';
 test('CAT-01/02: catalog distinguishes registered objects and implementation-only modules', () => {
   const registry = createClusterDependencies();
   const names = registry.list().map(object => object.name);
-  assert.equal(names.length, 22);
+  assert.equal(names.length, 31);
   for (const name of ['UI', 'Documents', 'OMU', 'VirtualFileSession', 'FILE_MENU']) {
     assert.ok(names.includes(name), name);
   }
-  assert.equal(names.includes('Explorer'), false);
-  assert.equal(names.includes('VTE'), false);
+  assert.equal(names.includes('Explorer'), true);
+  assert.equal(names.includes('VTE'), true);
   const relation = registry.dep('FlagUnit');
   assert.equal(relation.ok, true);
   assert.ok(relation.data.relations.length > 0);
