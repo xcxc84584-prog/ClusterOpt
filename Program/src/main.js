@@ -1,5 +1,5 @@
 import {createVTE} from './vte/vte.js';
-import {handleDfomKeydown, buildTabGuideFragment} from './dfom.js';
+import {handleDfomKeydown, handleDfomBeforeInput, buildTabGuideFragment} from './dfom.js';
 import {readStoragePriority, writeStoragePriority, fileSignature} from './storage-priority.js';
 import {createClusterDependencies} from './dependency-registry.js';
 import {VirtualFileSession} from './fmc/virtual-file-session.js';
@@ -530,6 +530,11 @@ editor.addEventListener('wheel', event => {
   capturePosition();
   scheduleRecovery();
 }));
+editor.addEventListener('beforeinput', event => {
+  if (handleDfomBeforeInput(event, editor)) {
+    editor.dispatchEvent(new Event('input', {bubbles: true}));
+  }
+});
 editor.addEventListener('keydown',e=>{
   if ((e.ctrlKey || e.metaKey) && ['z','y'].includes(e.key.toLowerCase())) {
     if (!active || virtualSessions.has(active) || editor.value.length >= 2 * 1024 * 1024) return;
@@ -1128,7 +1133,7 @@ renderTabGuides();
 
 function renderLanguage() {
   document.documentElement.lang=LANGUAGE.value;
-  document.title='Cluster Opt v0.0.15';
+  document.title='Cluster Opt v0.0.16';
   $('#menuBtn').textContent=t('file')+'⌄';
   for (const key of ['new','open','save','saveas','close','closeall']) {
     const button=$('#menu [data-action="'+key+'"]');
