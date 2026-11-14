@@ -74,14 +74,9 @@ export class VirtualFileSession {
       return {ok: false, code: 416};
     }
     const generation = ++this.#generation;
-    const start = Math.max(0, center - 1);
-    const end = Math.min(this.#count - 1, center + 1);
+    // Demand-load the visible slice only. Neighbors stay as metadata until requested.
     const slices = [];
     const requested = [center];
-    for (let distance = 1; distance <= 1; distance++) {
-      if (center - distance >= start) requested.push(center - distance);
-      if (center + distance <= end) requested.push(center + distance);
-    }
     onProgress({completed: 0, total: requested.length, center});
     for (const index of requested) {
       const sliceId = this.#documentId + ':' + index;
