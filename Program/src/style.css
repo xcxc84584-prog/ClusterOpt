@@ -868,3 +868,40 @@ footer select { background: var(--ui-control); border-color: var(--ui-border); c
 #tabGuide .dfom-tab::before { content: ''; position: absolute; top: 2px; bottom: 2px;
   left: 0; border-left: 1px dashed var(--ui-muted, #8793a6); opacity: .7; }
 @media(max-width:650px) { #tabGuide { left: 43px; } }
+
+/* EXPLORER: docked graphite sidebar based on legacy Cluster CEXP. */
+#clusterWorkspaceShell { flex:1; min-height:0; display:flex; overflow:hidden; }
+#clusterEditorColumn { flex:1; min-width:0; display:flex; flex-direction:column; }
+#clusterEditorColumn main { min-height:0; }
+#explorerPanel { width:255px; flex:0 0 255px; min-width:0; display:flex;
+  flex-direction:column; border-right:1px solid var(--ui-border);
+  background:var(--ui-panel); color:var(--ui-text-on-panel); }
+#explorerPanel[hidden] { display:none!important; }
+.explorer-header { min-height:44px; display:flex; align-items:center;
+  justify-content:space-between; padding:8px 10px 8px 15px;
+  border-bottom:1px solid var(--ui-border); font-size:12px; letter-spacing:.6px; }
+.explorer-header button { padding:3px 9px; }
+.explorer-actions { display:flex; gap:5px; padding:8px 10px; }
+.explorer-actions button { flex:1; padding:5px; background:var(--ui-control);
+  color:var(--ui-text-on-control); border:1px solid var(--ui-border); }
+#explorerSearch { width:calc(100% - 20px); margin:0 10px 8px; padding:8px 10px;
+  border:1px solid var(--ui-border); border-radius:5px; outline-offset:1px;
+  background:var(--ui-control); color:var(--ui-text-on-control); font-size:12px; font-family:inherit; }
+#explorerSearch::placeholder { color:var(--ui-muted); }
+#explorerTree { flex:1; min-height:0; overflow:auto; padding-bottom:12px; }
+.explorer-section { padding:11px 12px 6px; font-size:10px; font-weight:700;
+  letter-spacing:.7px; color:var(--ui-muted); }
+.explorer-entry { width:100%; min-height:29px; border:0; border-radius:0;
+  background:transparent; color:var(--ui-text-on-panel); display:flex;
+  align-items:center; gap:5px; text-align:left; padding:4px 8px; font-size:12px; }
+.explorer-entry:hover { background:var(--ui-hover); }
+.explorer-entry.active { background:var(--ui-control); font-weight:600;
+  border-left:2px solid var(--ui-accent); }
+.explorer-arrow { width:13px; flex-shrink:0; text-align:center; }
+.explorer-file-icon { width:15px; flex-shrink:0; text-align:center; }
+.explorer-name { overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+#explorerToggle { margin-left:auto; margin-right:10px; padding:7px 11px; }
+@media(max-width:650px) {
+  #explorerPanel { width:min(75vw,280px); flex-basis:min(75vw,280px); }
+  #explorerToggle { margin-left:auto; }
+}

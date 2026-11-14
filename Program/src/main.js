@@ -1,3 +1,4 @@
+import {Explorer} from './explorer.js';
 import {createVTE} from './vte/vte.js';
 import {handleDfomKeydown, handleDfomBeforeInput, buildTabGuideFragment} from './dfom.js';
 import {readStoragePriority, writeStoragePriority, fileSignature} from './storage-priority.js';
@@ -226,6 +227,16 @@ function scheduleRecovery() {
 }
 
 const $=s=>document.querySelector(s),editor=$('#editor');
+const explorer = new Explorer({
+  panel: $('#explorerPanel'),
+  openDocument: id => switchDoc(id),
+  openFile: async handle => {
+    const file = await handle.getFile();
+    await createVirtual({name: file.name, blob: file, content: null, handle});
+  },
+  log: message => omu.emit('EXPLORER', 'Operation', 500, message, true)
+});
+GLOBALS.register('EXPLORER', explorer);
 function localizeStatusMessage(raw) {
   if (raw === '就緒' || raw === 'Ready') return t('ready');
   if (raw === '未儲存' || raw === 'Unsaved') return t('unsaved');
@@ -250,6 +261,10 @@ function updateEditorLock() {
   editor.title = unavailable ? 'Waiting for the first editable slice' : '';
 }
 function refresh(){const d=active?docs.get(active).data:null;
+explorer.syncDocuments(docs.ids().map(id => {
+  const item = docs.get(id).data;
+  return {id, name: item.name, dirty: item.dirty};
+}), active);
 $('#empty').hidden=!!d;
 $('#editorPane').hidden=!d;
 $('#tabs').replaceChildren();
@@ -1133,7 +1148,8 @@ renderTabGuides();
 
 function renderLanguage() {
   document.documentElement.lang=LANGUAGE.value;
-  document.title='Cluster Opt v0.0.16';
+  explorer.setLocale(LANGUAGE.value, t);
+  document.title='Cluster Opt v0.0.17';
   $('#menuBtn').textContent=t('file')+'⌄';
   for (const key of ['new','open','save','saveas','close','closeall']) {
     const button=$('#menu [data-action="'+key+'"]');
