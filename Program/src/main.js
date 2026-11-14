@@ -235,7 +235,10 @@ if (virtualSessions.has(active)) {
   const session = virtualSessions.get(id);
   const index = session.center;
   const content = editor.value;
-  capturePosition(id);
+  session.setPosition(index, {
+    scrollTop: editor.scrollTop, scrollLeft: editor.scrollLeft,
+    selectionStart: editor.selectionStart, selectionEnd: editor.selectionEnd
+  });
   virtualEditQueue = virtualEditQueue.then(async () => {
     const result = await session.edit(index, content);
     if (!result.ok) throw new Error('WTF/MVCC commit failed: ' + result.code);
@@ -260,7 +263,13 @@ const activeTab=[...$('#tabs').children].find(tab=>tab.classList.contains('activ
 if(activeTab)activeTab.querySelector('.name').textContent=docs.get(active).data.name+' ●';status(t('unsaved'));});
 editor.addEventListener('scroll',()=>{
   $('#gutter').scrollTop=editor.scrollTop;
-  capturePosition();
+  if (active && virtualSessions.has(active)) {
+    virtualSessions.get(active).setPosition(
+      virtualSessions.get(active).center,
+      {scrollTop: editor.scrollTop, scrollLeft: editor.scrollLeft,
+        selectionStart: editor.selectionStart, selectionEnd: editor.selectionEnd}
+    );
+  } else capturePosition();
   scheduleRecovery();
 });
 ['click','keyup','select'].forEach(ev=>editor.addEventListener(ev,()=>{
@@ -377,6 +386,7 @@ async function renderVirtualSlice(id, center = null) {
   ).join('\n');
   $('#sliceNumber').textContent = (index + 1) + ' / ' + session.sliceCount;
   $('#sliceControls').hidden = false;
+  $('#gutter').scrollTop = editor.scrollTop;
   updatePos();
 }
 
