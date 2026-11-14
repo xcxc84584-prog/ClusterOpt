@@ -625,6 +625,11 @@ if (virtualSessions.has(id)) {
       if (active === id) renderSyncStatus();
     }
     if (active === id) await renderVirtualSlice(id, Math.min(savedCenter, session.sliceCount - 1));
+    try {
+      monitor.watch(id, null, await handle.getFile());
+    } catch (error) {
+      omu.emit('ExternalChangeMonitor', 'RefreshBaseline', 500, String(error), true);
+    }
     res = contract(true, {handle, name: handle.name});
   } catch (error) {
     res = contract(false, null, 500, String(error));
@@ -1239,6 +1244,7 @@ updatePaletteControls();
           const session = new VirtualFileSession(id, blob, {forceText: item.forceText === true});
           attachFlagEvents(session);
           virtualSessions.set(id, session);
+          if (item.handle) monitor.watch(id, null, blob);
           mapping.set(item.id, id);
           if (!active) { active = id; refresh(); }
           rebuildingDocuments.add(id);
