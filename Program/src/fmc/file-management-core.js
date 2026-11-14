@@ -7,6 +7,7 @@ export class FileManagementCore {
   #flags = new FlagUnit();
   #mvcc = new MVCCUnit();
   #loaderKey = Symbol('SliceLoader');
+  #recoveryProtected = new Set();
 
   get loaderAccess() {
     return Object.freeze({
@@ -32,9 +33,14 @@ export class FileManagementCore {
     if (key !== this.#loaderKey) return {ok: false, code: 403};
     const slice = this.#slices.get(sliceId);
     if (!slice) return {ok: false, code: 404};
-    if (slice.dirty || this.#flags.active(sliceId)) return {ok: false, code: 409};
+    if (slice.dirty || this.#flags.active(sliceId) ||
+        this.#recoveryProtected.has(sliceId) ||
+        this.#mvcc.hasUnpersistedVersion(sliceId)) {
+      return {ok: false, code: 409, message: 'Slice is protected from retirement'};
+    }
     this.#mvcc.unregister(sliceId);
     this.#slices.delete(sliceId);
+    this.#recoveryProtected.delete(sliceId);
     return {ok: true, code: 200};
   }
 
@@ -94,6 +100,11 @@ export class FileManagementCore {
     }
     this.#slices.get(sliceId).dirty = false;
     return {ok: true, code: 200};
+  }
+
+  setRecoveryProtection(sliceId, protectedState) {
+    if (protectedState) this.#recoveryProtected.add(sliceId);
+    else this.#recoveryProtected.delete(sliceId);
   }
 
   get loadedSliceCount() {
