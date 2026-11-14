@@ -480,14 +480,22 @@ return true;
 }
 let lastGutterSignature='';
 function updateLines(){
-  const count=editor.value.split('\n').length;
+  // Count the actual unsaved textarea contents, not the persisted slice index.
+  const count=1+(editor.value.match(/\n/g)?.length||0);
   const session=active?virtualSessions.get(active):null;
   const first=session?(session.lineStarts?.[session.center]||1):1;
   const signature=active+':'+session?.center+':'+first+':'+count;
-  if(signature===lastGutterSignature)return;
+  if(signature===lastGutterSignature && $('#gutter').dataset.signature===signature)return;
   lastGutterSignature=signature;
+  $('#gutter').dataset.signature=signature;
   $('#gutter').textContent=Array.from({length:count},(_,i)=>String(first+i)).join('\n');
   $('#gutter').scrollTop=editor.scrollTop;
+  // A newly appended line changes scrollHeight after layout. Re-sync once
+  // the browser has laid out the expanded gutter, including at EOF.
+  requestAnimationFrame(()=>{
+    if(active && $('#gutter').dataset.signature===signature)
+      $('#gutter').scrollTop=editor.scrollTop;
+  });
 }
 /**
  * Navigate only after the target physical slice has finished loading.
@@ -629,7 +637,9 @@ if (virtualSessions.has(active)) {
     omu.emit('VirtualEditor', 'Commit', 500, String(error), true);
   });
   $('#filename').textContent = docs.get(id).data.name + ' *';
-  if(lineStructureChanged)updateLines();
+  // Always check the unsaved buffer: IME, paste, undo and programmatic edits
+  // do not reliably emit a preceding beforeinput event.
+  updateLines();
   updatePos();
   return;
 }
@@ -1349,7 +1359,7 @@ renderTabGuides();
 function renderLanguage() {
   document.documentElement.lang=LANGUAGE.value;
   explorer.setLocale(LANGUAGE.value, t);
-  document.title='Cluster Opt v0.0.17.1';
+  document.title='Cluster Opt v0.0.35';
   $('#menuBtn').textContent=t('file')+'⌄';
   for (const key of ['new','open','save','saveas','close','closeall']) {
     const button=$('#menu [data-action="'+key+'"]');
