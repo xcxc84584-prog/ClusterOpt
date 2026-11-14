@@ -26,6 +26,8 @@ let virtualRenderGeneration = 0;
 let virtualEditQueue = Promise.resolve();
 let recoveryTimer = null;
 let restoring = false;
+let virtualScrollBusy = false;
+const virtualScrollCooldown = new Map();
 class ExternalChangeMonitor {
  #baseline=new Map();
 #busy=new Set();
@@ -128,29 +130,33 @@ function restorePosition(id = active) {
 function scheduleRecovery() {
   if (restoring) return;
   clearTimeout(recoveryTimer);
-  recoveryTimer = setTimeout(() => {
-    const snapshots = docs.ids().filter(id => !virtualSessions.has(id)).map(id => {
-      const data = docs.get(id).data;
-      return {id, name: data.name, content: data.content,
-        dirty: data.dirty, position: viewPositions.get(id) || null};
-    });
-    // Recovery snapshots are bounded to avoid filling IndexedDB with huge files.
-    const eligible = snapshots.filter(item => {
-      // Demand-loaded documents may have no materialized content. Never
-      // serialize that state as an empty string or access null.length.
-      if (typeof item.content !== 'string') {
-        omu.emit('OLR', 'SnapshotSkipped', 422,
-          'Document content is not materialized: ' + item.name, true);
-        return false;
-      }
-      return item.content.length <= 2 * 1024 * 1024;
-    });
-    olr.save('workspace', {
-      active: eligible.some(item => item.id === active) ? active : null,
-      documents: eligible
-    }).catch(error => {
+  recoveryTimer = setTimeout(async () => {
+    try {
+      await virtualEditQueue;
+      const snapshots = docs.ids().map(id => {
+        const data = docs.get(id).data;
+        const session = virtualSessions.get(id);
+        if (session) {
+          return {
+            id, name: data.name, virtual: true,
+            // File handles can be structured-cloned into IndexedDB.
+            handle: docs.handle(id) || null,
+            // Keep source bytes for picker-only files without a handle.
+            blob: docs.handle(id) ? null : session.sourceBlob,
+            edits: session.recoveryEdits,
+            center: session.center,
+            position: session.getPosition(session.center) || null
+          };
+        }
+        return {id, name: data.name, content: data.content,
+          dirty: data.dirty, position: viewPositions.get(id) || null};
+      }).filter(item => item.virtual ||
+        (typeof item.content === 'string' && item.content.length <= 2 * 1024 * 1024));
+      await olr.save('workspace', {active, documents: snapshots});
+    } catch (error) {
       omu.emit('OLR', 'Persist', 500, String(error), true);
-    });
+      status('Recovery persistence failed: ' + String(error));
+    }
   }, 350);
 }
 
@@ -160,7 +166,7 @@ function status(msg){$('#status').textContent=msg;
 function updateEditorLock() {
   const operation = active ? storageProgress.get(active) : null;
   const loading = !!active && (syncStates.get(active) === 'LOADING' ||
-    (operation?.operationType === 'LOAD' && operation.state === 'RUNNING'));
+    (['LOAD', 'INDEX'].includes(operation?.operationType) && operation.state === 'RUNNING'));
   const unavailable = !!active && virtualSessions.has(active) &&
     editor.dataset.doc !== active;
   editor.readOnly = loading || unavailable;
@@ -195,8 +201,7 @@ if(d){if(editor.dataset.doc!==active){
 $('#filename').textContent=d.name+(d.dirty?' *':'');
 if (virtualSessions.has(active)) {
   const session = virtualSessions.get(active);
-  $('#sliceControls').hidden = false;
-  $('#sliceNumber').textContent = (session.center + 1) + ' / ' + session.sliceCount;
+  $('#sliceControls').hidden = true;
   $('#gutter').textContent = '…';
 } else {
   $('#sliceControls').hidden = true;
@@ -294,6 +299,21 @@ editor.addEventListener('scroll',()=>{
     );
   } else capturePosition();
   scheduleRecovery();
+  if (active && virtualSessions.has(active) && !editor.readOnly && !virtualScrollBusy) {
+    const session = virtualSessions.get(active);
+    const max = editor.scrollHeight - editor.clientHeight;
+    const now = Date.now();
+    const last = virtualScrollCooldown.get(active) || 0;
+    if (now - last > 400 && max > 0) {
+      const next = editor.scrollTop >= max - 12 ? session.center + 1 :
+        editor.scrollTop <= 12 ? session.center - 1 : session.center;
+      if (next !== session.center && next >= 0 && next < session.sliceCount) {
+        virtualScrollCooldown.set(active, now);
+        virtualScrollBusy = true;
+        renderVirtualSlice(active, next).finally(() => { virtualScrollBusy = false; });
+      }
+    }
+  }
 });
 ['click','keyup','select'].forEach(ev=>editor.addEventListener(ev,()=>{
   updatePos();
@@ -375,8 +395,19 @@ async function createVirtual(item) {
   virtualSessions.set(id, session);
   active = id;
   refresh();
-  await renderVirtualSlice(id);
+  const initId = storageProgress.start(id, 'INDEX', session.sliceCount);
+  syncStates.set(id, 'LOADING');
+  try {
+    await session.indexLines(progress => storageProgress.update(initId, progress.completed, 'INDEX'));
+    storageProgress.finish(initId, 'SUCCESS');
+    await renderVirtualSlice(id);
+  } catch (error) {
+    storageProgress.finish(initId, 'ERROR');
+    syncStates.set(id, 'ERROR');
+    status('File indexing failed: ' + String(error));
+  }
   editor.focus({preventScroll: true});
+  scheduleRecovery();
 }
 
 async function renderVirtualSlice(id, center = null) {
@@ -417,14 +448,15 @@ async function renderVirtualSlice(id, center = null) {
       editor.scrollLeft = 0;
     }
     const firstLine = current.content.split('\n').length;
+    const lineStart = session.lineStarts?.[index] || 1;
     $('#gutter').textContent = Array.from(
-      {length: firstLine}, (_, i) => String(i + 1)
+      {length: firstLine}, (_, i) => String(lineStart + i)
     ).join('\n');
-    $('#sliceNumber').textContent = (index + 1) + ' / ' + session.sliceCount;
-    $('#sliceControls').hidden = false;
+    $('#sliceControls').hidden = true;
     status('Loaded slice ' + (index + 1) + ' / ' + session.sliceCount);
     $('#gutter').scrollTop = editor.scrollTop;
     updatePos();
+    scheduleRecovery();
     storageProgress.update(operationId, total, 'READ');
     succeeded = true;
     syncStates.set(id, session.dirty ? 'DIVERGED' : 'UNVERIFIED');
@@ -504,7 +536,7 @@ function renderSyncStatus() {
   bar.style.background = colors[state] || colors.UNVERIFIED;
   bar.parentElement.classList.toggle('indeterminate', saving && percent === null);
   const label = state === 'LOADING' && progress?.state === 'RUNNING'
-    ? 'LOADING (' + progress.completedUnits + '/' +
+    ? (progress.operationType === 'INDEX' ? 'INDEXING' : 'LOADING') + ' (' + progress.completedUnits + '/' +
       (progress.totalUnits ?? '?') + ' slices)'
     : saving && percent !== null ? state + ' ' + percent + '%' : state;
   const percentage = $('#meterPercent');
@@ -688,7 +720,7 @@ $('#paletteLight').addEventListener('click', () => setPalette([255, 255, 255]));
 UI_PALETTE.subscribe(updatePaletteControls);
 updatePaletteControls();
 
-// Restore saved small-document sessions after initial UI setup.
+// Restore virtual drafts and small documents after reload.
 (async () => {
   try {
     const records = await olr.restoreAll();
@@ -697,15 +729,47 @@ updatePaletteControls();
     restoring = true;
     const mapping = new Map();
     for (const item of workspace.documents) {
-      const result = docs.create(item.name, item.content);
-      const id = result.data.id;
-      mapping.set(item.id, id);
-      if (item.dirty) docs.update(id, item.content);
-      if (item.position) viewPositions.set(id, item.position);
+      try {
+        if (item.virtual) {
+          let blob = item.blob;
+          if (!blob && item.handle) {
+            const permission = await item.handle.queryPermission({mode: 'read'});
+            if (permission !== 'granted') {
+              status('File access needs permission: ' + item.name);
+              continue;
+            }
+            blob = await item.handle.getFile();
+          }
+          if (!blob) continue;
+          const created = docs.create(item.name, '', item.handle || null);
+          const id = created.data.id;
+          const session = new VirtualFileSession(id, blob);
+          virtualSessions.set(id, session);
+          mapping.set(item.id, id);
+          await session.indexLines();
+          await session.restoreEdits(item.edits);
+          const center = Math.min(Math.max(0, item.center || 0), session.sliceCount - 1);
+          session.setPosition(center, item.position || {
+            scrollTop: 0, scrollLeft: 0, selectionStart: 0, selectionEnd: 0
+          });
+          await session.window(center);
+          continue;
+        }
+        if (typeof item.content !== 'string') continue;
+        const created = docs.create(item.name, item.content);
+        const id = created.data.id;
+        mapping.set(item.id, id);
+        if (item.dirty) docs.update(id, item.content);
+        if (item.position) viewPositions.set(id, item.position);
+      } catch (error) {
+        omu.emit('OLR', 'RestoreDocument', 500, item.name + ': ' + String(error), true);
+      }
     }
-    active = mapping.get(workspace.active) || docs.ids()[0];
+    active = mapping.get(workspace.active) || docs.ids()[0] || null;
     refresh();
-    restorePosition(active);
+    if (active && virtualSessions.has(active)) {
+      await renderVirtualSlice(active, virtualSessions.get(active).center);
+    } else restorePosition(active);
     status('Recovered editor session');
   } catch (error) {
     omu.emit('OLR', 'Restore', 500, String(error), true);
