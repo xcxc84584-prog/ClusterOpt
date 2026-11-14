@@ -1,4 +1,5 @@
 import {VirtualFileSession} from './fmc/virtual-file-session.js';
+import {FileTypeIdentifier} from './fmc/file-type-identifier.js';
 import {OverloadRestorer} from './fmc/overload-restorer.js';
 import {LineTree} from './fmc/line-tree.js';
 import {WindowLoader} from './fmc/window-loader.js';
@@ -22,6 +23,8 @@ const olr = new OverloadRestorer();
 const windowLoader = new WindowLoader(sliceLoader, fmc);
 const viewPositions = new Map();
 const virtualSessions = new Map();
+const binaryDocuments = new Map();
+const FTI = new FileTypeIdentifier();
 const virtualRenderGenerations = new Map();
 const rebuildingDocuments = new Set();
 let virtualEditQueue = Promise.resolve();
@@ -109,6 +112,7 @@ GLOBALS.register('UI_PALETTE', UI_PALETTE);
 GLOBALS.register('STORAGE_PRIORITY','internal');
 GLOBALS.register('DOCUMENT_STATUS',syncStates);
 GLOBALS.register('STORAGE_PROGRESS', storageProgress);
+GLOBALS.register('FILE_TYPE_IDENTIFIER', FTI);
 const monitor=new ExternalChangeMonitor(docs,syncStates,GLOBALS);
 let active=null;
 function capturePosition(id = active) {
@@ -174,7 +178,7 @@ function updateEditorLock() {
     (['LOAD', 'INDEX'].includes(operation?.operationType) && operation.state === 'RUNNING'));
   const unavailable = !!active && (rebuildingDocuments.has(active) ||
     (virtualSessions.has(active) && editor.dataset.doc !== active));
-  editor.readOnly = loading || unavailable;
+  editor.readOnly = loading || unavailable || binaryDocuments.has(active);
   editor.setAttribute('aria-readonly', String(loading));
   editor.title = loading ? 'Loading slices — editing is disabled' :
     unavailable ? 'Slice not ready — editing is disabled' : '';
@@ -201,7 +205,7 @@ $('#tabs').append(tab);
 }
 if(d){const changedDocument = editor.dataset.doc !== active;
 if(changedDocument){
-  editor.value = virtualSessions.has(active) ? '' : d.content;
+  editor.value = binaryDocuments.has(active) ? 'Binary file — content is preserved without text decoding.' : virtualSessions.has(active) ? '' : d.content;
   editor.dataset.doc=active;
 }
 $('#filename').textContent=d.name+(d.dirty?' *':'');
@@ -250,6 +254,7 @@ if(!d)return;
 if(d.dirty&&!confirm(t('confirmClose',d.name)))return;
 monitor.unwatch(id);
 virtualSessions.delete(id);
+binaryDocuments.delete(id);
 rebuildingDocuments.delete(id);
 virtualRenderGenerations.delete(id);
 viewPositions.delete(id);
@@ -274,6 +279,7 @@ async function goToLine(lineNumber) {
     return;
   }
   const session = virtualSessions.get(id);
+  if (binaryDocuments.has(id)) { status('二進位文件不支援行號跳轉'); return; }
   const totalLines = session ? session.totalLines : editor.value.split('\n').length;
   if (lineNumber > totalLines) {
     status('行號超出文件範圍（共 ' + totalLines + ' 行）');
@@ -535,7 +541,63 @@ async function findOpenDocument(item) {
   }
   return null;
 }
+async function askForceBinary(name, reason) {
+  const dialog = $('#ftiDialog');
+  $('#ftiFileName').textContent = name;
+  $('#ftiReason').textContent = reason;
+  return new Promise(resolve => {
+    const cancel = $('#ftiCancel');
+    const force = $('#ftiForce');
+    let finished = false;
+    const settle = value => {
+      if (finished) return;
+      finished = true;
+      cancel.removeEventListener('click', onCancel);
+      force.removeEventListener('click', onForce);
+      dialog.removeEventListener('close', onClose);
+      if (dialog.open) dialog.close();
+      resolve(value);
+    };
+    const onCancel = () => settle(false);
+    const onForce = () => settle(true);
+    const onClose = () => settle(false);
+    cancel.addEventListener('click', onCancel);
+    force.addEventListener('click', onForce);
+    dialog.addEventListener('close', onClose);
+    dialog.showModal();
+    cancel.focus();
+  });
+}
+async function createBinary(item, type) {
+  const existing = await findOpenDocument(item);
+  if (existing) { switchDoc(existing); return; }
+  const created = docs.create(item.name, '', item.handle);
+  const id = created.data.id;
+  binaryDocuments.set(id, {blob: item.blob, type});
+  active = id;
+  syncStates.set(id, item.handle ? 'SYNCED' : 'UNVERIFIED');
+  refresh();
+  status(type.kind + ' · ' + item.blob.size + ' bytes · raw binary, read-only');
+  scheduleRecovery();
+}
 async function createVirtual(item) {
+  let type;
+  try {
+    type = await FTI.identify(item.blob, item.name);
+  } catch (error) {
+    omu.emit('FTI', 'Identify', 500, String(error), true);
+    if (!await askForceBinary(item.name, String(error))) return;
+    type = FTI.forceBinary();
+  }
+  if (type.mode === 'PROMPT') {
+    omu.emit('FTI', 'Parse', 422, type.ehu, true);
+    if (!await askForceBinary(item.name, '無法確認 UTF-8 編碼，是否以原始二進位方式載入？')) return;
+    type = FTI.forceBinary();
+  }
+  if (type.mode === 'BINARY') {
+    await createBinary(item, type);
+    return;
+  }
   const existing = await findOpenDocument(item);
   if (existing) {
     switchDoc(existing);
@@ -790,7 +852,7 @@ refresh();
 
 function renderLanguage() {
   document.documentElement.lang=LANGUAGE.value;
-  document.title='Cluster Opt v0.0.10+4';
+  document.title='Cluster Opt v0.0.10+5';
   $('#menuBtn').textContent=t('file')+'⌄';
   for (const key of ['new','open','save','saveas','close','closeall']) {
     const button=$('#menu [data-action="'+key+'"]');
