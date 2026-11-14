@@ -66,6 +66,27 @@ export class FileManagementCore {
     return result;
   }
 
+  commitBatch(changes) {
+    if (!Array.isArray(changes) || !changes.length) {
+      return {ok: false, code: 400};
+    }
+    for (const change of changes) {
+      if (!this.#slices.has(change.sliceId)) {
+        return {ok: false, code: 404};
+      }
+      if (!this.#flags.validate(
+        change.sliceId, change.leaseId, change.fencingToken
+      )) {
+        return {ok: false, code: 403, message: 'Invalid WTF'};
+      }
+    }
+    const result = this.#mvcc.commitBatch(changes);
+    if (result.ok) {
+      for (const change of changes) this.#slices.get(change.sliceId).dirty = true;
+    }
+    return result;
+  }
+
   markPersisted(sliceId, versionId) {
     const current = this.#mvcc.read(sliceId);
     if (!current.ok || current.data.versionId !== versionId) {
