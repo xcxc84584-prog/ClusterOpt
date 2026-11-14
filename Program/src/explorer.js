@@ -266,7 +266,8 @@ export class Explorer {
     this.#draft={directory,kind,busy:false};
     this.#save();
     this.render();
-    this.#tree.querySelector('.explorer-create-input')?.focus();
+    const field=this.#tree.querySelector('.explorer-create-input');
+    field?.focus();
   }
   async #commitDraft(draft,value){
     if(this.#draft!==draft||draft.busy)return;
@@ -465,7 +466,7 @@ export class Explorer {
       const siblings=nodes;
       const parentIndex=siblings.findIndex(row=>row.dataset?.path===this.#key(directory));
       if(parentIndex>=0){
-        const depth=this.#key(directory).split('/').length;
+        const depth=Math.round((parseInt(siblings[parentIndex].style.paddingInlineStart,10)-10)/15)+1;
         const row=this.#button('',draft.kind,depth);
         row.classList.add('explorer-create-row');
         const input=document.createElement('input');
@@ -484,7 +485,7 @@ export class Explorer {
         while(insertAt<siblings.length&&siblings[insertAt].style?.paddingInlineStart&&
           parseInt(siblings[insertAt].style.paddingInlineStart,10)>parseInt(siblings[parentIndex].style.paddingInlineStart,10))insertAt++;
         siblings.splice(insertAt,0,row);
-        while(fragment.firstChild)fragment.removeChild(fragment.firstChild);
+        fragment.replaceChildren();
         const heading=document.createElement('div');heading.className='explorer-section';heading.textContent=this.#say('工作區','WORKSPACE');
         fragment.append(heading,...siblings);
       }
