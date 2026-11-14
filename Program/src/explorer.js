@@ -112,6 +112,32 @@ export class Explorer {
     else {if(changed){this.#selected=null;this.#revealGeneration++;}this.render();}
   }
   newFile(){return this.#newFile();}
+  async openHandles(handles){
+    for(const handle of handles){
+      // Resolve imports through the existing workspace handle where possible.
+      const existing=await this.#findWorkspaceHandle(handle);
+      if(existing)await this.#openFile(existing);
+      else{await this.#remember(handle);await this.#openFile(handle);}
+    }
+    this.render();
+  }
+  async #findWorkspaceHandle(handle){
+    const matches=async nodes=>{
+      for(const node of nodes){
+        if(node.kind==='file'){
+          try{if(node.handle===handle||await node.handle.isSameEntry(handle))return node.handle;}catch{}
+        }else if(node.kind==='directory'){
+          try{
+            const path=await node.handle.resolve(handle);
+            if(path?.length){let current=node.handle;for(const part of path)current=await current.getDirectoryHandle(part).catch(()=>current.getFileHandle(part));return current;}
+          }catch{}
+          if(node.children){const found=await matches(node.children);if(found)return found;}
+        }
+      }
+      return null;
+    };
+    return matches(this.#roots);
+  }
   async addDirectory(){
     if(!window.showDirectoryPicker){this.#log('Directory picker unavailable');return;}
     try{const handle=await window.showDirectoryPicker({mode:'readwrite'});
@@ -121,8 +147,7 @@ export class Explorer {
   async addFile(){
     if(!window.showOpenFilePicker){document.querySelector('#fileInput').click();return;}
     try{const handles=await window.showOpenFilePicker({multiple:true});
-      for(const handle of handles){await this.#remember(handle);await this.#openFile(handle);}
-      this.render();}
+      await this.openHandles(handles);}
     catch(error){if(error.name!=='AbortError')this.#log(String(error));}
   }
   async #loadChildren(node,force=false){
@@ -213,6 +238,8 @@ export class Explorer {
     const menu=document.createElement('div');menu.className='explorer-context';menu.setAttribute('role','menu');
     menu.addEventListener('click',event=>event.stopPropagation());
     const items=[
+      [this.#say('建立新文件','New File'),()=>this.#createIn(node,'file')],
+      [this.#say('建立新資料夾','New Folder'),()=>this.#createIn(node,'directory')],
       [this.#say('重新命名','Rename'),()=>this.#startRename(node)],
       [this.#say('刪除','Delete'),()=>this.#delete(node)],
       [this.#say('剪下','Cut'),()=>this.#clipboard={node,cut:true}],
@@ -230,6 +257,22 @@ export class Explorer {
     const rect=this.#panel.getBoundingClientRect();
     menu.style.left=Math.max(0,Math.min(clientX-rect.left,rect.width-160))+'px';
     menu.style.top=Math.max(0,Math.min(clientY-rect.top,rect.height-190))+'px';
+  }
+  async #createIn(node,kind){
+    const directory=node.kind==='directory'?node:node.parent;
+    if(!directory){if(kind==='file')this.newFile();else this.#log('Select a folder to create a directory');return;}
+    const name=prompt(kind==='file'?this.#say('新文件名稱','New file name'):this.#say('新資料夾名稱','New folder name'))?.trim();
+    if(!name||name==='.'||name==='..'||name.includes('/')||name.includes('\\'))return;
+    try{
+      // Never overwrite an existing file silently.
+      for await(const existing of directory.handle.keys())if(existing===name){this.#log('Entry already exists: '+name);return;}
+      const handle=kind==='file'?await directory.handle.getFileHandle(name,{create:true}):await directory.handle.getDirectoryHandle(name,{create:true});
+      await this.#loadChildren(directory,true);
+      directory.expanded=true;
+      this.#state.expanded??={};this.#state.expanded[this.#key(directory)]=true;
+      this.#save();this.render();
+      if(kind==='file')await this.#openFile(handle);
+    }catch(error){this.#log('Create entry failed: '+error);}
   }
   async #closeEntry(node){
     if(!node.parent){
@@ -327,7 +370,7 @@ export class Explorer {
     if(!this.#hold)return;
     const {node,ready}=this.#hold;this.#clearHold();
     this.#tree.querySelectorAll('.drag-ready,.drag-target').forEach(el=>el.classList.remove('drag-ready','drag-target'));
-    if(ready)this.#suppressClick=true;
+    if(ready&&this.#drag)this.#suppressClick=true;
     if(!ready||e.button!==0||!this.#drag){this.#drag=null;return;}
     const target=this.#allNodes().find(n=>this.#key(n)===this.#drag);this.#drag=null;
     if(!target||node===target||node.parent!==target.parent)return;
