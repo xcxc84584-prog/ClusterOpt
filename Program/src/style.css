@@ -840,3 +840,19 @@ footer select { background: var(--ui-control); border-color: var(--ui-border); c
 #ftiDialog #ftiReason { color: var(--ui-text-on-surface); opacity: .78; }
 #ftiDialog .fti-actions button { background: var(--ui-control); border-color: var(--ui-border); color: var(--ui-text-on-control); }
 #ftiDialog #ftiForce { background: var(--ui-hover); color: var(--ui-text-on-control); font-weight: 700; }
+
+/* v0.0.12+2: grouped, accessible File > Tool controls. */
+#menu { min-width: 236px; padding: 7px; border-radius: 10px; }
+#menu > button, #toolOptions > button { min-height: 34px; padding: 8px 12px; }
+#menu button:focus-visible, #priority:focus-visible {
+  outline: 2px solid var(--ui-accent, #829aff); outline-offset: -2px;
+}
+#toolOptions { margin: 4px 3px; padding: 6px; border: 1px solid var(--ui-border);
+  border-radius: 8px; background: var(--ui-panel); }
+#toolOptions[hidden] { display: none !important; }
+.priority-heading { display: block; padding: 7px 10px 5px; color: var(--ui-muted);
+  font-size: 11px; font-weight: 600; }
+#toolOptions #priority { display: block; width: calc(100% - 12px); margin: 0 6px 6px;
+  padding: 8px 10px; border-radius: 6px; background: var(--ui-control);
+  color: var(--ui-text); border: 1px solid var(--ui-border); }
+@media (max-width: 650px) { #toolOptions #priority { display: block; } }
