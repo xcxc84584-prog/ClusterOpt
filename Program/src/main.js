@@ -293,13 +293,13 @@ function updateLines(){
 async function goToLine(lineNumber) {
   const id = active;
   if (!id || !Number.isSafeInteger(lineNumber) || lineNumber < 1) {
-    status('請輸入有效的正整數行號');
+    status(t('goLineInvalid'));
     return;
   }
   const session = virtualSessions.get(id);
   const totalLines = session ? session.totalLines : editor.value.split('\n').length;
   if (lineNumber > totalLines) {
-    status('行號超出文件範圍（共 ' + totalLines + ' 行）');
+    status(t('goLineOutOfRange',totalLines));
     return;
   }
   const input = $('#goLineInput');
@@ -308,7 +308,7 @@ async function goToLine(lineNumber) {
   button.disabled = true;
   try {
     if (session) {
-      if (!session.lineStarts?.length) throw new Error('行號索引尚未建立完成');
+      if (!session.lineStarts?.length) throw new Error(t('goLineIndexMissing'));
       let low = 0;
       let high = session.lineStarts.length - 1;
       while (low < high) {
@@ -318,10 +318,10 @@ async function goToLine(lineNumber) {
       }
       const targetSlice = low;
       syncStates.set(id, 'LOADING');
-      status('正在載入目標區塊，請稍候…');
+      status(t('goLineLoading'));
       await renderVirtualSlice(id, targetSlice);
       if (active !== id || session.center !== targetSlice) return;
-      if (syncStates.get(id) === 'ERROR') throw new Error('區塊載入失敗');
+      if (syncStates.get(id) === 'ERROR') throw new Error(t('goLineLoadFailed'));
       const relativeLine = lineNumber - session.lineStarts[targetSlice];
       const lines = editor.value.split('\n');
       const offset = lines.slice(0, relativeLine).reduce(
@@ -364,7 +364,7 @@ $('#goLineInput').addEventListener('keydown', event => {
   if (event.key === 'Enter') goToLine(Number(event.currentTarget.value));
 });
 function updatePos(){const p=editor.selectionStart||0,txt=editor.value.slice(0,p),lines=txt.split('\n');
-$('#position').textContent=`Ln ${lines.length}, Col ${lines.at(-1).length+1}`;
+$('#position').textContent=t('position',lines.length,lines.at(-1).length+1);
 }
 editor.addEventListener('input',()=>{if(!active || editor.readOnly)return;
 if (binaryDocuments.has(active)) {
@@ -860,7 +860,7 @@ function renderSyncStatus() {
   const stateLabel = t('state' + (state || 'UNVERIFIED'));
   const label = state === 'LOADING' && progress?.state === 'RUNNING'
     ? t('state' + (progress.operationType === 'INDEX' ? 'INDEXING' : 'LOADING')) +
-      ' (' + progress.completedUnits + '/' + (progress.totalUnits ?? '?') + ' slices)'
+      ' (' + progress.completedUnits + '/' + (progress.totalUnits ?? '?') + ' ' + t('slices') + ')'
     : saving && percent !== null ? stateLabel + ' ' + percent + '%' : stateLabel;
   const percentage = $('#meterPercent');
   percentage.hidden = !saving;
@@ -963,6 +963,8 @@ function renderLanguage() {
 const currentStatus=$('#status').dataset.rawMessage;
   status(currentStatus || t('ready'));
   refresh();
+  renderSyncStatus();
+  updatePos();
 }
 LANGUAGE.subscribe(()=>{renderLanguage();omu.emit('LANGUAGE','Set',200);});
 $('#languageBtn').addEventListener('click',event=>{
