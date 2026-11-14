@@ -220,10 +220,12 @@ export class VirtualFileSession {
     return offset + skip;
   }
 
-  async save(handle, onProgress = () => {}) {
+  async save(handle, onProgress = () => {}, signal = null) {
+    if (signal?.aborted) throw new DOMException('Save interrupted by editing', 'AbortError');
     const writer = await handle.createWritable();
     try {
       for (let index = 0; index < this.#count; index++) {
+        if (signal?.aborted) throw new DOMException('Save interrupted by editing', 'AbortError');
         if (this.#dirty.has(index)) {
           await writer.write(this.#dirty.get(index).content);
         } else {
@@ -236,6 +238,7 @@ export class VirtualFileSession {
         }
         onProgress({completed: index + 1, total: this.#count});
       }
+      if (signal?.aborted) throw new DOMException('Save interrupted by editing', 'AbortError');
       await writer.close();
     } catch (error) {
       await writer.abort().catch(() => {});
