@@ -4,7 +4,7 @@ export class MVCCUnit {
 
   register(sliceId, content) {
     if (this.#versions.has(sliceId)) return {ok: false, code: 409};
-    this.#versions.set(sliceId, {current: 0, history: new Map([[0, content]])});
+    this.#versions.set(sliceId, {current: 0, persisted: 0, history: new Map([[0, content]])});
     return {ok: true, code: 201, data: {versionId: 0}};
   }
 
@@ -55,6 +55,18 @@ export class MVCCUnit {
       versions.push({sliceId: change.sliceId, versionId});
     }
     return {ok: true, code: 200, data: {versions}};
+  }
+
+  hasUnpersistedVersion(sliceId) {
+    const record = this.#versions.get(sliceId);
+    return Boolean(record && record.current !== 0 && record.persisted !== record.current);
+  }
+
+  markPersisted(sliceId, versionId) {
+    const record = this.#versions.get(sliceId);
+    if (!record || record.current !== versionId) return false;
+    record.persisted = versionId;
+    return true;
   }
 
   unregister(sliceId) {
