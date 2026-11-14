@@ -16,8 +16,8 @@ export function matchingWindow(text,caret,maxLines=MAX_CONTEXT_LINES){
   const starts=lineStarts(text),anchor=lineFor(starts,Math.min(caret,text.length));
   const half=Math.floor((maxLines-1)/2);
   const lower=Math.max(0,anchor-half),upper=Math.min(starts.length-1,anchor+half);
-  // Balance delimiters in a bounded scan. Angle brackets are recognized only
-  // as adjacent to the edit, to avoid treating every comparison as a template.
+  // Balance delimiters in a bounded scan. Angle brackets are considered
+  // candidate delimiters; comparisons can still be ambiguous without a parser.
   const stack=[],pairs=[];
   const begin=starts[lower],end=upper+1<starts.length?starts[upper+1]:text.length;
   let quote=null,comment=null;
@@ -30,11 +30,9 @@ export function matchingWindow(text,caret,maxLines=MAX_CONTEXT_LINES){
     if(ch==='/'&&next==='*'){comment='block';i++;continue;}
     if(ch==='"'||ch==="'"||ch==='`'){quote=ch;continue;}
     if(OPEN[ch]){
-      if(ch==='<'&&i!==caret&&i!==caret-1)continue;
       stack.push({ch,at:i});continue;
     }
     if(CLOSE[ch]){
-      if(ch==='>'&&i!==caret&&i!==caret-1)continue;
       const top=stack[stack.length-1];
       if(top&&top.ch===CLOSE[ch]){stack.pop();pairs.push([top.at,i]);}
     }
