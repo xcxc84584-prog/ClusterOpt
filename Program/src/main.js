@@ -26,6 +26,8 @@ const virtualSessions = new Map();
 const binaryDocuments = new Map();
 const FTI = new FileTypeIdentifier();
 const virtualRenderGenerations = new Map();
+const savingDocuments = new Set();
+const backgroundIndexing = new Set();
 const rebuildingDocuments = new Set();
 let virtualEditQueue = Promise.resolve();
 let recoveryTimer = null;
@@ -192,7 +194,8 @@ function status(msg){
 }
 function updateEditorLock() {
   const operation = active ? storageProgress.get(active) : null;
-  const loading = !!active && (syncStates.get(active) === 'LOADING' ||
+  const loading = !!active && (backgroundIndexing.has(active) ||
+    rebuildingDocuments.has(active) || syncStates.get(active) === 'LOADING' ||
     (['LOAD', 'INDEX'].includes(operation?.operationType) && operation.state === 'RUNNING'));
   const unavailable = !!active && (rebuildingDocuments.has(active) ||
     (virtualSessions.has(active) && editor.dataset.doc !== active));
@@ -248,10 +251,11 @@ function switchDoc(id){
     });
   } else capturePosition();
   active=id;
-  recoveryPrebuild.hidden = true;
   refresh();
-  if (rebuildingDocuments.has(id)) {
-    showRecoveryFor(id);
+  if (savingDocuments.has(id) || rebuildingDocuments.has(id)) {
+    // Keep the original SAVE/INDEX operation and its progress intact.
+    // A return to this tab must not start another LOAD operation.
+    renderSyncStatus();
   } else if (virtualSessions.has(id)) {
     renderVirtualSlice(id);
   } else {
@@ -487,6 +491,7 @@ editor.addEventListener('keydown',e=>{
 const s=editor.selectionStart;editor.setRangeText('    ',s,editor.selectionEnd,'end');editor.dispatchEvent(new Event('input'));}});
 async function doSave(as=false){if(!active)return;
 const id=active;
+if (savingDocuments.has(id) || rebuildingDocuments.has(id)) return;
 capturePosition(id);
 if (binaryDocuments.has(id)) {
   const data = binaryDocuments.get(id);
@@ -527,6 +532,7 @@ if (binaryDocuments.has(id)) {
 const operationId=storageProgress.start(
   id, 'SAVE', virtualSessions.has(id) ? virtualSessions.get(id).sliceCount : 1
 );
+savingDocuments.add(id);
 syncStates.set(id,'SAVING');
 const d=docs.get(id).data;
 const revision=d.revision;
@@ -546,8 +552,10 @@ if (virtualSessions.has(id)) {
       storageProgress.update(operationId, progress.completed, 'FLUSH');
     });
     storageProgress.finish(operationId, 'SUCCESS');
+    savingDocuments.delete(id);
     const reindexId = storageProgress.start(id, 'INDEX', session.sliceCount);
     rebuildingDocuments.add(id);
+    backgroundIndexing.add(id);
     syncStates.set(id, 'LOADING');
     try {
       await session.indexLines(progress =>
@@ -555,14 +563,17 @@ if (virtualSessions.has(id)) {
       storageProgress.finish(reindexId, 'SUCCESS');
       const center = Math.min(savedCenter, session.sliceCount - 1);
       if (savedPosition) session.setPosition(center, savedPosition);
-      if (active === id) await renderVirtualSlice(id, center);
+      // Finish the background INDEX before rendering; avoid replacing its progress.
+      // The saved viewport is loaded after the lock is released.
     } catch (error) {
       storageProgress.finish(reindexId, 'ERROR');
       throw error;
     } finally {
       rebuildingDocuments.delete(id);
-      if (active === id) recoveryPrebuild.hidden = true;
+      backgroundIndexing.delete(id);
+      if (active === id) renderSyncStatus();
     }
+    if (active === id) await renderVirtualSlice(id, Math.min(savedCenter, session.sliceCount - 1));
     res = contract(true, {handle, name: handle.name});
   } catch (error) {
     res = contract(false, null, 500, String(error));
@@ -570,6 +581,7 @@ if (virtualSessions.has(id)) {
 } else {
   res = await files.save(d, docs.handle(id), as);
 }
+savingDocuments.delete(id);
 if(res.ok){storageProgress.update(operationId,1,'FLUSH');
 storageProgress.finish(operationId,'SUCCESS');
 if(!docs.get(id).ok)return;
@@ -754,6 +766,7 @@ async function renderVirtualSlice(id, center = null) {
   if (!session) return;
   const generation = (virtualRenderGenerations.get(id) || 0) + 1;
   virtualRenderGenerations.set(id, generation);
+  if (savingDocuments.has(id) || backgroundIndexing.has(id)) return;
   syncStates.set(id, 'LOADING');
   const index = center === null ? session.center : center;
   // Only the requested physical slice is materialized; no neighbor preloading.
@@ -855,7 +868,9 @@ function renderSyncStatus() {
   const saving = state === 'SAVING' || state === 'LOADING' || progress?.state === 'RUNNING';
   updateEditorLock();
   bar.style.width = saving && percent !== null ? percent + '%' : '100%';
-  bar.style.background = state === 'SYNCED' ? '#22C55E' : colors[state] || colors.UNVERIFIED;
+  const operationColor = progress?.state === 'RUNNING' &&
+    ['SAVE', 'INDEX', 'LOAD'].includes(progress.operationType) ? '#3B82F6' : null;
+  bar.style.background = operationColor || (state === 'SYNCED' ? '#22C55E' : colors[state] || colors.UNVERIFIED);
   bar.parentElement.classList.toggle('indeterminate', saving && percent === null);
   const stateLabel = t('state' + (state || 'UNVERIFIED'));
   const label = state === 'LOADING' && progress?.state === 'RUNNING'
@@ -1062,7 +1077,8 @@ recoveryPrebuild.hidden = true;
 recoveryPrebuild.innerHTML = '<strong id="recoveryName"></strong><span id="recoveryStage">正在重建文件視窗…</span><progress id="recoveryProgress" max="100" value="0"></progress><span id="recoveryCount">0%</span>';
 document.querySelector('#workspace').append(recoveryPrebuild);
 function recoveryDisplay(name, completed = 0, total = 1, stage = '建立切片索引') {
-  recoveryPrebuild.hidden = false;
+  // Recovery is a background operation; never cover the editor with a modal.
+  recoveryPrebuild.hidden = true;
   document.querySelector('#recoveryName').textContent = name;
   document.querySelector('#recoveryStage').textContent = stage;
   const percent = Math.min(100, Math.floor(100 * completed / Math.max(1, total)));
@@ -1084,7 +1100,7 @@ function showRecoveryFor(id) {
     if (!workspace?.documents?.length || docs.ids().length) return;
     restoring = true;
     const firstVirtual = workspace.documents.find(item => item.virtual);
-    if (firstVirtual) recoveryDisplay(firstVirtual.name, 0, 1, '正在準備恢復…');
+    // No blocking recovery overlay: progress is shown in the footer.
     const mapping = new Map();
     for (const item of workspace.documents) {
       try {
@@ -1121,20 +1137,20 @@ function showRecoveryFor(id) {
           const session = new VirtualFileSession(id, blob);
           virtualSessions.set(id, session);
           mapping.set(item.id, id);
-          if (active === id) recoveryDisplay(item.name, 0, session.sliceCount);
           rebuildingDocuments.add(id);
+          backgroundIndexing.add(id);
           const indexing = storageProgress.start(id, 'INDEX', session.sliceCount);
           try {
             await session.indexLines(progress => {
               storageProgress.update(indexing, progress.completed, 'INDEX');
-              if (active === id) recoveryDisplay(item.name, progress.completed, progress.total);
+              // Footer subscribes to this document-scoped INDEX progress.
             });
             storageProgress.finish(indexing, 'SUCCESS');
           } catch (indexError) {
             storageProgress.finish(indexing, 'ERROR');
             throw indexError;
           }
-          if (active === id) recoveryDisplay(item.name, session.sliceCount, session.sliceCount, '正在還原未提交編輯…');
+
           await session.restoreEdits(item.edits);
           if (item.edits?.length) docs.update(id, '');
           const center = Math.min(Math.max(0, item.center || 0), session.sliceCount - 1);
@@ -1143,6 +1159,7 @@ function showRecoveryFor(id) {
           });
           await session.window(center);
           rebuildingDocuments.delete(id);
+          backgroundIndexing.delete(id);
           continue;
         }
         if (typeof item.content !== 'string') continue;
@@ -1169,6 +1186,7 @@ function showRecoveryFor(id) {
   } finally {
     restoring = false;
     rebuildingDocuments.clear();
+    backgroundIndexing.clear();
     recoveryPrebuild.hidden = true;
   }
 })();
