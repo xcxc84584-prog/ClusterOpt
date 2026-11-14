@@ -241,8 +241,14 @@ function renderLanguage() {
   $('#toolBtn').textContent=t('tool')+' ›';
   $('#paletteBtn').textContent=t('palette')+' ›';
   $('#paletteLabel').textContent=t('paletteRGB');
+  $('#paletteTitle').textContent=t('palette');
   $('#paletteDark').textContent=t('darkEndpoint');
   $('#paletteLight').textContent=t('lightEndpoint');
+  $('#paletteHint').textContent=t('paletteHint');
+  $('#palettePresetLabel').textContent=t('palettePresets');
+  $('#paletteFooterHint').textContent=t('paletteAutosave');
+  $('#paletteDone').textContent=t('done');
+  $('#paletteClose').setAttribute('aria-label',t('closeDialog'));
   $('#empty p').textContent=t('empty');
   $('#editor').setAttribute('aria-label',t('editor'));
   $('#priority').title=t('priority');
@@ -281,6 +287,8 @@ function updatePaletteControls() {
   const rgb = UI_PALETTE.value;
   const hex = rgb.map(value => value.toString(16).padStart(2, '0')).join('');
   $('#palettePicker').value = '#' + hex;
+  $('#paletteHex').textContent = '#' + hex.toUpperCase();
+  $('#paletteMode').textContent = UI_PALETTE.mode.toUpperCase();
 
   document.querySelectorAll('[data-rgb]').forEach(input => {
     input.value = rgb[Number(input.dataset.rgb)];
@@ -306,15 +314,22 @@ $('#toolBtn').addEventListener('click', event => {
   $('#toolBtn').setAttribute('aria-expanded', String(!options.hidden));
 });
 
+const paletteDialog = $('#paletteDialog');
+
 $('#paletteBtn').addEventListener('click', event => {
   event.stopPropagation();
-  const options = $('#paletteOptions');
-  options.hidden = !options.hidden;
-  $('#paletteBtn').setAttribute('aria-expanded', String(!options.hidden));
+  $('#menu').hidden = true;
+  $('#toolOptions').hidden = true;
+  $('#toolBtn').setAttribute('aria-expanded', 'false');
+  updatePaletteControls();
+  paletteDialog.showModal();
 });
 
-$('#paletteOptions').addEventListener('click', event => {
-  event.stopPropagation();
+$('#paletteClose').addEventListener('click', () => paletteDialog.close());
+$('#paletteDone').addEventListener('click', () => paletteDialog.close());
+
+paletteDialog.addEventListener('click', event => {
+  if (event.target === paletteDialog) paletteDialog.close();
 });
 
 $('#palettePicker').addEventListener('input', event => {
