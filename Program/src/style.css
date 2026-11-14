@@ -995,3 +995,14 @@ header .menu-wrap { margin-left:auto; }
 .highlighter-content p {margin:0;color:var(--ui-muted);line-height:1.6;}
 .highlighter-switch {display:flex;align-items:center;gap:10px;font-size:14px;}
 #highlighterState {font-size:11px;}
+
+/* v0.0.31: palette-aware editor contrast, including white mode. */
+#highlightOverlay {color:var(--ui-text);}
+#editorPane textarea:not(.highlight-active) {color:var(--ui-text);}
+#editorPane textarea.highlight-active {caret-color:var(--ui-text);}
+.highlighter-dialog .highlighter-content,
+.highlighter-dialog .highlighter-switch {color:var(--ui-text-on-panel);}
+.highlighter-dialog .highlighter-content p {color:var(--ui-text-on-panel);opacity:.88;}
+.highlighter-dialog .palette-modal-header h2 {color:var(--ui-text-on-panel);}
+.highlighter-dialog button {background:var(--ui-control);color:var(--ui-text-on-control);border-color:var(--ui-border);}
+.highlighter-dialog button:hover {background:var(--ui-hover);color:var(--ui-text-on-panel);}
