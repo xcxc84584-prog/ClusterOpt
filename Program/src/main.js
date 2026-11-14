@@ -226,8 +226,8 @@ editor.addEventListener('scroll',()=>{
 }));
 editor.addEventListener('keydown',e=>{
   if ((e.ctrlKey || e.metaKey) && ['z','y'].includes(e.key.toLowerCase())) {
+    if (!active || editor.value.length >= 2 * 1024 * 1024) return;
     e.preventDefault();
-    if (!active) return;
     const content = e.key.toLowerCase() === 'y' || e.shiftKey
       ? olr.redo(active, editor.value) : olr.undo(active, editor.value);
     if (content === null) return;
