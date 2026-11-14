@@ -48,7 +48,8 @@ export class Explorer {
     this.#tree.addEventListener('scroll',()=>this.#closeMenu(),{passive:true});
     this.#tree.addEventListener('wheel',()=>this.#closeMenu(),{passive:true});
     this.#tree.addEventListener('touchmove',()=>this.#closeMenu(),{passive:true});
-    window.addEventListener('resize',()=>this.#closeMenu(),{passive:true});
+    if(typeof window!=='undefined')
+      window.addEventListener('resize',()=>this.#closeMenu(),{passive:true});
     this.#tree.addEventListener('pointerdown',e=>this.#pointerDown(e));
     document.addEventListener('pointermove',e=>this.#pointerMove(e));
     document.addEventListener('pointerup',e=>this.#pointerUp(e));
