@@ -168,6 +168,8 @@ let lineHighlightGeneration=0;
 function scheduleHighlight(){
   clearTimeout(lineHighlightTimer);
   lineHighlightGeneration++;
+  clearTimeout(dirtyTimer);
+  ++dirtyGeneration;
   clearTimeout(highlightTimer);
   highlightRenderer.retainDuringEdit();
   const generation=++highlightGeneration;
@@ -227,8 +229,7 @@ function recordDirtyEdit(){
   const position=pendingEdit?.position??editor.selectionStart;
   const oldLines=pendingEdit?.removedLines??0;
   const line=current.slice(0,Math.min(position,current.length)).split('\n').length-1;
-  const newLines=Math.max(0,countNewlines(current.slice(
-    Math.min(position,current.length),editor.selectionStart)));
+  const newLines=Math.max(0,Math.abs(current.slice(0,editor.selectionStart).split('\n').length-1-line));
   tracker.shift(line,oldLines,newLines);
   tracker.add(line,Math.min(current.split('\n').length-1,line+Math.max(oldLines,newLines)));
   pendingEdit=null;
@@ -244,6 +245,7 @@ function scheduleDirtyHighlight(key){
     const id=active,item=docs.get(id)?.data;
     if(!item)return;
     const value=editor.value;
+    if(!highlightRenderer.lastScheme)return;
     const starts=highlightRenderer.starts;
     const batch=tracker.take();
     if(!batch)return;
