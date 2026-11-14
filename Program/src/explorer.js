@@ -30,7 +30,7 @@ export class Explorer {
   #roots=[];#documents=[];#active=null;#locale='zh-Hant';
   #panel;#tree;#search;#openFile;#openDocument;#log;
   #state=readState();#clipboard=null;#menu=null;#rename=null;
-  #hold=null;#drag=null;#selected=null;
+  #hold=null;#drag=null;#selected=null;#revealGeneration=0;
   constructor({panel,openFile,openDocument,log=()=>{}}){
     this.#panel=panel;this.#tree=panel.querySelector('#explorerTree');
     this.#search=panel.querySelector('#explorerSearch');
@@ -105,7 +105,7 @@ export class Explorer {
     this.#documents=documents.map(item=>({...item}));
     const changed=this.#active!==activeId;this.#active=activeId;
     if(changed&&activeId&&!this.#panel.hidden)this.revealDocument(activeId);
-    else this.render();
+    else {if(changed){this.#selected=null;this.#revealGeneration++;}this.render();}
   }
   async addDirectory(){
     if(!window.showDirectoryPicker){this.#log('Directory picker unavailable');return;}
@@ -142,7 +142,7 @@ export class Explorer {
     });
   }
   async #expand(node){
-    if(node.kind==='file'){await this.#openFile(node.handle);return;}
+    if(node.kind==='file'){this.#selected=this.#key(node);this.render();await this.#openFile(node.handle);return;}
     node.expanded=!node.expanded;
     this.#state.expanded??={};this.#state.expanded[this.#key(node)]=node.expanded;this.#save();
     if(node.expanded)await this.#loadChildren(node);
@@ -155,7 +155,9 @@ export class Explorer {
     await visit(this.#roots);this.render();
   }
   async revealDocument(id){
-    const doc=this.#documents.find(d=>d.id===id);if(!doc)return;
+    const generation=++this.#revealGeneration;
+    const doc=this.#documents.find(d=>d.id===id);
+    if(!doc){this.#selected=null;this.render();return;}
     const find=async nodes=>{
       for(const node of nodes){
         if(node.kind==='file'&&node.name===doc.name)return node;
@@ -169,6 +171,8 @@ export class Explorer {
     };
     // Name-only matching is ambiguous; prefer a matching FileSystemHandle when supplied.
     const match=await find(this.#roots);
+    if(generation!==this.#revealGeneration||id!==this.#active)return;
+    this.#selected=match?this.#key(match):null;
     this.#save();this.render();
     if(match&&!this.#panel.hidden){
       const row=[...this.#tree.querySelectorAll('.explorer-entry[data-path]')]
@@ -181,8 +185,13 @@ export class Explorer {
   #closeMenu(){this.#menu?.remove();this.#menu=null;}
   #context(event){
     const row=event.target.closest('.explorer-entry[data-path]');
-    if(!row)return;event.preventDefault();this.#closeMenu();
+    if(!row)return;event.preventDefault();
     const node=this.#nodeAt(row);if(!node)return;
+    this.#selected=this.#key(node);this.render();
+    this.#openMenu(node,event.clientX,event.clientY);
+  }
+  #openMenu(node,clientX,clientY){
+    this.#closeMenu();
     const menu=document.createElement('div');menu.className='explorer-context';menu.setAttribute('role','menu');
     const items=[
       [this.#say('重新命名','Rename'),()=>this.#startRename(node)],
@@ -199,8 +208,8 @@ export class Explorer {
     }
     this.#panel.append(menu);this.#menu=menu;
     const rect=this.#panel.getBoundingClientRect();
-    menu.style.left=Math.min(event.clientX-rect.left,rect.width-160)+'px';
-    menu.style.top=Math.min(event.clientY-rect.top,rect.height-190)+'px';
+    menu.style.left=Math.max(0,Math.min(clientX-rect.left,rect.width-160))+'px';
+    menu.style.top=Math.max(0,Math.min(clientY-rect.top,rect.height-190))+'px';
   }
   #cancelRename(){this.#rename=null;this.render();}
   #startRename(node){this.#rename=this.#key(node);this.render();
@@ -291,12 +300,13 @@ export class Explorer {
       const heading=document.createElement('div');heading.className='explorer-section';heading.textContent=title;
       fragment.append(heading,...rows);
     };
-    const docs=filterExplorerEntries(this.#documents,query).map(doc=>{
+    /* Open editors are represented by tabs; Explorer displays only the workspace. */
+    /* const docs=filterExplorerEntries(this.#documents,query).map(doc=>{
       const row=this.#button(doc.name+(doc.dirty?' ●':''),'file',0);
       if(doc.id===this.#active)row.classList.add('active');
       row.onclick=()=>this.#openDocument(doc.id);return row;
     });
-    section(this.#say('已開啟文件','OPEN EDITORS'),docs);
+    section(this.#say('已開啟文件','OPEN EDITORS'),docs); */
     const nodes=[];
     const walk=(node,depth)=>{
       const matches=!query||node.name.toLocaleLowerCase().includes(query);
@@ -307,8 +317,15 @@ export class Explorer {
       if(!matches&&!descendants.length)return;
       const row=this.#button(node.name,node.kind,depth);
       row.dataset.path=this.#key(node);
+      if(row.dataset.path===this.#selected)row.classList.add('active');
       row.querySelector('.explorer-arrow').textContent=node.kind==='directory'?(node.expanded?'⌄':'›'):'';
-      row.onclick=()=>{if(this.#rename)return;this.#expand(node);};
+      row.onclick=event=>{
+        if(this.#rename)return;
+        this.#selected=this.#key(node);this.render();
+        if(node.kind==='directory')this.#expand(node);
+        else this.#expand(node);
+        this.#openMenu(node,event.clientX,event.clientY);
+      };
       if(this.#rename===this.#key(node)){
         const input=document.createElement('input');input.className='explorer-rename';
         input.value=node.name;row.querySelector('.explorer-name').replaceWith(input);
