@@ -43,6 +43,49 @@ export class VirtualFileSession {
     return this.#core.loadedSliceCount;
   }
 
+  get sourceBlob() { return this.#blob; }
+
+  get recoveryEdits() {
+    return [...this.#dirty].map(([index, data]) => ({
+      index, content: data.content
+    }));
+  }
+
+  async restoreEdits(edits) {
+    for (const item of edits || []) {
+      const result = await this.edit(item.index, item.content);
+      if (!result.ok) throw new Error('Recovery commit failed: ' + result.code);
+    }
+  }
+
+  // Build a line-number index without decoding or registering all slices.
+  // Each chunk is released after counting LF bytes; only integer offsets remain.
+  async indexLines(onProgress = () => {}) {
+    const counts = new Array(this.#count).fill(0);
+    const step = 4 * 1024 * 1024;
+    let scanned = 0;
+    for (let offset = 0; offset < this.#blob.size; offset += step) {
+      const end = Math.min(offset + step, this.#blob.size);
+      const bytes = new Uint8Array(await this.#blob.slice(offset, end).arrayBuffer());
+      for (let j = 0; j < bytes.length; j++) {
+        if (bytes[j] === 10) counts[Math.floor((offset + j) / (256 * 1024))]++;
+      }
+      scanned = end;
+      onProgress({completed: Math.min(this.#count,
+        Math.ceil(scanned / (256 * 1024))), total: this.#count});
+      await new Promise(resolve => setTimeout(resolve, 0));
+    }
+    if (this.#blob.size === 0) onProgress({completed: 1, total: 1});
+    this.lineStarts = new Array(this.#count);
+    let line = 1;
+    for (let i = 0; i < this.#count; i++) {
+      this.lineStarts[i] = line;
+      line += counts[i];
+    }
+    this.totalLines = line;
+    return {ok: true, code: 200, data: {sliceCount: this.#count, totalLines: line}};
+  }
+
   getPosition(index) {
     return this.#positions.get(index) || null;
   }
