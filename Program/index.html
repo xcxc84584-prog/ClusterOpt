@@ -65,19 +65,7 @@
               <button id="paletteBtn" type="button" aria-expanded="false">
                 介面調色盤 ›
               </button>
-              <div id="paletteOptions" hidden>
-                <label for="palettePicker" id="paletteLabel">介面色系 RGB</label>
-                <input id="palettePicker" type="color" value="#000000">
-                <div class="palette-channels">
-                  <label>R <input data-rgb="0" type="number" min="0" max="255"></label>
-                  <label>G <input data-rgb="1" type="number" min="0" max="255"></label>
-                  <label>B <input data-rgb="2" type="number" min="0" max="255"></label>
-                </div>
-                <div class="palette-presets">
-                  <button id="paletteDark" type="button">黑色端點</button>
-                  <button id="paletteLight" type="button">白色端點</button>
-                </div>
-              </div>
+
             </div>
           </nav>
         </div>
@@ -136,8 +124,60 @@
         </span>
       </footer>
     </div>
+    <dialog id="paletteDialog" aria-labelledby="paletteTitle">
+      <div class="palette-modal-header">
+        <div>
+          <div class="palette-eyebrow">CLUSTER / APPEARANCE</div>
+          <h2 id="paletteTitle">介面調色盤</h2>
+        </div>
+        <button id="paletteClose" class="palette-close" type="button"
+          aria-label="關閉">×</button>
+      </div>
+      <div class="palette-modal-body">
+        <div class="palette-preview" aria-hidden="true">
+          <div class="palette-preview-top">
+            <span class="palette-preview-dot"></span>
+            <span>CLUSTER</span>
+            <span class="palette-preview-caption">UI PREVIEW</span>
+          </div>
+          <div class="palette-preview-content">
+            <div class="palette-preview-sidebar"></div>
+            <div class="palette-preview-editor">
+              <div class="palette-preview-line"></div>
+              <div class="palette-preview-line short"></div>
+              <div class="palette-preview-line medium"></div>
+            </div>
+          </div>
+        </div>
+        <div class="palette-section-title">
+          <label id="paletteLabel" for="palettePicker">介面色系 RGB</label>
+          <span id="paletteHex">#000000</span>
+        </div>
+        <div class="palette-picker-row">
+          <input id="palettePicker" type="color" value="#000000">
+          <span id="paletteHint">選擇顏色以即時預覽整體介面</span>
+        </div>
+        <div class="palette-channels">
+          <label>R <input data-rgb="0" type="number" min="0" max="255"></label>
+          <label>G <input data-rgb="1" type="number" min="0" max="255"></label>
+          <label>B <input data-rgb="2" type="number" min="0" max="255"></label>
+        </div>
+        <div class="palette-section-title">
+          <span id="palettePresetLabel">端點風格</span>
+          <span id="paletteMode">DARK</span>
+        </div>
+        <div class="palette-presets">
+          <button id="paletteDark" type="button">黑色端點</button>
+          <button id="paletteLight" type="button">白色端點</button>
+        </div>
+      </div>
+      <div class="palette-modal-footer">
+        <span id="paletteFooterHint">設定會自動儲存</span>
+        <button id="paletteDone" type="button">完成</button>
+      </div>
+    </dialog>
     <input type="file" id="fileInput" multiple hidden>
-    <script type="module" src="./src/main.js?v=opt6-palette-1">
+    <script type="module" src="./src/main.js?v=opt6-modal-2">
     </script>
   </body>
 </html>
