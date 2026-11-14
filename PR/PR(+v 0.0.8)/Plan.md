@@ -33,3 +33,14 @@
 - 部分修補 #23：OLR Undo/Redo 改存最小差異區段；新增 clearAll 與 ClusterOpt.clearRecovery()。
 - #1、#2、#4、#20、#21、#22、#24、#25 仍需進一步整合與驗收；不得標示 PASS。
 - 下版目標：實際大文件載入、Viewport 切片、記憶體上限、位置恢復及 WTF 整合測試。
+
+## v0.0.8+2：#1、#2 優先修補
+
+- FileManager.open / openWithHandle 改為 Blob descriptor，不呼叫 file.text()。
+- 新增 VirtualFileSession，檔案開啟時只載入中心與上下鄰近切片；單切片編輯以 WTF + MVCC commit。
+- 主編輯器增加切片前後導航；切換時保存該切片的游標與捲動位置。
+- File System Access API 可寫 Handle 以逐切片串流儲存，不串接完整字串。
+- 未完成：AGENT API 統一、行級 Viewport、完整 OLR/LineTree、崩潰恢復、無 Handle 的大文件儲存、壓力測試。
+- #1/#2 暫保留在未處理清單，下一版必須經過測試才可移入已解決紀錄。
+
+參考：MDN Blob.slice、CodeMirror Viewport、Google JavaScript Style Guide。
