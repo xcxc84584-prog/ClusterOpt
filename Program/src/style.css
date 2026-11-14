@@ -1015,3 +1015,7 @@ header .menu-wrap { margin-left:auto; }
 #encodingDialog select {background:var(--ui-control);color:var(--ui-text-on-control);
   border:1px solid var(--ui-border);padding:9px;border-radius:7px;}
 #encodingDialog label {color:var(--ui-text-on-panel);}
+
+/* v0.0.41: tab guide is a fixed viewport; only its inner mirror translates. */
+#tabGuide { padding:0; overflow:hidden; }
+#tabGuide .tab-guide-content { box-sizing:border-box; padding:16px; width:max-content; min-width:100%; white-space:pre; font:inherit; tab-size:4; will-change:transform; }
