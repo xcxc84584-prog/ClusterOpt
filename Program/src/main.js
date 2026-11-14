@@ -1306,6 +1306,11 @@ function renderLanguage() {
   highlighterText[1].textContent=t('highlighterSlices');
   $('#highlighterDone').textContent=t('done');
   $('#highlighterClose').setAttribute('aria-label',t('closeDialog'));
+  $('#encodingTitle').textContent=t('encodingTitle');
+  $('#encodingNotice').textContent=t('encodingNotice');
+  $('#encodingCancel').textContent=t('encodingCancel');
+  $('#encodingConfirm').textContent=t('encodingConfirm');
+  document.querySelector('label[for="encodingSelect"]').textContent=t('encodingLabel');
   $('#paletteLabel').textContent=t('paletteRGB');
   $('#paletteTitle').textContent=t('palette');
   $('#paletteDark').textContent=t('darkEndpoint');
