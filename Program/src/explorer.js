@@ -44,6 +44,10 @@ export class Explorer {
     document.querySelector('#explorerToggle').addEventListener('click',()=>this.toggle());
     // Right click opens the action menu; left-button hold and drag reorders siblings.
     this.#tree.addEventListener('contextmenu',e=>this.#context(e));
+    // Dismiss immediately on wheel/touch movement, and on any actual tree scroll.
+    this.#tree.addEventListener('scroll',()=>this.#closeMenu(),{passive:true});
+    this.#tree.addEventListener('wheel',()=>this.#closeMenu(),{passive:true});
+    this.#tree.addEventListener('touchmove',()=>this.#closeMenu(),{passive:true});
     this.#tree.addEventListener('pointerdown',e=>this.#pointerDown(e));
     document.addEventListener('pointermove',e=>this.#pointerMove(e));
     document.addEventListener('pointerup',e=>this.#pointerUp(e));
@@ -84,11 +88,13 @@ export class Explorer {
   }
   toggle(force){
     const open=force===undefined?this.#panel.hidden:!!force;
+    if(!open)this.#closeMenu();
     this.#panel.hidden=!open;
     document.querySelector('#explorerToggle').setAttribute('aria-expanded',String(open));
     if(open&&this.#active)this.revealDocument(this.#active);
   }
   setLocale(locale,translate){
+    this.#closeMenu();
     this.#locale=locale;
     this.#translate=translate;
     const labels={explorerTitle:'#explorerTitle',explorerSearch:'#explorerSearch',
@@ -241,28 +247,98 @@ export class Explorer {
   }
   #openMenu(node,clientX,clientY){
     this.#closeMenu();
-    const menu=document.createElement('div');menu.className='explorer-context';menu.setAttribute('role','menu');
+    const menu=document.createElement('div');
+    menu.className='explorer-context';
+    menu.setAttribute('role','menu');
+    menu.setAttribute('aria-label',this.#say('檔案操作','File actions'));
+    menu.tabIndex=-1;
     menu.addEventListener('click',event=>event.stopPropagation());
-    const items=[
-      [this.#say('建立新文件','New File'),()=>this.#createIn(node,'file')],
-      [this.#say('建立新資料夾','New Folder'),()=>this.#createIn(node,'directory')],
-      [this.#say('重新命名','Rename'),()=>this.#startRename(node)],
-      [this.#say('刪除','Delete'),()=>this.#delete(node)],
-      [this.#say('剪下','Cut'),()=>this.#clipboard={node,cut:true}],
-      [this.#say('複製','Copy'),()=>this.#clipboard={node,cut:false}],
-      [this.#say('貼上','Paste'),()=>this.#paste(node)],
-      [this.#say('關閉','Close'),()=>this.#closeEntry(node)]
+    const header=document.createElement('div');
+    header.className='explorer-context-header';
+    const icon=document.createElement('span');
+    icon.className='explorer-context-header-icon';
+    icon.textContent=node.kind==='directory'?'▣':'◇';
+    icon.setAttribute('aria-hidden','true');
+    const details=document.createElement('div');
+    details.className='explorer-context-details';
+    const title=document.createElement('div');
+    title.className='explorer-context-title';
+    title.textContent=node.name;
+    title.title=node.name;
+    const subtitle=document.createElement('div');
+    subtitle.className='explorer-context-subtitle';
+    subtitle.textContent=node.kind==='directory'?
+      this.#say('資料夾','Folder'):this.#say('文件','File');
+    details.append(title,subtitle);
+    header.append(icon,details);
+    menu.append(header);
+    const groups=[
+      [
+        ['file','＋',this.#say('建立新文件','New File'),()=>this.#createIn(node,'file')],
+        ['folder','▣',this.#say('建立新資料夾','New Folder'),()=>this.#createIn(node,'directory')]
+      ],
+      [
+        ['rename','✎',this.#say('重新命名','Rename'),()=>this.#startRename(node)],
+        ['cut','✂',this.#say('剪下','Cut'),()=>this.#clipboard={node,cut:true}],
+        ['copy','▤',this.#say('複製','Copy'),()=>this.#clipboard={node,cut:false}],
+        ['paste','▧',this.#say('貼上','Paste'),()=>this.#paste(node)]
+      ],
+      [
+        ['close','×',this.#say('關閉','Close'),()=>this.#closeEntry(node)],
+        ['delete','⌫',this.#say('刪除','Delete'),()=>this.#delete(node)]
+      ]
     ];
-    for(const [label,action] of items){
-      const button=document.createElement('button');button.type='button';button.textContent=label;
-      button.setAttribute('role','menuitem');
-      button.onclick=()=>{this.#closeMenu();Promise.resolve(action()).catch(error=>this.#log(String(error)));};
-      menu.append(button);
+    const buttons=[];
+    for(const [groupIndex,items] of groups.entries()){
+      if(groupIndex){
+        const separator=document.createElement('div');
+        separator.className='explorer-context-separator';
+        separator.setAttribute('role','separator');
+        menu.append(separator);
+      }
+      for(const [key,symbol,label,action] of items){
+        const button=document.createElement('button');
+        button.type='button';
+        button.className='explorer-context-item'+(key==='delete'?' is-danger':'');
+        button.dataset.action=key;
+        button.setAttribute('role','menuitem');
+        button.tabIndex=-1;
+        const glyph=document.createElement('span');
+        glyph.className='explorer-context-icon';
+        glyph.textContent=symbol;
+        glyph.setAttribute('aria-hidden','true');
+        const caption=document.createElement('span');
+        caption.className='explorer-context-label';
+        caption.textContent=label;
+        button.append(glyph,caption);
+        button.addEventListener('click',()=>{
+          this.#closeMenu();
+          Promise.resolve().then(action).catch(error=>this.#log(String(error)));
+        });
+        buttons.push(button);
+        menu.append(button);
+      }
     }
-    this.#panel.append(menu);this.#menu=menu;
+    menu.addEventListener('keydown',event=>{
+      const index=buttons.indexOf(document.activeElement);
+      if(event.key==='Escape'){event.preventDefault();this.#closeMenu();return;}
+      if(event.key==='ArrowDown'||event.key==='ArrowUp'){
+        event.preventDefault();
+        const direction=event.key==='ArrowDown'?1:-1;
+        buttons[(index+direction+buttons.length)%buttons.length].focus();
+      }
+      if(event.key==='Home'){event.preventDefault();buttons[0].focus();}
+      if(event.key==='End'){event.preventDefault();buttons.at(-1).focus();}
+    });
+    this.#panel.append(menu);
+    this.#menu=menu;
+    // Position using measured dimensions, not hard-coded menu height.
     const rect=this.#panel.getBoundingClientRect();
-    menu.style.left=Math.max(0,Math.min(clientX-rect.left,rect.width-160))+'px';
-    menu.style.top=Math.max(0,Math.min(clientY-rect.top,rect.height-190))+'px';
+    const width=menu.offsetWidth,height=menu.offsetHeight;
+    const x=clientX-rect.left,y=clientY-rect.top;
+    menu.style.left=Math.max(8,Math.min(x,rect.width-width-8))+'px';
+    menu.style.top=Math.max(8,Math.min(y,rect.height-height-8))+'px';
+    buttons[0]?.focus({preventScroll:true});
   }
   async #createIn(node,kind){
     const directory=node.kind==='directory'?node:node.parent;
