@@ -272,7 +272,7 @@ export class Explorer {
     if(this.#draft!==draft||draft.busy)return;
     const name=value.trim();
     if(!name){this.#draft=null;this.render();return;}
-    if(name==='.'||name==='..'||name.includes('/')||name.includes('\\\\')){
+    if(name==='.'||name==='..'||name.includes('/')||name.includes('\\')){
       this.#log('Invalid entry name: '+name);
       this.#tree.querySelector('.explorer-create-input')?.focus();
       return;
@@ -484,7 +484,7 @@ export class Explorer {
         while(insertAt<siblings.length&&siblings[insertAt].style?.paddingInlineStart&&
           parseInt(siblings[insertAt].style.paddingInlineStart,10)>parseInt(siblings[parentIndex].style.paddingInlineStart,10))insertAt++;
         siblings.splice(insertAt,0,row);
-        fragment.replaceChildren?.();
+        while(fragment.firstChild)fragment.removeChild(fragment.firstChild);
         const heading=document.createElement('div');heading.className='explorer-section';heading.textContent=this.#say('工作區','WORKSPACE');
         fragment.append(heading,...siblings);
       }
