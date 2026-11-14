@@ -726,6 +726,23 @@ $('#paletteLight').addEventListener('click', () => setPalette([255, 255, 255]));
 UI_PALETTE.subscribe(updatePaletteControls);
 updatePaletteControls();
 
+// Prebuilt recovery window: metadata is visible before large-file indexing finishes.
+const recoveryPrebuild = document.createElement('div');
+recoveryPrebuild.id = 'recoveryPrebuild';
+recoveryPrebuild.setAttribute('role', 'status');
+recoveryPrebuild.setAttribute('aria-live', 'polite');
+recoveryPrebuild.hidden = true;
+recoveryPrebuild.innerHTML = '<strong id="recoveryName"></strong><span id="recoveryStage">正在重建文件視窗…</span><progress id="recoveryProgress" max="100" value="0"></progress><span id="recoveryCount">0%</span>';
+document.querySelector('#workspace').append(recoveryPrebuild);
+function recoveryDisplay(name, completed = 0, total = 1, stage = '建立切片索引') {
+  recoveryPrebuild.hidden = false;
+  document.querySelector('#recoveryName').textContent = name;
+  document.querySelector('#recoveryStage').textContent = stage;
+  const percent = Math.min(100, Math.floor(100 * completed / Math.max(1, total)));
+  document.querySelector('#recoveryProgress').value = percent;
+  document.querySelector('#recoveryCount').textContent =
+    completed + ' / ' + total + ' slices (' + percent + '%)';
+}
 // Restore virtual drafts and small documents after reload.
 (async () => {
   try {
@@ -733,6 +750,8 @@ updatePaletteControls();
     const workspace = records.find(record => record.documentId === 'workspace');
     if (!workspace?.documents?.length || docs.ids().length) return;
     restoring = true;
+    const firstVirtual = workspace.documents.find(item => item.virtual);
+    if (firstVirtual) recoveryDisplay(firstVirtual.name, 0, 1, '正在準備恢復…');
     const mapping = new Map();
     for (const item of workspace.documents) {
       try {
@@ -752,7 +771,19 @@ updatePaletteControls();
           const session = new VirtualFileSession(id, blob);
           virtualSessions.set(id, session);
           mapping.set(item.id, id);
-          await session.indexLines();
+          recoveryDisplay(item.name, 0, session.sliceCount);
+          const indexing = storageProgress.start(id, 'INDEX', session.sliceCount);
+          try {
+            await session.indexLines(progress => {
+              storageProgress.update(indexing, progress.completed, 'INDEX');
+              recoveryDisplay(item.name, progress.completed, progress.total);
+            });
+            storageProgress.finish(indexing, 'SUCCESS');
+          } catch (indexError) {
+            storageProgress.finish(indexing, 'ERROR');
+            throw indexError;
+          }
+          recoveryDisplay(item.name, session.sliceCount, session.sliceCount, '正在還原未提交編輯…');
           await session.restoreEdits(item.edits);
           if (item.edits?.length) docs.update(id, '');
           const center = Math.min(Math.max(0, item.center || 0), session.sliceCount - 1);
@@ -782,5 +813,6 @@ updatePaletteControls();
     omu.emit('OLR', 'Restore', 500, String(error), true);
   } finally {
     restoring = false;
+    recoveryPrebuild.hidden = true;
   }
 })();
