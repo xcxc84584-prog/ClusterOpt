@@ -149,7 +149,13 @@ export class VirtualFileSession {
     // Older requests are not evicted while still pending.
     for (const index of protectedWindow) {
       if (index !== center && !this.#dirty.has(index)) {
-        this.requestSlice(index).catch(() => {});
+        this.requestSlice(index).then(() => {
+          // A stale prefetch must not remain resident after viewport changes.
+          if (!this.#resident.has(index) && !this.#dirty.has(index) &&
+              !this.#recoveryProtected.has(index)) {
+            this.#loader.unload(this.#documentId, index);
+          }
+        }).catch(() => {});
       }
     }
     for (const index of this.#loader.loadedIndices(this.#documentId)) {
