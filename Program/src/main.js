@@ -1,3 +1,4 @@
+import {DirtyLineTracker,countNewlines} from './text-highlighter/dirty-line-tracker.js';
 import {transcodeToUtf8} from './fmc/chinese-transcoder.js';
 import {TextHighlighter,detectLanguage} from './text-highlighter/text-highlighter.js';
 import {HighlightRenderer} from './text-highlighter/highlight-renderer.js';
@@ -208,37 +209,70 @@ function scheduleHighlight(){
   },180);
 }
 
-// The edit path NEVER calls highlightSlice or reads neighboring slices.
+// Each document/slice has its own dirty history. A successful save starts a new epoch.
+const dirtyHistories=new Map();
+let dirtyTimer=null;
+let dirtyGeneration=0;
+let pendingEdit=null;
+function dirtyKey(id=active){
+  const session=id?virtualSessions.get(id):null;
+  return id+':'+(session?.center??0);
+}
+function recordDirtyEdit(){
+  if(!active||binaryDocuments.has(active))return;
+  const key=dirtyKey();
+  let tracker=dirtyHistories.get(key);
+  if(!tracker){tracker=new DirtyLineTracker();dirtyHistories.set(key,tracker);}
+  const current=editor.value;
+  const position=pendingEdit?.position??editor.selectionStart;
+  const oldLines=pendingEdit?.removedLines??0;
+  const line=current.slice(0,Math.min(position,current.length)).split('\n').length-1;
+  const newLines=Math.max(0,countNewlines(current.slice(
+    Math.min(position,current.length),editor.selectionStart)));
+  tracker.shift(line,oldLines,newLines);
+  tracker.add(line,Math.min(current.split('\n').length-1,line+Math.max(oldLines,newLines)));
+  pendingEdit=null;
+  scheduleDirtyHighlight(key);
+}
+function scheduleDirtyHighlight(key){
+  clearTimeout(dirtyTimer);
+  const generation=++dirtyGeneration;
+  if(!TEXT_HIGHLIGHTER.enabled)return;
+  dirtyTimer=setTimeout(async()=>{
+    const tracker=dirtyHistories.get(key);
+    if(!tracker||!tracker.pending||key!==dirtyKey())return;
+    const id=active,item=docs.get(id)?.data;
+    if(!item)return;
+    const value=editor.value;
+    const starts=highlightRenderer.starts;
+    const batch=tracker.take();
+    if(!batch)return;
+    const startLine=batch.start,endLine=Math.min(batch.end,starts.length-1);
+    if(startLine>endLine)return;
+    const from=starts[startLine];
+    const to=endLine+1<starts.length?starts[endLine+1]-1:value.length;
+    const lines=value.slice(from,to).split('\n');
+    const bg=getComputedStyle(document.documentElement).getPropertyValue('--ui-editor');
+    const background=(bg.match(/\d+/g)||['0','0','0']).slice(0,3).map(Number);
+    const scheme=await TEXT_HIGHLIGHTER.highlightRange({
+      documentId:id,targetSliceId:String(virtualSessions.get(id)?.center??0),
+      revision:generation,language:detectLanguage(item.name),lines,background
+    });
+    if(generation!==dirtyGeneration||key!==dirtyKey()||value!==editor.value){
+      tracker.add(batch.start,batch.end);
+      return;
+    }
+    highlightRenderer.renderRange({...scheme,startLine,endLine},value);
+    if(scheme.error)omu.emit('TextHighlighter','HighlightRange',500,scheme.error,true);
+    if(tracker.pending)scheduleDirtyHighlight(key);
+  },150);
+}
 function scheduleLineHighlight(){
-  clearTimeout(lineHighlightTimer);
   clearTimeout(highlightTimer);
   highlightAbort?.abort();
   ++highlightGeneration;
   highlightRenderer.retainDuringEdit();
-  const generation=++lineHighlightGeneration;
-  if(!TEXT_HIGHLIGHTER.enabled)return;
-  const id=active;
-  const item=id?docs.get(id)?.data:null;
-  if(!item||binaryDocuments.has(id))return;
-  const value=editor.value;
-  const caret=editor.selectionStart;
-  const start=value.lastIndexOf('\n',Math.max(0,caret-1))+1;
-  const newline=value.indexOf('\n',start);
-  const end=newline<0?value.length:newline;
-  const line=value.slice(start,end);
-  const sliceId=virtualSessions.get(id)?.center??0;
-  lineHighlightTimer=setTimeout(async()=>{
-    if(generation!==lineHighlightGeneration||active!==id)return;
-    const bg=getComputedStyle(document.documentElement).getPropertyValue('--ui-editor');
-    const background=(bg.match(/\d+/g)||['0','0','0']).slice(0,3).map(Number);
-    const scheme=await TEXT_HIGHLIGHTER.highlightLine({
-      documentId:id,targetSliceId:String(sliceId),revision:generation,
-      language:detectLanguage(item.name),line,background
-    });
-    if(generation!==lineHighlightGeneration||active!==id||editor.value!==value)return;
-    highlightRenderer.renderLine({...scheme,start,end},value);
-    if(scheme.error)omu.emit('TextHighlighter','HighlightLine',500,scheme.error,true);
-  },90);
+  recordDirtyEdit();
 }
 
 const t=(key,...args)=>LANGUAGE.t(key,...args);
@@ -578,6 +612,8 @@ function renderTabGuides() {
 }
 let lineStructureChanged=true;
 editor.addEventListener('beforeinput',event=>{
+  const start=editor.selectionStart,end=editor.selectionEnd;
+  pendingEdit={position:start,removedLines:countNewlines(editor.value.slice(start,end))};
   const from=editor.selectionStart,to=editor.selectionEnd;
   const removed=editor.value.slice(from,to);
   const backward=from>0?editor.value[from-1]:'';
@@ -757,6 +793,7 @@ if (binaryDocuments.has(id)) {
     data.previewBytes = bytes.length;
     data.dirty = false;
     docs.setSaved(id, handle, handle.name, docs.get(id).data.revision);
+    for(const key of dirtyHistories.keys())if(key.startsWith(id+':'))dirtyHistories.delete(key);
     syncStates.set(id, 'SYNCED');
     if (active === id) status('Binary bytes saved without lossy encoding');
     scheduleRecovery();
@@ -829,7 +866,10 @@ if (virtualSessions.has(id)) {
 }
 savingDocuments.delete(id);
 if (saveAbortControllers.get(id) === saveController) saveAbortControllers.delete(id);
-if(res.ok){storageProgress.update(operationId,1,'FLUSH');
+if(res.ok){
+for(const key of dirtyHistories.keys())if(key.startsWith(id+':'))dirtyHistories.delete(key);
+if(active===id){clearTimeout(dirtyTimer);++dirtyGeneration;}
+storageProgress.update(operationId,1,'FLUSH');
 storageProgress.finish(operationId,'SUCCESS');
 if(!docs.get(id).ok)return;
 docs.setSaved(id,res.data.handle,res.data.name,revision);
