@@ -1006,3 +1006,12 @@ header .menu-wrap { margin-left:auto; }
 .highlighter-dialog .palette-modal-header h2 {color:var(--ui-text-on-panel);}
 .highlighter-dialog button {background:var(--ui-control);color:var(--ui-text-on-control);border-color:var(--ui-border);}
 .highlighter-dialog button:hover {background:var(--ui-hover);color:var(--ui-text-on-panel);}
+
+/* v0.0.31: editor background and foreground follow the global palette. */
+#editorPane {background:var(--ui-editor);}
+#editorPane #gutter {background:var(--ui-gutter);color:var(--ui-text);border-color:var(--ui-border);}
+#editorPane #editor {background:transparent;color:var(--ui-text);}
+#highlightOverlay {color:var(--ui-text);background:transparent;}
+#encodingDialog select {background:var(--ui-control);color:var(--ui-text-on-control);
+  border:1px solid var(--ui-border);padding:9px;border-radius:7px;}
+#encodingDialog label {color:var(--ui-text-on-panel);}
