@@ -553,6 +553,7 @@ async function createVirtual(item) {
     await session.indexLines(progress => storageProgress.update(initId, progress.completed, 'INDEX'));
     storageProgress.finish(initId, 'SUCCESS');
     if (active === id) await renderVirtualSlice(id);
+    else await reconcileLoadedDocument(id);
   } catch (error) {
     storageProgress.finish(initId, 'ERROR');
     syncStates.set(id, 'ERROR');
@@ -560,6 +561,57 @@ async function createVirtual(item) {
   }
   editor.focus({preventScroll: true});
   scheduleRecovery();
+}
+
+/**
+ * Reconcile persisted recovery records with FMC/MVCC state after loading.
+ * A missing handle or a failed recovery query is not proof of synchronization.
+ */
+async function reconcileLoadedDocument(id) {
+  const document = docs.get(id);
+  if (!document.ok) return;
+  const session = virtualSessions.get(id);
+  const handle = docs.handle(id);
+  if (document.data.dirty || session?.dirty) {
+    syncStates.set(id, 'DIVERGED');
+    return;
+  }
+  if (!handle) {
+    syncStates.set(id, 'UNVERIFIED');
+    return;
+  }
+
+  try {
+    const records = await olr.restoreAll();
+    const workspace = records.find(record => record.documentId === 'workspace');
+    let recoverable = false;
+    for (const saved of workspace?.documents || []) {
+      const pending = saved.virtual
+        ? Array.isArray(saved.edits) && saved.edits.length > 0
+        : saved.dirty === true;
+      if (!pending) continue;
+      if (saved.handle && typeof handle.isSameEntry === 'function') {
+        if (await handle.isSameEntry(saved.handle)) {
+          recoverable = true;
+          break;
+        }
+      } else if (!saved.handle && saved.id === id) {
+        recoverable = true;
+        break;
+      }
+    }
+    // An edit or a new operation may have started during the IndexedDB read.
+    if (!docs.get(id).ok || docs.get(id).data.dirty || session?.dirty) {
+      syncStates.set(id, 'DIVERGED');
+      return;
+    }
+    const running = storageProgress.get(id);
+    if (running?.state === 'RUNNING') return;
+    syncStates.set(id, recoverable ? 'DIVERGED' : 'SYNCED');
+  } catch (error) {
+    syncStates.set(id, 'UNVERIFIED');
+    omu.emit('FMC', 'ReconcileRecovery', 500, String(error), true);
+  }
 }
 
 async function renderVirtualSlice(id, center = null) {
@@ -620,6 +672,7 @@ async function renderVirtualSlice(id, center = null) {
     }
   } finally {
     storageProgress.finish(operationId, succeeded ? 'SUCCESS' : 'ERROR');
+    if (succeeded) await reconcileLoadedDocument(id);
     if (generation === virtualRenderGenerations.get(id) && active === id &&
         syncStates.get(id) === 'LOADING') syncStates.set(id, 'ERROR');
     updateEditorLock();
@@ -737,7 +790,7 @@ refresh();
 
 function renderLanguage() {
   document.documentElement.lang=LANGUAGE.value;
-  document.title='Cluster Opt 8';
+  document.title='Cluster Opt v0.0.10+4';
   $('#menuBtn').textContent=t('file')+'⌄';
   for (const key of ['new','open','save','saveas','close','closeall']) {
     const button=$('#menu [data-action="'+key+'"]');
@@ -947,6 +1000,9 @@ function showRecoveryFor(id) {
     if (active && virtualSessions.has(active)) {
       await renderVirtualSlice(active, virtualSessions.get(active).center);
     } else restorePosition(active);
+    for (const id of docs.ids()) {
+      if (virtualSessions.has(id) && id !== active) await reconcileLoadedDocument(id);
+    }
     status('Recovered editor session');
   } catch (error) {
     omu.emit('OLR', 'Restore', 500, String(error), true);
