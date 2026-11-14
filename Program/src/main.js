@@ -142,7 +142,8 @@ function scheduleRecovery() {
             // File handles can be structured-cloned into IndexedDB.
             handle: docs.handle(id) || null,
             // Keep source bytes for picker-only files without a handle.
-            blob: docs.handle(id) ? null : session.sourceBlob,
+            blob: !docs.handle(id) || session.sourceBlob.size <= 16 * 1024 * 1024
+              ? session.sourceBlob : null,
             edits: session.recoveryEdits,
             center: session.center,
             position: session.getPosition(session.center) || null
@@ -750,6 +751,7 @@ updatePaletteControls();
           mapping.set(item.id, id);
           await session.indexLines();
           await session.restoreEdits(item.edits);
+          if (item.edits?.length) docs.update(id, '');
           const center = Math.min(Math.max(0, item.center || 0), session.sliceCount - 1);
           session.setPosition(center, item.position || {
             scrollTop: 0, scrollLeft: 0, selectionStart: 0, selectionEnd: 0
