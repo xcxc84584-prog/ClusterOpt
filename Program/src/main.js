@@ -207,7 +207,7 @@ if(changedDocument){
 $('#filename').textContent=d.name+(d.dirty?' *':'');
 if (virtualSessions.has(active)) {
   const session = virtualSessions.get(active);
-  $('#gutter').textContent = '…';
+  if (changedDocument || rebuildingDocuments.has(active)) $('#gutter').textContent = '…';
 } else {
   updateLines();
 }
