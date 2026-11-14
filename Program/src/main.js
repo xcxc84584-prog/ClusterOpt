@@ -664,7 +664,6 @@ async function renderVirtualSlice(id, center = null) {
     storageProgress.update(operationId, total, 'READ');
     succeeded = true;
     syncStates.set(id, session.dirty ? 'DIVERGED' : 'UNVERIFIED');
-    await reconcileLoadedDocument(id);
   } catch (error) {
     if (generation === virtualRenderGenerations.get(id) && active === id) {
       syncStates.set(id, 'ERROR');
@@ -673,6 +672,7 @@ async function renderVirtualSlice(id, center = null) {
     }
   } finally {
     storageProgress.finish(operationId, succeeded ? 'SUCCESS' : 'ERROR');
+    if (succeeded) await reconcileLoadedDocument(id);
     if (generation === virtualRenderGenerations.get(id) && active === id &&
         syncStates.get(id) === 'LOADING') syncStates.set(id, 'ERROR');
     updateEditorLock();
