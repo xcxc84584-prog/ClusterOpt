@@ -302,7 +302,9 @@ const s=editor.selectionStart;editor.setRangeText('    ',s,editor.selectionEnd,'
 async function doSave(as=false){if(!active)return;
 const id=active;
 capturePosition(id);
-const operationId=storageProgress.start(id,'SAVE',1);
+const operationId=storageProgress.start(
+  id, 'SAVE', virtualSessions.has(id) ? virtualSessions.get(id).sliceCount : 1
+);
 syncStates.set(id,'SAVING');
 const d=docs.get(id).data;
 const revision=d.revision;
@@ -315,7 +317,9 @@ if (virtualSessions.has(id)) {
       handle = await window.showSaveFilePicker({suggestedName: d.name});
     }
     if (!handle) throw new Error('Streaming save requires a file handle');
-    await virtualSessions.get(id).save(handle);
+    await virtualSessions.get(id).save(handle, progress => {
+      storageProgress.update(operationId, progress.completed, 'FLUSH');
+    });
     res = contract(true, {handle, name: handle.name});
   } catch (error) {
     res = contract(false, null, 500, String(error));
@@ -358,7 +362,16 @@ async function renderVirtualSlice(id, center = null) {
   const generation = ++virtualRenderGeneration;
   await virtualEditQueue;
   const index = center === null ? session.center : center;
-  const result = await session.window(index);
+  const operationId = storageProgress.start(id, 'LOAD', Math.min(
+    session.sliceCount, index === 0 || index === session.sliceCount - 1 ? 2 : 3
+  ));
+  syncStates.set(id, 'LOADING');
+  const result = await session.window(index, progress => {
+    storageProgress.update(operationId, progress.completed, 'READ');
+  });
+  storageProgress.finish(operationId, result.ok ? 'SUCCESS' : 'ERROR');
+  if (active === id) syncStates.set(id, result.ok ?
+    (session.dirty ? 'DIVERGED' : 'UNVERIFIED') : 'ERROR');
   if (!result.ok) {
     status(result.message || 'Slice load failed');
     return;
@@ -386,6 +399,7 @@ async function renderVirtualSlice(id, center = null) {
   ).join('\n');
   $('#sliceNumber').textContent = (index + 1) + ' / ' + session.sliceCount;
   $('#sliceControls').hidden = false;
+  status('Loaded slice ' + (index + 1) + ' / ' + session.sliceCount);
   $('#gutter').scrollTop = editor.scrollTop;
   updatePos();
 }
@@ -446,7 +460,7 @@ function renderSyncStatus() {
   const bar = $('#meterFill');
   const percent = progress && progress.state === 'RUNNING'
     ? progress.progressPercent : null;
-  const saving = state === 'SAVING';
+  const saving = state === 'SAVING' || state === 'LOADING';
   bar.style.width = saving && percent !== null ? percent + '%' : '100%';
   bar.style.background = colors[state] || colors.UNVERIFIED;
   bar.parentElement.classList.toggle('indeterminate', saving && percent === null);
