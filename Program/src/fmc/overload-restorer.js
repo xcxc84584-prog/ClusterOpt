@@ -55,26 +55,75 @@ export class OverloadRestorer {
     await this.#transaction('readwrite', store => store.delete(documentId));
   }
 
+  /** Keep changed ranges rather than full copies of each document. */
   record(documentId, before, after) {
     if (before === after) return;
     const history = this.#history.get(documentId) || {undo: [], redo: []};
-    history.undo.push(before);
+    history.undo.push(this.#patch(after, before));
     if (history.undo.length > this.#limit) history.undo.shift();
     history.redo = [];
     this.#history.set(documentId, history);
   }
 
+  #patch(before, after) {
+    let start = 0;
+    while (start < before.length && start < after.length &&
+        before[start] === after[start]) {
+      start++;
+    }
+    let beforeEnd = before.length;
+    let afterEnd = after.length;
+    while (beforeEnd > start && afterEnd > start &&
+        before[beforeEnd - 1] === after[afterEnd - 1]) {
+      beforeEnd--;
+      afterEnd--;
+    }
+    return {
+      start,
+      removed: before.slice(start, beforeEnd),
+      inserted: after.slice(start, afterEnd)
+    };
+  }
+
+  #apply(current, patch) {
+    if (current.slice(patch.start, patch.start + patch.removed.length) !==
+        patch.removed) {
+      return null;
+    }
+    return current.slice(0, patch.start) + patch.inserted +
+      current.slice(patch.start + patch.removed.length);
+  }
+
+  async clearAll() {
+    const db = await this.#dbPromise;
+    await new Promise((resolve, reject) => {
+      const transaction = db.transaction('documents', 'readwrite');
+      transaction.objectStore('documents').clear();
+      transaction.oncomplete = resolve;
+      transaction.onerror = () => reject(transaction.error);
+      transaction.onabort = () => reject(transaction.error);
+    });
+    this.#history.clear();
+    return {ok: true, code: 200};
+  }
+
   undo(documentId, current) {
     const history = this.#history.get(documentId);
     if (!history?.undo.length) return null;
-    history.redo.push(current);
-    return history.undo.pop();
+    const patch = history.undo.pop();
+    const previous = this.#apply(current, patch);
+    if (previous === null) return null;
+    history.redo.push(this.#patch(previous, current));
+    return previous;
   }
 
   redo(documentId, current) {
     const history = this.#history.get(documentId);
     if (!history?.redo.length) return null;
-    history.undo.push(current);
-    return history.redo.pop();
+    const patch = history.redo.pop();
+    const next = this.#apply(current, patch);
+    if (next === null) return null;
+    history.undo.push(this.#patch(next, current));
+    return next;
   }
 }
