@@ -274,3 +274,157 @@ footer .grow {
   color:#8ba3ff;
   font-weight:700
 }
+
+/* Opt 6: Global RGB palette tokens, shared by every UI object. */
+:root {
+  --ui-background: rgb(0, 0, 0);
+  --ui-surface: rgb(32, 33, 39);
+  --ui-panel: rgb(17, 18, 22);
+  --ui-control: rgb(52, 54, 64);
+  --ui-hover: rgb(71, 74, 88);
+  --ui-border: rgb(60, 62, 73);
+  --ui-text: rgb(241, 242, 245);
+  --ui-muted: rgb(165, 168, 181);
+  --ui-editor: rgb(0, 0, 0);
+  --ui-gutter: rgb(8, 9, 11);
+}
+
+:root,
+body,
+#app,
+main,
+textarea {
+  background: var(--ui-background);
+  color: var(--ui-text);
+}
+
+header,
+footer {
+  background: var(--ui-surface);
+  color: var(--ui-text);
+  border-color: var(--ui-border);
+}
+
+#tabs,
+.tab,
+#languageOptions,
+#toolOptions,
+#paletteOptions {
+  background: var(--ui-panel);
+  color: var(--ui-text);
+  border-color: var(--ui-border);
+}
+
+.tab.active,
+#empty {
+  background: var(--ui-background);
+  color: var(--ui-text);
+}
+
+.tab .name,
+.brand strong,
+#filename,
+#position,
+#status {
+  color: var(--ui-text);
+}
+
+.tab .close,
+.brand small,
+p,
+#gutter,
+.menu-arrow {
+  color: var(--ui-muted);
+}
+
+#gutter {
+  background: var(--ui-gutter);
+  border-color: var(--ui-border);
+}
+
+textarea {
+  background: var(--ui-editor);
+  color: var(--ui-text);
+}
+
+button,
+select,
+footer select {
+  background: var(--ui-control);
+  border-color: var(--ui-border);
+  color: var(--ui-text);
+}
+
+button:hover {
+  background: var(--ui-hover);
+}
+
+nav {
+  background: var(--ui-surface);
+  border-color: var(--ui-border);
+}
+
+nav button {
+  background: transparent;
+  color: var(--ui-text);
+}
+
+nav button:hover {
+  background: var(--ui-hover);
+}
+
+.menu-divider {
+  background: var(--ui-border);
+}
+
+#toolOptions,
+#paletteOptions {
+  margin: 4px;
+  padding: 6px;
+  border: 1px solid var(--ui-border);
+  border-radius: 6px;
+}
+
+#toolOptions[hidden],
+#paletteOptions[hidden] {
+  display: none;
+}
+
+#paletteOptions label {
+  display: block;
+  font-size: 12px;
+  margin: 5px 0;
+}
+
+#palettePicker {
+  width: 100%;
+  height: 34px;
+  cursor: pointer;
+}
+
+.palette-channels,
+.palette-presets {
+  display: flex;
+  gap: 5px;
+}
+
+.palette-channels label {
+  flex: 1;
+  min-width: 0;
+}
+
+.palette-channels input {
+  width: 100%;
+  min-width: 0;
+  padding: 4px;
+  background: var(--ui-background);
+  color: var(--ui-text);
+  border: 1px solid var(--ui-border);
+  border-radius: 4px;
+}
+
+.palette-presets button {
+  padding: 6px;
+  text-align: center;
+  font-size: 11px;
+}
