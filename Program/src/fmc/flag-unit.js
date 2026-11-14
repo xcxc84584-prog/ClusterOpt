@@ -14,6 +14,9 @@ export class FlagUnit {
     this.#clock = clock;
     if (onEvent) this.#events.add(onEvent);
   }
+  reportEHU(sliceId, ownerId, reason, code = 403) {
+    this.#emit('EHU', sliceId, {ownerId, ownerType: 'AGENT', flagType: null}, code, reason);
+  }
   subscribe(listener) {
     if (typeof listener !== 'function') throw new TypeError('listener must be a function');
     this.#events.add(listener);
