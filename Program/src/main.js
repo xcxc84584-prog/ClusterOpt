@@ -263,6 +263,83 @@ function updateLines(){
   const tree = new LineTree([count]);
   $('#gutter').textContent = Array.from({length: tree.total}, (_, i) => i + 1).join('\n');
 }
+/**
+ * Navigate only after the target physical slice has finished loading.
+ * Binary search uses the indexed first line of each slice.
+ */
+async function goToLine(lineNumber) {
+  const id = active;
+  if (!id || !Number.isSafeInteger(lineNumber) || lineNumber < 1) {
+    status('請輸入有效的正整數行號');
+    return;
+  }
+  const session = virtualSessions.get(id);
+  const totalLines = session ? session.totalLines : editor.value.split('\n').length;
+  if (lineNumber > totalLines) {
+    status('行號超出文件範圍（共 ' + totalLines + ' 行）');
+    return;
+  }
+  const input = $('#goLineInput');
+  const button = $('#goLineButton');
+  input.disabled = true;
+  button.disabled = true;
+  try {
+    if (session) {
+      if (!session.lineStarts?.length) throw new Error('行號索引尚未建立完成');
+      let low = 0;
+      let high = session.lineStarts.length - 1;
+      while (low < high) {
+        const middle = Math.ceil((low + high) / 2);
+        if (session.lineStarts[middle] <= lineNumber) low = middle;
+        else high = middle - 1;
+      }
+      const targetSlice = low;
+      syncStates.set(id, 'LOADING');
+      status('正在載入目標區塊，請稍候…');
+      await renderVirtualSlice(id, targetSlice);
+      if (active !== id || session.center !== targetSlice) return;
+      if (syncStates.get(id) === 'ERROR') throw new Error('區塊載入失敗');
+      const relativeLine = lineNumber - session.lineStarts[targetSlice];
+      const lines = editor.value.split('\n');
+      const offset = lines.slice(0, relativeLine).reduce(
+        (sum, text) => sum + text.length + 1, 0
+      );
+      editor.setSelectionRange(offset, offset);
+      const lineHeight = Number.parseFloat(getComputedStyle(editor).lineHeight) || 22;
+      editor.scrollTop = Math.max(0, relativeLine * lineHeight - editor.clientHeight / 3);
+      $('#gutter').scrollTop = editor.scrollTop;
+      session.setPosition(targetSlice, {
+        scrollTop: editor.scrollTop, scrollLeft: editor.scrollLeft,
+        selectionStart: offset, selectionEnd: offset
+      });
+    } else {
+      const lines = editor.value.split('\n');
+      const offset = lines.slice(0, lineNumber - 1).reduce(
+        (sum, text) => sum + text.length + 1, 0
+      );
+      editor.setSelectionRange(offset, offset);
+      const lineHeight = Number.parseFloat(getComputedStyle(editor).lineHeight) || 22;
+      editor.scrollTop = Math.max(0, (lineNumber - 1) * lineHeight - editor.clientHeight / 3);
+      $('#gutter').scrollTop = editor.scrollTop;
+    }
+    updatePos();
+    editor.focus({preventScroll: true});
+    status('已跳轉至第 ' + lineNumber + ' 行');
+    scheduleRecovery();
+  } catch (error) {
+    syncStates.set(id, 'ERROR');
+    omu.emit('EditorWindow', 'GoToLine', 500, String(error), true);
+    status('跳轉失敗：' + String(error));
+  } finally {
+    input.disabled = false;
+    button.disabled = false;
+  }
+}
+$('#goLineButton').addEventListener('click', () =>
+  goToLine(Number($('#goLineInput').value)));
+$('#goLineInput').addEventListener('keydown', event => {
+  if (event.key === 'Enter') goToLine(Number(event.currentTarget.value));
+});
 function updatePos(){const p=editor.selectionStart||0,txt=editor.value.slice(0,p),lines=txt.split('\n');
 $('#position').textContent=`Ln ${lines.length}, Col ${lines.at(-1).length+1}`;
 }

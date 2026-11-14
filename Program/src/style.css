@@ -696,3 +696,35 @@ nav button {
 #recoveryName { font-size: 18px; overflow-wrap: anywhere; }
 #recoveryStage, #recoveryCount { font-size: 13px; opacity: .85; }
 #recoveryProgress { width: min(460px, 90%); height: 14px; accent-color: #32b9aa; }
+
+/* The jump toolbar is a separate flex row; never overlap editor text. */
+#app { min-height: 0; }
+#workspace { min-height: 0; flex: 1 1 auto; }
+#goLineBar {
+  box-sizing: border-box;
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 5px 12px;
+  background: #1b1c22;
+  border-top: 1px solid #34353e;
+  color: #e2e5ee;
+  font-size: 12px;
+}
+#goLineInput { width: 92px; max-width: 30vw; }
+#goLineBar button, #goLineInput {
+  border: 1px solid #4a4c55;
+  border-radius: 4px;
+  background: #252831;
+  color: #f2f4f8;
+  padding: 4px 7px;
+}
+#goLineBar button:disabled, #goLineInput:disabled { opacity: .55; }
+.goLineHint { color: #a5adbd; }
+@media (max-width: 520px) {
+  #goLineBar { padding: 4px 8px; }
+  .goLineHint { display: none; }
+}
