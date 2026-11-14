@@ -905,3 +905,14 @@ footer select { background: var(--ui-control); border-color: var(--ui-border); c
   #explorerPanel { width:min(75vw,280px); flex-basis:min(75vw,280px); }
   #explorerToggle { margin-left:auto; }
 }
+
+/* v0.0.17.1: Explorer control belongs to the upper-left utility rail. */
+header { justify-content:initial; gap:10px; }
+.header-utility { display:flex; align-items:center; margin-left:8px; }
+header .menu-wrap { margin-left:auto; }
+#explorerToggle { margin:0; padding:7px 11px; min-width:92px;
+  background:var(--ui-control); color:var(--ui-text-on-control);
+  border:1px solid var(--ui-border); }
+#explorerToggle[aria-expanded="true"] { background:var(--ui-hover); }
+@media(max-width:650px) { .header-utility { margin-left:0; }
+  #explorerToggle { min-width:0; padding:7px; font-size:11px; } }
