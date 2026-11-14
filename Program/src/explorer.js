@@ -39,10 +39,10 @@ export class Explorer {
       () => this.toggle());
   }
   toggle(force) {
-    const visible = force === undefined ? this.#panel.hidden : !force;
-    this.#panel.hidden = visible;
+    const open = force === undefined ? this.#panel.hidden : Boolean(force);
+    this.#panel.hidden = !open;
     document.querySelector('#explorerToggle').setAttribute(
-      'aria-expanded', String(!visible));
+      'aria-expanded', String(open));
   }
   setLocale(locale, translate) {
     this.#locale = locale;
