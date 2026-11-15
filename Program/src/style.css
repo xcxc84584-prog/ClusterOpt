@@ -1213,10 +1213,3 @@ body > .explorer-context .explorer-context-label { overflow-wrap:anywhere; }
 #explorerTree .explorer-entry.active:hover {
   background:var(--explorer-active-hover, #32628d);
 }
-#explorerPanel { --explorer-active-bg:#274c70; --explorer-active-hover:#32628d;
-  --explorer-active-text:#fff; --explorer-active-edge:#80c8ff; }
-body.day-mode #explorerPanel, body.light-mode #explorerPanel,
-body[data-theme="light"] #explorerPanel, [data-theme="light"] #explorerPanel {
-  --explorer-active-bg:#b8d7ff; --explorer-active-hover:#9cc6ff;
-  --explorer-active-text:#102c4b; --explorer-active-edge:#145da0;
-}
