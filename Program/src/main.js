@@ -575,7 +575,7 @@ function renderGutterWindow(){
  if(signature!==gutterWindowSignature){
   gutterWindowSignature=signature;
   labels.textContent=Array.from({length:windowRange.end-windowRange.start},
-   (_,i)=>String(windowRange.firstNumber+i)).join('\\n');
+   (_,i)=>String(windowRange.firstNumber+i)).join('\n');
   labels.style.top=windowRange.offsetTop+'px';
   gutter.dataset.signature=signature;
  }
@@ -583,7 +583,7 @@ function renderGutterWindow(){
 function updateLines(){
  const count=pendingLineDelta!==null&&cachedLineCount!==null?
   Math.max(1,cachedLineCount+pendingLineDelta):
-  1+(editor.value.match(/\\n/g)?.length||0);
+  1+(editor.value.match(/\n/g)?.length||0);
  pendingLineDelta=null;
  cachedLineCount=count;
  lastGutterSignature=String(count);
