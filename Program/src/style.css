@@ -1266,3 +1266,14 @@ body > .explorer-context .explorer-context-label { overflow-wrap:anywhere; }
 #clusterEditorColumn.psm-mode #tabs{position:relative;z-index:9;visibility:visible;pointer-events:auto}
 #clusterEditorColumn.psm-mode .psm-pane{top:48px}
 #clusterEditorColumn.psm-mode #tabs .tab:not(.psm-tab).active{background:#191a20;color:#a5a8b5}
+
+/* v0.0.60 PLA guided setup — follows the global palette. */
+.psm-quick-setup{display:grid;gap:14px;width:min(100%,640px);margin:0 auto 22px;text-align:left}
+.psm-setup-step{display:grid;grid-template-columns:38px minmax(0,1fr);gap:14px;padding:16px;border:1px solid color-mix(in srgb,var(--ui-accent,#8baaff) 30%,transparent);border-radius:12px;background:color-mix(in srgb,var(--ui-accent,#8baaff) 5%,transparent)}
+.psm-setup-step>span{font-size:18px;font-weight:750;color:var(--ui-accent,#8baaff)}
+.psm-setup-step strong{display:block;font-size:15px}
+.psm-setup-step p{font-size:12px;line-height:1.6;opacity:.85;margin:7px 0 12px}
+.psm-pair-row{display:flex;gap:8px;flex-wrap:wrap}
+.psm-pair-row input{flex:1 1 180px;min-width:0;padding:10px;border-radius:8px;border:1px solid currentColor;background:transparent;color:inherit}
+.psm-primary{border-radius:8px;padding:10px 16px;background:var(--ui-accent,#8baaff);color:#101018;font-weight:700}
+.psm-pane{overflow:auto}
