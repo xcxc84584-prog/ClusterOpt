@@ -33,7 +33,7 @@ import {createFileManagerClass} from './file-manager.js';
 import {createGlobalPropertyRegistryClass} from './global-properties.js';
 import {createSyncStatusClass} from './sync-status.js';
 import {LanguageProperty} from './language.js?v=opt038-i18n';
-import {mountPowerShellUI} from './powershell-manager/powershell-ui.js';
+import {mountPowerShellUI} from './powershell-manager/powershell-ui.js?v=opt060-psm-r4';
 // Cluster Opt 1: object state is private; contracts are the only cross-object channel.
 const contract=(ok,data=null,code=200,message='')=>Object.freeze({ok,code,data,message});
 const omu=new OMU();
