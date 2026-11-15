@@ -33,12 +33,12 @@ import {createFileManagerClass} from './file-manager.js';
 import {createGlobalPropertyRegistryClass} from './global-properties.js';
 import {createSyncStatusClass} from './sync-status.js';
 import {LanguageProperty} from './language.js?v=opt038-i18n';
-import {mountPowerShellUI} from './powershell-manager/powershell-ui.js?v=opt064-port-r2';
+import {mountPowerShellUI} from './powershell-manager/powershell-ui.js?v=opt065-native-r1';
 // Normalize stale bookmarked release query parameters without discarding user data.
 if(typeof window!=='undefined'&&window.location?.search){
  const params=new URLSearchParams(window.location.search);
- if(params.get('v')!=='0.0.64'||params.get('build')!=='opt064-port-r2'){
-  params.set('v','0.0.64');params.set('build','opt064-port-r2');
+ if(params.get('v')!=='0.0.65'||params.get('build')!=='opt065-native-r1'){
+  params.set('v','0.0.65');params.set('build','opt065-native-r1');
   window.history.replaceState(window.history.state,'',window.location.pathname+'?'+params.toString()+window.location.hash);
  }
 }
@@ -1672,7 +1672,7 @@ renderTabGuides();
 function renderLanguage() {
   document.documentElement.lang=LANGUAGE.value;
   explorer.setLocale(LANGUAGE.value, t);
-  document.title='Cluster Opt v0.0.64';
+  document.title='Cluster Opt v0.0.65';
   $('#menuBtn').textContent=t('file')+'⌄';
   for (const key of ['new','open','save','saveas','close','closeall']) {
     const button=$('#menu [data-action="'+key+'"]');
