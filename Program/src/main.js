@@ -27,6 +27,7 @@ import {SliceLoader} from './fmc/slice-loader.js';
 import {StorageProgressTracker} from './fmc/storage-progress-tracker.js';
 import {OMU} from './omu.js';
 import {InterfacePalette} from './interface-palette.js';
+import {BlockedFileTypes} from './file-type-blocklist.js';
 import {createDocumentsClass} from './documents.js';
 import {createFileManagerClass} from './file-manager.js';
 import {createGlobalPropertyRegistryClass} from './global-properties.js';
@@ -182,6 +183,7 @@ const GlobalPropertyRegistry = createGlobalPropertyRegistryClass();
 const SyncStatus = createSyncStatusClass();
 const LANGUAGE=new LanguageProperty();
 const UI_PALETTE = new InterfacePalette();
+const FILE_TYPE_BLOCKLIST = new BlockedFileTypes();
 const TEXT_HIGHLIGHTER = new TextHighlighter();
 const highlightRenderer = new HighlightRenderer(document.querySelector('#editor'),document.querySelector('#highlightOverlay'));
 let highlightGeneration = 0;
@@ -344,6 +346,8 @@ const t=(key,...args)=>LANGUAGE.t(key,...args);
 const docs=new Documents(),files=new FileManager(),GLOBALS=new GlobalPropertyRegistry(),syncStates=new SyncStatus();
 GLOBALS.register('LANGUAGE',LANGUAGE);
 GLOBALS.register('UI_PALETTE', UI_PALETTE);
+GLOBALS.register('FILE_TOOL_BLOCKED_TYPES',FILE_TYPE_BLOCKLIST);
+GLOBALS.register('FILE_TOOL_THEME',UI_PALETTE);
 // Derived global UI color property: palette is the sole writer.
 GLOBALS.register('EXPLORER_ACTIVE_COLOR', UI_PALETTE.explorerActiveColor);
 UI_PALETTE.subscribe(() => GLOBALS.set('EXPLORER_ACTIVE_COLOR', UI_PALETTE.explorerActiveColor));
@@ -464,6 +468,8 @@ const explorer = new Explorer({
   log: message => omu.emit('EXPLORER', 'Operation', 500, message, true)
 });
 GLOBALS.register('EXPLORER', explorer);
+explorer.setBlockedFileTypes(FILE_TYPE_BLOCKLIST);
+FILE_TYPE_BLOCKLIST.subscribe(()=>explorer.render());
 function localizeStatusMessage(raw) {
   if (raw === '就緒' || raw === 'Ready') return t('ready');
   if (raw === '未儲存' || raw === 'Unsaved') return t('unsaved');
@@ -1251,6 +1257,10 @@ async function chooseLegacyEncoding(name, candidates) {
   });
 }
 async function createVirtual(item) {
+  if(FILE_TYPE_BLOCKLIST.has(item.name)){
+    status('File type excluded from Explorer/editor: '+item.name);
+    return;
+  }
   let type;
   try {
     type = await FTI.identify(item.blob, item.name);
@@ -1445,6 +1455,46 @@ async function renderVirtualSlice(id, center = null) {
 
 const actions={new:()=>create(),open:()=>explorer.addFile(),save:()=>doSave(),saveas:()=>doSave(true),close:()=>active&&closeDoc(active),closeall:()=>{for(const id of docs.ids())closeDoc(id);
 }};
+// File Tool settings: persistent, palette-driven and independent of file bytes.
+const blockedDialog=$('#blockedTypesDialog');
+const blockedList=$('#blockedTypesList');
+const blockedError=$('#blockedTypesError');
+function renderBlockedTypes(){
+  blockedList.replaceChildren();
+  const entries=FILE_TYPE_BLOCKLIST.value;
+  $('#blockedTypesCount').textContent=String(entries.length);
+  for(const ext of entries){
+    const row=document.createElement('div');row.className='file-tool-type-row';row.setAttribute('role','listitem');
+    const name=document.createElement('code');name.textContent=ext;
+    const controls=document.createElement('div');controls.className='file-tool-type-actions';
+    const edit=document.createElement('button');edit.type='button';edit.textContent='✎';edit.title='修改 '+ext;edit.setAttribute('aria-label','修改 '+ext);
+    const remove=document.createElement('button');remove.type='button';remove.textContent='×';remove.title='刪除 '+ext;remove.setAttribute('aria-label','刪除 '+ext);
+    edit.addEventListener('click',()=>{
+      const next=prompt('修改副檔名',ext);
+      if(next===null)return;
+      try{FILE_TYPE_BLOCKLIST.replace(ext,next);blockedError.textContent='';renderBlockedTypes();}
+      catch(error){blockedError.textContent=String(error.message);}
+    });
+    remove.addEventListener('click',()=>{FILE_TYPE_BLOCKLIST.remove(ext);renderBlockedTypes();});
+    controls.append(edit,remove);row.append(name,controls);blockedList.append(row);
+  }
+}
+$('#blockedTypesBtn').addEventListener('click',()=>{
+  $('#menu').hidden=true;$('#toolOptions').hidden=true;
+  blockedError.textContent='';renderBlockedTypes();blockedDialog.showModal();
+});
+$('#blockedTypesClose').addEventListener('click',()=>blockedDialog.close());
+$('#blockedTypesDone').addEventListener('click',()=>blockedDialog.close());
+$('#blockedTypesForm').addEventListener('submit',event=>{
+  event.preventDefault();
+  try{
+    FILE_TYPE_BLOCKLIST.add($('#blockedTypesInput').value);
+    $('#blockedTypesInput').value='';blockedError.textContent='';renderBlockedTypes();
+  }catch(error){blockedError.textContent=String(error.message);}
+});
+$('#blockedTypesReset').addEventListener('click',()=>{FILE_TYPE_BLOCKLIST.reset();renderBlockedTypes();});
+blockedDialog.addEventListener('click',event=>{if(event.target===blockedDialog)blockedDialog.close();});
+
 $('#menuBtn').onclick=()=>{$('#menu').hidden=!$('#menu').hidden;
 };
 $('#menu').onclick=e=>{
@@ -1595,7 +1645,7 @@ renderTabGuides();
 function renderLanguage() {
   document.documentElement.lang=LANGUAGE.value;
   explorer.setLocale(LANGUAGE.value, t);
-  document.title='Cluster Opt v0.0.56';
+  document.title='Cluster Opt v0.0.57';
   $('#menuBtn').textContent=t('file')+'⌄';
   for (const key of ['new','open','save','saveas','close','closeall']) {
     const button=$('#menu [data-action="'+key+'"]');
