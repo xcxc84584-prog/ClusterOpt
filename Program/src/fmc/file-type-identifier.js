@@ -6,6 +6,18 @@ export class FileTypeIdentifier {
   async identify(blob, name = '') {
     if (!(blob instanceof Blob)) throw new TypeError('FTI requires Blob');
     const header = new Uint8Array(await blob.slice(0, 4096).arrayBuffer());
+    // ISO BMFF: MP4/M4V/MOV files carry an ftyp box near the beginning.
+    // Detect before UTF-8/legacy text heuristics: some media headers can
+    // otherwise appear decodable and enter the text editor pipeline.
+    const isIsoBmff = header.length >= 12 &&
+      header[4] === 0x66 && header[5] === 0x74 &&
+      header[6] === 0x79 && header[7] === 0x70;
+    const extension = String(name).toLowerCase().split('.').pop();
+    const mediaExtension = ['mp4', 'm4v', 'mov', 'm4a', '3gp', '3g2'].includes(extension);
+    if (isIsoBmff || mediaExtension || /^(video|audio)\\//i.test(blob.type)) {
+      return {kind: 'MEDIA', format: isIsoBmff ? 'ISO-BMFF' : 'MEDIA',
+        mode: 'BINARY', ehu: 'FTI_MEDIA_LOAD'};
+    }
     const zip = header.length >= 4 && header[0] === 0x50 &&
       header[1] === 0x4b && (
         (header[2] === 3 && header[3] === 4) ||
