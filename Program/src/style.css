@@ -1257,3 +1257,7 @@ body > .explorer-context .explorer-context-label { overflow-wrap:anywhere; }
 .psm-body input{width:100%;padding:12px;border-radius:6px;background:var(--ui-control,#242733);color:var(--ui-text-on-control,#eee);border:1px solid var(--ui-border,#555);font-family:monospace}
 .psm-glyph{font-size:35px;opacity:.75}
 #explorerPowerShell{min-width:32px}
+
+/* v0.0.60: PowerShell is a header utility, independent of Explorer panel. */
+.header-utility{display:flex;align-items:center;gap:7px;min-width:0}
+.header-utility #explorerPowerShell{flex:0 0 auto;min-width:34px;padding:9px 10px}

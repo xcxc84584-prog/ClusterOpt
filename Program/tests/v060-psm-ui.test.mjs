@@ -7,3 +7,12 @@ test('60.6 Explorer terminal button exists',()=>assert.match(read('index.html'),
 test('60.7 setup view never exposes an editable terminal input',()=>{const src=read('src/powershell-manager/powershell-ui.js');assert.match(src,/id="psmCheckCommand" readonly/);assert.doesNotMatch(src,/eval\(|new Function\(/);});
 test('60.8 version route and assets match',()=>{assert.match(read('index.html'),/Cluster Opt 0\.0\.60/);assert.match(read('src/main.js'),/mountPowerShellUI/);});
 test('60.9 localization uses global LANGUAGE subscription',()=>assert.match(read('src/powershell-manager/powershell-ui.js'),/language\.subscribe\(translate\)/));
+
+test('60.10 PowerShell button is in header utility, not Explorer actions',()=>{
+ const html=read('index.html');
+ const header=html.match(/<div class="header-utility">([\\s\\S]*?)<\\/div>/)?.[1]||'';
+ const explorer=html.match(/<div class="explorer-actions">([\\s\\S]*?)<\\/div>/)?.[1]||'';
+ assert.match(header,/id="explorerToggle"/);
+ assert.match(header,/id="explorerPowerShell"/);
+ assert.doesNotMatch(explorer,/id="explorerPowerShell"/);
+});
