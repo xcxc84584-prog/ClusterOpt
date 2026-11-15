@@ -134,7 +134,7 @@ export function mountPowerShellUI({host,button,language,manager=new PowerShellMa
      try{
        const state=await manager.checkConnection();
        if(state.configured){setConnected(true);appendOutput(language.value==='en'?'Local Agent authenticated. Read-only commands are available.':'本地代理驗證成功，已開啟唯讀 PowerShell 介面。');setFeedback('');}
-       else setFeedback(language.value==='en'?'Connection rejected: check token, agent window and browser local-network permission.':'連線未通過：請檢查 Token、CMD 代理視窗及瀏覽器本地網路存取權限。');
+       else setFeedback((language.value==='en'?'Pairing failed: ':'配對失敗：')+(state.error||'NETWORK_UNAVAILABLE')+(language.value==='en'?'. Check agent, token and browser local-network access.':'。請確認代理視窗、Token 與瀏覽器本地網路權限。'));
      }catch{setFeedback(language.value==='en'?'Cannot reach local agent on 127.0.0.1:43881.':'無法連線至 127.0.0.1:43881。');}
      finally{pairButton.disabled=false;}
    }
@@ -151,7 +151,7 @@ export function mountPowerShellUI({host,button,language,manager=new PowerShellMa
    if(action==='tool'){const menu=toolMenu();const shouldOpen=menu.hidden;closeToolMenu();if(shouldOpen){menu.hidden=false;toolButton().setAttribute('aria-expanded','true');positionToolMenu();}}
    if(action==='permissions'){setFeedback(t().rule+' — '+t().notice);closeToolMenu();}
    if(action==='revoke'){try{const result=await manager.revokeLocalAccess();setConnected(false);setFeedback(result.ok?'Revoked':t().unavailable);}catch{setFeedback(t().unavailable);}closeToolMenu();}
-   if(action==='check'){const state=await manager.checkConnection();if(state.configured){setConnected(true);appendOutput(language.value==='en'?'Connected to local agent.':'已連線至本地代理。');}else setFeedback(language.value==='en'?'Connection failed. Check token, agent and local-network permissions.':'連線失敗：請確認 Token、代理視窗與本地網路權限。');}
+   if(action==='check'){const state=await manager.checkConnection();if(state.configured){setConnected(true);appendOutput(language.value==='en'?'Connected to local agent.':'已連線至本地代理。');}else setFeedback((language.value==='en'?'Connection failed: ':'連線失敗：')+(state.error||'NETWORK_UNAVAILABLE'));}
  });
  function setFeedback(value){q('[data-psm="feedback"]').textContent=value;const session=sessions.find(x=>x.id===selected);if(session)session.feedback=value;}
  const unsubscribe=language.subscribe(()=>{translate();syncTabs();});
