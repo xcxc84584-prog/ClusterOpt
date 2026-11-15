@@ -1,0 +1,2 @@
+# 51.2 — Plan
+研究日期 2026-11-15。MDN InputEvent https://developer.mozilla.org/en-US/docs/Web/API/InputEvent ：beforeinput 可攜帶 inputType/data，但 IME、history 及部分貼上 data 不可靠，因此只作可驗證的 fast path，未知回退。CodeMirror ChangeDesc https://codemirror.net/docs/ref/#state.ChangeDesc ：以 from/to/insert 表示變更並映射偏移；採用相同概念但不引入 CodeMirror。風險：行起點陣列 tail shift、Token array tail shift 仍 O(N)；上下文驗證只有鄰近窗口，非權限保證。未實作 Shiki 跨行 checkpoint。

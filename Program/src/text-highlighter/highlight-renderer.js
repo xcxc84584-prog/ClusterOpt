@@ -1,5 +1,6 @@
 import {calculateViewport} from '../editor-render/viewport-calculator.js';
 import {measureTextMetrics} from '../editor-render/text-metrics.js';
+import {patchLineStarts,patchTokenRanges,validateKnownEdit} from './incremental-line-index.js';
 // ClusterOpt v0.0.33: viewport-windowed read-only overlay.
 // CodeMirror's visible-range decorations inspired this approach. The native
 // textarea remains the sole owner of text, selection, IME and undo history.
@@ -111,14 +112,17 @@ export class HighlightRenderer {
     this.windowStart=-1;this.#draw(true);
     this.editor.classList.add('highlight-active');this.sync();
   }
-  retainDuringEdit(){
+  retainDuringEdit(patch=null){
     if(!this.lastScheme||!this.editor.classList.contains('highlight-active'))return;
     const next=this.editor.value;
     if(next===this.lastText)return;
-    this.lastScheme={...this.lastScheme,
-      ranges:remapRanges(this.lastScheme.ranges,this.lastText,next)};
+    const known=validateKnownEdit(this.lastText,next,patch);
+    const ranges=known?patchTokenRanges(this.lastScheme.ranges,patch):
+      remapRanges(this.lastScheme.ranges,this.lastText,next);
+    const starts=known?patchLineStarts(this.starts,patch):buildLineStarts(next);
+    this.lastScheme={...this.lastScheme,ranges};
     this.lastText=next;
-    this.starts=buildLineStarts(next);
+    this.starts=starts;
     this.windowStart=-1;this.#draw(true);this.sync();
   }
   // A local edit can arrive before the asynchronous full-slice initial pass.
