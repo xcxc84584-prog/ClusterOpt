@@ -290,8 +290,8 @@ export class Explorer {
     toolbar.setAttribute('role','toolbar');
     toolbar.setAttribute('aria-label',this.#say('檔案操作','File actions'));
     const primary=[
-      ['folder','▣+',this.#say('建立新資料夾','New folder'),()=>this.#createIn(node,'directory')],
-      ['file','◇+',this.#say('建立新文件','New file'),()=>this.#createIn(node,'file')],
+      ['folder','▣',this.#say('建立新資料夾','New folder'),()=>this.#createIn(node,'directory')],
+      ['file','◇',this.#say('建立新文件','New file'),()=>this.#createIn(node,'file')],
       ['close','×',this.#say('關閉','Close'),()=>this.#closeEntry(node)],
       ['more','⋯',this.#say('操作','More actions'),null]
     ];
