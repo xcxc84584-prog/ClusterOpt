@@ -185,6 +185,8 @@ const UI_PALETTE = new InterfacePalette();
 const TEXT_HIGHLIGHTER = new TextHighlighter();
 const highlightRenderer = new HighlightRenderer(document.querySelector('#editor'),document.querySelector('#highlightOverlay'));
 let highlightGeneration = 0;
+const LARGE_HIGHLIGHT_THRESHOLD=64*1024;
+const MAX_VIEWPORT_TOKEN_CHARS=12*1024;
 let highlightViewportOnly=false;
 let highlightViewportKey='';
 let highlightTimer = null;
@@ -196,6 +198,8 @@ const highlightTasks=new HighlightTaskScheduler({onError:error=>
   omu.emit('TextHighlighter','HighlightTask',500,String(error),true)});
 function buildHighlightLineStarts(value){const starts=[0];for(let i=0;i<value.length;i++)if(value.charCodeAt(i)===10)starts.push(i+1);return starts;}
 function scheduleHighlight(){
+  // A large resident slice must never enter synchronous whole-slice Shiki.
+  highlightViewportOnly=editor.value.length>LARGE_HIGHLIGHT_THRESHOLD;
   highlightTasks.cancel();
   clearTimeout(lineHighlightTimer);
   lineHighlightGeneration++;
@@ -216,7 +220,7 @@ function scheduleHighlight(){
     const signal=highlightAbort.signal;
     try{
       if(highlightViewportOnly){
-        const starts=buildHighlightLineStarts(target);
+        const starts=highlightRenderer.lineIndexFor(target)||buildHighlightLineStarts(target);
         const metrics=measureTextMetrics(editor);
         const lineHeight=metrics.ok?metrics.data.lineHeight:22;
         const viewport=calculateViewport({scrollTop:Math.max(0,editor.scrollTop),
@@ -228,6 +232,13 @@ function scheduleHighlight(){
         if(endLine<startLine)return;
         const from=starts[startLine],to=endLine+1<starts.length?starts[endLine+1]-1:target.length;
         const source=target.slice(from,to);
+        // Pathological long lines and huge viewport windows are rendered plain.
+        // Avoid uninterruptible grammar parsing on the UI thread.
+        if(source.length>MAX_VIEWPORT_TOKEN_CHARS){
+          highlightRenderer.clear();
+          highlightViewportKey=`${id}:${targetIndex}:${startLine}:${endLine}`;
+          return;
+        }
         const bg=getComputedStyle(document.documentElement).getPropertyValue('--ui-editor');
         const background=(bg.match(/\d+/g)||['0','0','0']).slice(0,3).map(Number);
         const scheme=await TEXT_HIGHLIGHTER.highlightRegion({documentId:id,targetSliceId:String(targetIndex),revision:generation,language:detectLanguage(item.name),source,background,signal});
@@ -275,7 +286,7 @@ function scheduleLineHighlight(){
   ++highlightGeneration;
   const generation=++lineHighlightGeneration;
   if(!TEXT_HIGHLIGHTER.enabled)return;
-  if(highlightViewportOnly){scheduleHighlight();return;}
+  if(editor.value.length>LARGE_HIGHLIGHT_THRESHOLD){scheduleHighlight();return;}
   const id=active,item=id?docs.get(id)?.data:null;
   if(!item||binaryDocuments.has(id))return;
   const value=editor.value,caret=editor.selectionStart;
@@ -294,6 +305,7 @@ function scheduleLineHighlight(){
     const from=starts[safeStart];
     const to=endLine+1<starts.length?starts[endLine+1]-1:value.length;
     const source=value.slice(from,to);
+    if(source.length>MAX_VIEWPORT_TOKEN_CHARS)return;
     const bg=getComputedStyle(document.documentElement).getPropertyValue('--ui-editor');
     const background=(bg.match(/\d+/g)||['0','0','0']).slice(0,3).map(Number);
     highlightTasks.run({revision:generation,
@@ -822,6 +834,15 @@ editor.addEventListener('scroll',()=>{
     render:snapshot=>{
       if(!snapshot.isCurrent())return;
       highlightRenderer.sync();
+      if(highlightViewportOnly&&TEXT_HIGHLIGHTER.enabled){
+        const id=active,session=id?virtualSessions.get(id):null;
+        const starts=highlightRenderer.lineIndexFor(editor.value);
+        const metrics=measureTextMetrics(editor);
+        const lineHeight=metrics.ok?metrics.data.lineHeight:22;
+        const first=Math.max(0,Math.floor(editor.scrollTop/lineHeight)-2);
+        const key=`${id}:${session?.center??0}:${first}`;
+        if(key!==highlightViewportKey){highlightViewportKey=key;scheduleHighlight();}
+      }
       syncGutterScroll();
       syncTabGuides();
     }
