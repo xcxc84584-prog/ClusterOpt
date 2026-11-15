@@ -712,6 +712,11 @@ function scheduleTabGuides(){
   tabGuideTimer=setTimeout(renderTabGuides,180);
 }
 let lineStructureChanged=true;
+let pendingPasteText=null;
+editor.addEventListener('paste',event=>{
+  // Clipboard text may be absent from beforeinput.data on Chromium/Firefox.
+  pendingPasteText=event.clipboardData?.getData('text/plain')??null;
+},true);
 editor.addEventListener('beforeinput',event=>{
   if(active&&virtualSessions.has(active)&&!editor.readOnly&&editor.value.length<=1024*1024){
     const key=active+':'+virtualSessions.get(active).center;
@@ -719,7 +724,9 @@ editor.addEventListener('beforeinput',event=>{
       activeEditPath={key,buffer:new EditPath(key,editor.value)};
   }
   pendingEditIntent=deriveEditIntent({
-    inputType:event.inputType,data:event.data,isComposing:event.isComposing,
+    inputType:event.inputType,
+    data:event.inputType==='insertFromPaste'?(event.data??event.dataTransfer?.getData('text/plain')??pendingPasteText):event.data,
+    isComposing:event.isComposing,
     start:editor.selectionStart,end:editor.selectionEnd,value:editor.value
   });
   pendingLineDelta=pendingEditIntent?.deltaLines??null;
@@ -736,6 +743,8 @@ editor.addEventListener('beforeinput',event=>{
 
 },true);
 editor.addEventListener('input',event=>{
+ const pasted=event.inputType==='insertFromPaste'||pendingPasteText!==null;
+ pendingPasteText=null;
  const historyEdit=['historyUndo','historyRedo'].includes(event.inputType);
  const inputIntent=pendingEditIntent;
  pendingEditIntent=null;
@@ -743,7 +752,10 @@ editor.addEventListener('input',event=>{
  // shared LF index is current when matchingWindow executes.
  highlightRenderer.retainDuringEdit(inputIntent);
  // Native undo/redo can alter lines beyond the bounded caret region.
- if(historyEdit)scheduleHighlight();else scheduleLineHighlight();
+ // Re-tokenize pasted content, not only the caret line. Large resident
+ // slices keep the bounded region path to avoid a main-thread Shiki stall.
+ if(historyEdit||(pasted&&editor.value.length<=256*1024))scheduleHighlight();
+ else scheduleLineHighlight();
  scheduleTabGuides();
  if(!active || editor.readOnly)return;
 const abortSave = saveAbortControllers.get(active);
