@@ -20,3 +20,5 @@ Local-first browser IDE (GitHub Pages). Current release: **v0.0.50** (through st
 51.1: isolated Node benchmark for line-index and token-range remap; excludes Shiki, DOM, browser latency.
 
 51.2: known beforeinput patch updates highlight line starts and token ranges; unknown edits fall back. Current array tail-shift and DOM repaint remain linear.
+
+51.3: bounded conservative lexical restart (C-family); NOT Shiki grammar-stack persistence. Unknown context uses existing matching-window fallback.

@@ -4,6 +4,7 @@ import {measureTextMetrics} from './editor-render/text-metrics.js?v=opt048-metri
 import {RenderCoordinator} from './editor-render/render-coordinator.js?v=opt047-pr03';
 import {PerformanceMonitor} from './performance/performance-monitor.js?v=opt046-pmu';
 import {matchingWindow} from './text-highlighter/matching-window.js?v=opt038-matcher';
+import {findLexicalRestart} from './text-highlighter/lexical-checkpoints.js';
 import {transcodeToUtf8} from './fmc/chinese-transcoder.js';
 import {TextHighlighter,detectLanguage} from './text-highlighter/text-highlighter.js?v=opt039-dual-endpoint';
 import {HighlightRenderer} from './text-highlighter/highlight-renderer.js?v=opt048-render';
@@ -277,7 +278,11 @@ function scheduleLineHighlight(){
     highlightRenderer.retainDuringEdit();
     const window=matchingWindow(value,caret,100);
     const {startLine,endLine,starts}=window;
-    const from=starts[startLine];
+    const checkpoint=findLexicalRestart(value,caret,detectLanguage(item.name));
+    // Only widen a bounded window when the checkpoint proves a neutral restart.
+    const safeStart=checkpoint&&endLine-checkpoint.restartLine<100?
+      Math.min(startLine,checkpoint.restartLine):startLine;
+    const from=starts[safeStart];
     const to=endLine+1<starts.length?starts[endLine+1]-1:value.length;
     const source=value.slice(from,to);
     const bg=getComputedStyle(document.documentElement).getPropertyValue('--ui-editor');
@@ -289,7 +294,7 @@ function scheduleLineHighlight(){
     if(generation!==lineHighlightGeneration||active!==id||editor.value!==value)return;
     if(scheme.status==='OK'){
       highlightRenderer.bootstrap(value);
-      highlightRenderer.renderRegion({...scheme,startLine,endLine},value);
+      highlightRenderer.renderRegion({...scheme,startLine:safeStart,endLine},value);
     }
     if(scheme.error)omu.emit('TextHighlighter','HighlightRegion',500,scheme.error,true);
   },100);
