@@ -21,6 +21,6 @@ test('56: entry module imports the same Explorer build as the page',()=>{
  const main=read('../src/main.js');
  const root=read('../../index.html');
  assert.match(main,/explorer\.js\?v=opt059-shortcut-i18n/);
- assert.match(root,/searchParams\.set\("v", "0\.0\.60"\)/);
+ assert.match(root,/searchParams\.set\("v", "0\.0\.61"\)/);
  assert.match(root,/searchParams\.set\("build", "opt061-psm-r1"\)/);
 });
