@@ -106,10 +106,45 @@ export class Explorer {
       this.render();
     }catch(error){this.#log('Explorer handle restore: '+error);}
   }
+  async #workspaceDirectory(handle){
+    if(handle?.kind!=='directory')return null;
+    // Resolve by FileSystemHandle identity, not by name: distinct folders can
+    // share a basename, and a child folder must never become another root.
+    for(const root of this.#roots){
+      if(root.kind!=='directory')continue;
+      try{
+        if(await root.handle.isSameEntry(handle))return root;
+        const path=await root.handle.resolve(handle);
+        if(path!==null){
+          let node=root;
+          for(const part of path){
+            await this.#loadChildren(node);
+            let child=node.children?.find(item=>item.kind==='directory'&&item.name===part);
+            if(!child){
+              const childHandle=await node.handle.getDirectoryHandle(part);
+              child=this.#node(childHandle,node);
+              node.children=this.#order([...(node.children||[]),child],node);
+            }
+            node.expanded=true;
+            this.#state.expanded??={};
+            this.#state.expanded[this.#key(node)]=true;
+            node=child;
+          }
+          this.#save();
+          return node;
+        }
+      }catch(error){this.#log('Explorer root resolution: '+error);}
+    }
+    return null;
+  }
   async #remember(handle){
-    const key=handle.kind+':'+handle.name;
-    let existing=this.#roots.find(n=>n.key===key);
-    if(existing){existing.handle=handle;return existing;}
+    const existing=await this.#workspaceDirectory(handle);
+    if(existing)return existing;
+    // Only reuse a same-name root after confirming entry identity. A different
+    // directory with the same name must retain a distinct persisted key.
+    const base=handle.kind+':'+handle.name;
+    let key=base,ordinal=2;
+    while(this.#roots.some(node=>node.key===key))key=base+'#'+ordinal++;
     const node=this.#node(handle,null,key);this.#roots.push(node);
     this.#state.rootOrder=this.#roots.map(n=>n.key);this.#save();
     try{await handleTransaction('readwrite',store=>store.put({key,handle}));}
@@ -158,7 +193,10 @@ export class Explorer {
     for(const handle of handles){
       // Resolve imports through the existing workspace handle where possible.
       const existing=await this.#findWorkspaceHandle(handle);
-      if(existing)await this.#openFile(existing);
+      if(handle.kind==='directory'){
+        const node=await this.#remember(handle);
+        if(node.kind==='directory'&&!node.expanded){node.expanded=true;await this.#loadChildren(node);}
+      }else if(existing)await this.#openFile(existing);
       else{await this.#remember(handle);await this.#openFile(handle);}
     }
     this.render();
@@ -183,7 +221,10 @@ export class Explorer {
   async addDirectory(){
     if(!window.showDirectoryPicker){this.#log('Directory picker unavailable');return;}
     try{const handle=await window.showDirectoryPicker({mode:'readwrite'});
-      await this.#remember(handle);this.render();}
+      const node=await this.#remember(handle);
+      if(!node.expanded){node.expanded=true;await this.#loadChildren(node);}
+      this.#state.expanded??={};this.#state.expanded[this.#key(node)]=true;
+      this.#selected=this.#key(node);this.#save();this.render();}
     catch(error){if(error.name!=='AbortError')this.#log(String(error));}
   }
   async addFile(){
