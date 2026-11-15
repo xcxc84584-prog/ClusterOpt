@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {RenderCoordinator} from '../../src/editor-render/render-coordinator.js';
+import {RenderCoordinator} from '../src/editor-render/render-coordinator.js';
 function harness(){
   const frames=new Map();let next=0;const errors=[];
   const coordinator=new RenderCoordinator({
