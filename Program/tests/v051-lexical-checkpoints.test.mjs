@@ -11,7 +11,7 @@ test('51.3: restart before block comment and after neutral line',()=>{
 });
 test('51.3: unknown language, template, long prefix fail closed',()=>{
  assert.equal(findLexicalRestart('abc',1,'python'),null);
- assert.equal(findLexicalRestart('const a=\x60hi\x60;',12,'javascript'),null);
+ assert.equal(findLexicalRestart('const a=\x60hi\x60;\nnext',19,'javascript'),null);
  assert.equal(findLexicalRestart('a\n'.repeat(105),210,'javascript'),null);
  assert.throws(()=>findLexicalRestart('abc',-1,'cpp'),RangeError);
 });
