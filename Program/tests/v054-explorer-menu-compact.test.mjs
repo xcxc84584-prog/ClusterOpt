@@ -11,5 +11,5 @@ test('54.2 compact action row fits four buttons without horizontal scrolling',()
  assert.match(css,/overflow:visible/);
 });
 test('54.2 Explorer style cache invalidated',()=>{
- assert.match(html,/style\.css\?v=opt054-explorer-icons/);
+ assert.match(html,/style\.css\?v=opt055-vscode-menu/);
 });
