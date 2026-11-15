@@ -1,4 +1,4 @@
-# ClusterOpt Property List — v0.0.49.5
+# ClusterOpt Property List — v0.0.50.1
 
 Source of truth: `Program/src/dependency-registry.js`. Properties are shared names; the table lists objects declaring each property, not a persisted value store.
 
@@ -9,6 +9,9 @@ Source of truth: `Program/src/dependency-registry.js`. Properties are shared nam
 | `FILE_TYPE_IDENTIFIER` | UI, GlobalPropertyRegistry |
 | `FONT_METRICS` | TextMetrics |
 | `LANGUAGE` | UI, GlobalPropertyRegistry, LanguageProperty, FILE_MENU, Explorer |
+| `LINE_BENCHMARK_P50` | LineBenchmark |
+| `LINE_BENCHMARK_P95` | LineBenchmark |
+| `LINE_BENCHMARK_P99` | LineBenchmark |
 | `LINE_COUNT` | PieceTree, EditPath |
 | `MICRO_PATCH_BASE_VERSION` | VirtualFileSession, AgentFlagGateway, UserFlagGateway |
 | `MICRO_PATCH_RANGE` | VirtualFileSession, AgentFlagGateway, UserFlagGateway |
