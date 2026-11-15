@@ -41,10 +41,12 @@ export class HighlightRenderer {
     this.lastScheme=null;this.lastText='';
     this.starts=[0];this.windowStart=-1;this.windowEnd=-1;
     this.lineNodes=new Map();this.viewportOnly=false;
+    this.contentNode=null;this.topSpacer=null;this.bottomSpacer=null;
   }
   clear(){
     this.lastScheme=null;this.lastText='';this.starts=[0];
     this.windowStart=-1;this.windowEnd=-1;this.lineNodes.clear();
+    this.contentNode=null;this.topSpacer=null;this.bottomSpacer=null;
     this.overlay.replaceChildren();this.editor.classList.remove('highlight-active');
   }
   #lineHeight(){
@@ -87,22 +89,35 @@ export class HighlightRenderer {
     const first=range.data.start,last=range.data.end;
     if(!force&&first===this.windowStart&&last===this.windowEnd)return;
     this.windowStart=first;this.windowEnd=last;
-    const fragment=document.createDocumentFragment(),nodes=new Map();
-    const top=document.createElement('div');
-    top.style.height=(first*height)+'px';fragment.append(top);
+    if(!this.contentNode){
+      this.contentNode=document.createElement('div');
+      this.topSpacer=document.createElement('div');
+      this.bottomSpacer=document.createElement('div');
+      this.contentNode.append(this.topSpacer,this.bottomSpacer);
+      this.overlay.replaceChildren(this.contentNode);
+    }
+    this.topSpacer.style.height=(first*height)+'px';
+    this.bottomSpacer.style.height=((this.starts.length-last)*height)+'px';
+    const nodes=new Map();
     for(let i=first;i<last;i++){
+      const existed=this.lineNodes.has(i);
       const node=this.lineNodes.get(i)||document.createElement('div');
       node.style.height=height+'px';
       node.style.lineHeight=height+'px';
       node.style.whiteSpace='pre';
-      if(force||!this.lineNodes.has(i))this.#paint(node,i);
-      fragment.append(node);nodes.set(i,node);
+      if(force||!existed)this.#paint(node,i);
+      nodes.set(i,node);
     }
-    const bottom=document.createElement('div');
-    bottom.style.height=((this.starts.length-last)*height)+'px';
-    fragment.append(bottom);
-    const content=document.createElement('div');content.append(fragment);
-    this.overlay.replaceChildren(content);this.lineNodes=nodes;
+    // Reorder existing nodes in-place; avoid replacing the overlay root.
+    // Reverse insertion keeps already ordered nodes untouched.
+    let next=this.bottomSpacer;
+    for(let i=last-1;i>=first;i--){
+      const node=nodes.get(i);
+      if(node.nextSibling!==next)this.contentNode.insertBefore(node,next);
+      next=node;
+    }
+    for(const [i,node] of this.lineNodes)if(!nodes.has(i))node.remove();
+    this.lineNodes=nodes;
   }
   render(scheme){
     if(scheme.status!=='OK'){this.clear();return;}
@@ -123,7 +138,11 @@ export class HighlightRenderer {
     this.lastScheme={...this.lastScheme,ranges};
     this.lastText=next;
     this.starts=starts;
-    this.windowStart=-1;this.#draw(true);this.sync();
+    this.windowStart=-1;this.#draw(false);
+    // The retained visible nodes need repaint only when their text or token offsets changed.
+    const first=known?Math.max(0,lineAt(this.starts,patch.start)-1):0;
+    for(const [i,node] of this.lineNodes)if(i>=first)this.#paint(node,i);
+    this.sync();
   }
   // A local edit can arrive before the asynchronous full-slice initial pass.
   // Initialize a blank decoration scheme so local region painting is not lost.
