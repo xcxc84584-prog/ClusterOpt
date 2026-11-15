@@ -13,8 +13,8 @@ test('56: Explorer actions are embedded in the file row, not detached',()=>{
 });
 test('56: Explorer asset cache is invalidated',()=>{
  const html=read('../index.html');
- assert.match(html,/style\.css\?v=opt060-psm-r4/);
- assert.match(html,/main\.js\?v=opt060-psm-r4/);
+ assert.match(html,/style\.css\?v=opt060-psm-r5/);
+ assert.match(html,/main\.js\?v=opt060-psm-r5/);
 });
 
 test('56: entry module imports the same Explorer build as the page',()=>{
@@ -22,5 +22,5 @@ test('56: entry module imports the same Explorer build as the page',()=>{
  const root=read('../../index.html');
  assert.match(main,/explorer\.js\?v=opt059-shortcut-i18n/);
  assert.match(root,/searchParams\.set\("v", "0\.0\.60"\)/);
- assert.match(root,/searchParams\.set\("build", "opt060-psm-r4"\)/);
+ assert.match(root,/searchParams\.set\("build", "opt060-psm-r5"\)/);
 });
