@@ -6,7 +6,7 @@ import {createVTE} from '../src/vte/vte.js';
 test('CAT-01/02: catalog distinguishes registered objects and implementation-only modules', () => {
   const registry = createClusterDependencies();
   const names = registry.list().map(object => object.name);
-  assert.equal(names.length, 36); // v0.0.47 adds ViewportCalculator, RenderCoordinator and TextMetrics
+  assert.equal(names.length, 37); // v0.0.49.3 registers PieceTree, MicroSliceDocument and MicroSliceIndex
   for (const name of ['UI', 'Documents', 'OMU', 'VirtualFileSession', 'FILE_MENU']) {
     assert.ok(names.includes(name), name);
   }
