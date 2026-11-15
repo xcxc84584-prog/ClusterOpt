@@ -10,6 +10,18 @@ const CHECK='powershell.exe -NoProfile -Command "$PSVersionTable.PSVersion.ToStr
 export function mountPowerShellUI({host,button,language,manager=new PowerShellManager({agent:new PowerShellClient()})}){
  if(!host||!button||!language)throw new Error('PSM_UI_MISSING_DEPENDENCY');
  let open=false;
+ const toolMenu=()=>pane.querySelector('.psm-menu');
+ const toolButton=()=>pane.querySelector('[data-psm-action="tool"]');
+ function closeToolMenu(){const menu=toolMenu();if(!menu)return;menu.hidden=true;toolButton()?.setAttribute('aria-expanded','false');}
+ function positionToolMenu(){const menu=toolMenu(),trigger=toolButton();if(!menu||menu.hidden||!trigger)return;const a=trigger.getBoundingClientRect();const w=menu.offsetWidth||200,h=menu.offsetHeight||100;menu.style.left=Math.max(8,Math.min(a.right-w,window.innerWidth-w-8))+'px';menu.style.top=Math.max(8,Math.min(a.bottom+6,window.innerHeight-h-8))+'px';}
+ function onOutsideClick(event){if(!toolMenu()?.hidden&&!toolMenu().contains(event.target)&&!toolButton().contains(event.target))closeToolMenu();}
+ function onEscape(event){if(event.key==='Escape')closeToolMenu();}
+ function onScroll(event){if(!toolMenu()?.hidden&&event.target!==toolMenu())closeToolMenu();}
+ document.addEventListener('pointerdown',onOutsideClick,true);
+ document.addEventListener('keydown',onEscape,true);
+ document.addEventListener('scroll',onScroll,true);
+ window.addEventListener('scroll',onScroll,true);
+ window.addEventListener('resize',closeToolMenu);
  const sessions=[];
  let selected=null;
  let sequence=0;
@@ -56,6 +68,7 @@ export function mountPowerShellUI({host,button,language,manager=new PowerShellMa
    }
  }
  function selectSession(id){
+   closeToolMenu();
    if(!sessions.some(x=>x.id===id))return;
    selected=id;open=true;pane.hidden=false;
    host.classList.add('psm-mode');button.setAttribute('aria-pressed','true');
@@ -67,7 +80,7 @@ export function mountPowerShellUI({host,button,language,manager=new PowerShellMa
    const session={id:++sequence,feedback:''};sessions.push(session);
    selectSession(session.id);return session.id;
  }
- function hide(){open=false;pane.hidden=true;host.classList.remove('psm-mode');button.setAttribute('aria-pressed','false');q('.psm-menu').hidden=true;syncTabs();}
+ function hide(){closeToolMenu();open=false;pane.hidden=true;host.classList.remove('psm-mode');button.setAttribute('aria-pressed','false');closeToolMenu();syncTabs();}
  function closeSession(id){
    const i=sessions.findIndex(x=>x.id===id);if(i<0)return;
    sessions.splice(i,1);
@@ -100,13 +113,13 @@ export function mountPowerShellUI({host,button,language,manager=new PowerShellMa
      setFeedback(ok?(language.value==='en'?'Token accepted. Check connection.':'Token 格式正確，請檢查連線。'):(language.value==='en'?'Invalid token format.':'Token 格式錯誤。'));
    }
    if(action==='close')closeSession(selected);
-   if(action==='tool'){q('.psm-menu').hidden=!q('.psm-menu').hidden;q('[data-psm-action="tool"]').setAttribute('aria-expanded',String(!q('.psm-menu').hidden));}
-   if(action==='permissions'){setFeedback(t().rule+' — '+t().notice);q('.psm-menu').hidden=true;}
-   if(action==='revoke'){try{const result=await manager.revokeLocalAccess();setFeedback(result.ok?'Revoked':t().unavailable);}catch{setFeedback(t().unavailable);}q('.psm-menu').hidden=true;}
+   if(action==='tool'){const menu=toolMenu();const shouldOpen=menu.hidden;closeToolMenu();if(shouldOpen){menu.hidden=false;toolButton().setAttribute('aria-expanded','true');positionToolMenu();}}
+   if(action==='permissions'){setFeedback(t().rule+' — '+t().notice);closeToolMenu();}
+   if(action==='revoke'){try{const result=await manager.revokeLocalAccess();setFeedback(result.ok?'Revoked':t().unavailable);}catch{setFeedback(t().unavailable);}closeToolMenu();}
    if(action==='check'){try{const state=await manager.checkConnection();setFeedback(state.configured?(language.value==='en'?'Connected':'已連線'):t().unavailable);}catch{setFeedback(language.value==='en'?'Connection failed. Verify CMD is still running and token is paired.':'連線失敗，請確認 CMD 仍在執行且已完成 Token 配對。');}}
  });
  function setFeedback(value){q('[data-psm="feedback"]').textContent=value;const session=sessions.find(x=>x.id===selected);if(session)session.feedback=value;}
  const unsubscribe=language.subscribe(()=>{translate();syncTabs();});
  translate();
- return {show,hide,createSession,selectSession,closeSession,syncTabs,get isOpen(){return open;},get sessions(){return sessions.map(x=>({...x}));},dispose(){unsubscribe();hide();tabs.querySelectorAll('.psm-tab').forEach(x=>x.remove());pane.remove();}};
+ return {show,hide,createSession,selectSession,closeSession,syncTabs,get isOpen(){return open;},get sessions(){return sessions.map(x=>({...x}));},dispose(){unsubscribe();document.removeEventListener('pointerdown',onOutsideClick,true);document.removeEventListener('keydown',onEscape,true);document.removeEventListener('scroll',onScroll,true);window.removeEventListener('scroll',onScroll,true);window.removeEventListener('resize',closeToolMenu);hide();tabs.querySelectorAll('.psm-tab').forEach(x=>x.remove());pane.remove();}};
 }

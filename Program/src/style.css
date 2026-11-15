@@ -1339,3 +1339,22 @@ body > .explorer-context .explorer-context-label { overflow-wrap:anywhere; }
 .psm-pane .psm-body .psm-primary,.psm-pane .psm-body .psm-pair-row button{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:10px 16px;font-size:13px;font-weight:700;line-height:1.4;color:var(--ui-text-on-control,var(--ui-text));background:var(--ui-control);border:1px solid var(--ui-border);opacity:1;visibility:visible}
 .psm-pane .psm-footer [data-psm="feedback"]{min-height:20px}
 .psm-pane .psm-menu[hidden]{display:none!important}
+
+/* v0.0.60 UI hotfix: always resolve palette tokens, never allow invisible controls. */
+.psm-pane{
+ --psm-bg:var(--ui-background,var(--ui-surface,#17191e));
+ --psm-card:var(--ui-surface,#242630);
+ --psm-ink:var(--ui-text-on-surface,var(--ui-text,#f1f2f5));
+ --psm-muted:var(--ui-muted,var(--ui-text-on-surface,#c6cad3));
+ --psm-line:var(--ui-border,#5a6070);
+ --psm-button:var(--ui-control,#353946);
+ --psm-button-text:var(--ui-text-on-control,var(--ui-text-on-surface,#f1f2f5));
+ --psm-hover:var(--ui-hover,var(--ui-control,#4a5060));
+}
+.psm-pane .psm-top,.psm-pane .psm-setup-step,.psm-pane .psm-advanced,.psm-pane .psm-intro{color:var(--psm-ink)}
+.psm-pane .psm-menu{position:fixed!important;right:auto!important;bottom:auto!important;z-index:2147483000!important;max-width:calc(100vw - 16px);max-height:calc(100vh - 16px);overflow:auto}
+.psm-pane .psm-menu button,.psm-pane .psm-top button,.psm-pane .psm-body button{color:var(--psm-button-text)!important;background:var(--psm-button)!important;border-color:var(--psm-line)!important;opacity:1!important;visibility:visible!important;-webkit-text-fill-color:currentColor}
+.psm-pane .psm-menu button:hover,.psm-pane .psm-top button:hover,.psm-pane .psm-body button:hover{background:var(--psm-hover)!important}
+.psm-pane .psm-top [data-psm="status"],.psm-pane .psm-body strong,.psm-pane .psm-advanced summary{color:var(--psm-ink)!important;-webkit-text-fill-color:currentColor}
+.psm-pane .psm-setup-step p,.psm-pane .psm-intro p{color:var(--psm-muted)!important;-webkit-text-fill-color:currentColor}
+.psm-pane .psm-menu[hidden]{display:none!important}
