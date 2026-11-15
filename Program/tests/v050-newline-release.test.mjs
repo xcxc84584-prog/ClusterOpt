@@ -6,14 +6,14 @@ import {createVTE} from '../src/vte/vte.js';
 const read=p=>readFileSync(new URL(p,import.meta.url),'utf8');
 test('50.2: release, OCDA, GitHub inventory and VTE remain aligned',()=>{
   const registry=createClusterDependencies();
-  assert.equal(registry.list().length,40);
+  assert.equal(registry.list().length,41);
   const intent=registry.list().find(x=>x.name==='NewlineEditIntent');
   assert.ok(intent.properties.includes('LINE_EDIT_DELTA'));
   assert.ok(registry.edges().some(e=>e.from==='UI'&&e.to==='NewlineEditIntent'));
   assert.match(read('../../OBJECT_LIST.md'),/\| NewlineEditIntent \|/);
   assert.match(read('../../PROPERTY_LIST.md'),/LINE_EDIT_DELTA/);
   assert.match(read('../../index.html'),/Program\/\?v=0\.0\.50/);
-  assert.match(read('../index.html'),/main\.js\?v=opt050-pr02/);
+  assert.match(read('../index.html'),/main\.js\?v=opt050-pr04/);
   assert.match(read('../src/main.js'),/deriveEditIntent\(/);
   const vte=createVTE();
   registry.list();

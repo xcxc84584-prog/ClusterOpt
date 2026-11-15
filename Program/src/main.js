@@ -1,4 +1,5 @@
 import {calculateViewport} from './editor-render/viewport-calculator.js?v=opt048-viewport';
+import {calculateGutterWindow} from './editor-render/gutter-window.js?v=opt050-pr04';
 import {measureTextMetrics} from './editor-render/text-metrics.js?v=opt048-metrics';
 import {RenderCoordinator} from './editor-render/render-coordinator.js?v=opt047-pr03';
 import {PerformanceMonitor} from './performance/performance-monitor.js?v=opt046-pmu';
@@ -532,36 +533,61 @@ scheduleRecovery();
 return true;
 }
 let lastGutterSignature='';
-// The textarea and gutter are independent scroll containers. Their scrollHeight
-// must match; otherwise scrollTop is clamped at the gutter's shorter boundary.
-function syncGutterScroll(){
-  const gutter=$('#gutter');
-  gutter.style.paddingBottom='16px';
-  const missing=Math.max(0,editor.scrollHeight-gutter.scrollHeight);
-  gutter.style.paddingBottom=(16+missing)+'px';
-  gutter.scrollTop=editor.scrollTop;
-}
 let cachedLineCount=null;
 let pendingLineDelta=null;
+let gutterWindowSignature='';
+function ensureGutterParts(){
+ const gutter=$('#gutter');
+ let spacer=gutter.querySelector('.gutter-spacer');
+ let labels=gutter.querySelector('.gutter-labels');
+ if(!spacer||!labels){
+  gutter.replaceChildren();
+  spacer=document.createElement('div');
+  spacer.className='gutter-spacer';
+  labels=document.createElement('div');
+  labels.className='gutter-labels';
+  gutter.append(spacer,labels);
+ }
+ return {gutter,spacer,labels};
+}
+function syncGutterScroll(){
+ const {gutter,spacer}=ensureGutterParts();
+ // Preserve the textarea's native scroll range, including its bottom padding.
+ const contentHeight=Math.max(0,editor.scrollHeight-32);
+ if(spacer.style.height!==contentHeight+'px')spacer.style.height=contentHeight+'px';
+ gutter.scrollTop=editor.scrollTop;
+ renderGutterWindow();
+}
+function renderGutterWindow(){
+ const {gutter,labels}=ensureGutterParts();
+ const count=Math.max(1,cachedLineCount??1);
+ const session=active?virtualSessions.get(active):null;
+ const first=session?(session.lineStarts?.[session.center]||1):1;
+ const style=getComputedStyle(editor);
+ const lineHeight=parseFloat(style.lineHeight)||22;
+ const paddingTop=parseFloat(style.paddingTop)||16;
+ const windowRange=calculateGutterWindow({
+  lineCount:count,firstLine:first,scrollTop:editor.scrollTop,
+  viewportHeight:editor.clientHeight,lineHeight,paddingTop,overscan:5
+ });
+ const signature=[active,session?.center,first,count,windowRange.start,
+   windowRange.end,lineHeight,paddingTop].join(':');
+ if(signature!==gutterWindowSignature){
+  gutterWindowSignature=signature;
+  labels.textContent=Array.from({length:windowRange.end-windowRange.start},
+   (_,i)=>String(windowRange.firstNumber+i)).join('\n');
+  labels.style.top=windowRange.offsetTop+'px';
+  gutter.dataset.signature=signature;
+ }
+}
 function updateLines(){
-  const count=pendingLineDelta!==null&&cachedLineCount!==null?
-    Math.max(1,cachedLineCount+pendingLineDelta):
-    1+(editor.value.match(/\n/g)?.length||0);
-  pendingLineDelta=null;
-  cachedLineCount=count;
-  const session=active?virtualSessions.get(active):null;
-  const first=session?(session.lineStarts?.[session.center]||1):1;
-  const signature=active+':'+session?.center+':'+first+':'+count;
-  const gutter=$('#gutter');
-  if(signature!==lastGutterSignature||gutter.dataset.signature!==signature){
-    lastGutterSignature=signature;
-    gutter.dataset.signature=signature;
-    gutter.textContent=Array.from({length:count},(_,i)=>String(first+i)).join('\n');
-  }
-  syncGutterScroll();
-  requestAnimationFrame(()=>{
-    if(active&&gutter.dataset.signature===signature)syncGutterScroll();
-  });
+ const count=pendingLineDelta!==null&&cachedLineCount!==null?
+  Math.max(1,cachedLineCount+pendingLineDelta):
+  1+(editor.value.match(/\n/g)?.length||0);
+ pendingLineDelta=null;
+ cachedLineCount=count;
+ lastGutterSignature=String(count);
+ syncGutterScroll();
 }
 /**
  * Navigate only after the target physical slice has finished loading.
