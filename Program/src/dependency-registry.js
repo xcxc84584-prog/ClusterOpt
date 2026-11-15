@@ -71,7 +71,7 @@ export class DependencyRegistry {
   edges() { return this.dep().data.relations; }
 }
 
-/** Single source of truth for the current v0.0.45 static OCDA declarations. */
+/** Single source of truth for the current v0.0.47 static OCDA declarations. */
 export function createClusterDependencies() {
   const registry = new DependencyRegistry();
   const objects = [
@@ -99,6 +99,8 @@ export function createClusterDependencies() {
     ['FILE_MENU', 'main.js', 'File menu UI', ['LANGUAGE']],
     ['Explorer', 'explorer.js', 'Workspace tree, context menu and file actions', ['LANGUAGE']],
     ['VTE', 'vte/vte.js', 'Isolated virtual test environment', []],
+    ['ViewportCalculator', 'editor-render/viewport-calculator.js', 'Fixed-height visible line range', ['VIEWPORT_RANGE','OVERSCAN']],
+    ['RenderCoordinator', 'editor-render/render-coordinator.js', 'Coalesced visual frame scheduler', ['RENDER_GENERATION','RENDER_REVISION','RENDER_PENDING']],
     ['DFOM', 'dfom.js', 'Editor indentation and tab guide rendering', []],
     ['TextHighlighter', 'text-highlighter/text-highlighter.js', 'Syntax tokenization', ['TEXT_HIGHLIGHTER']],
     ['HighlightRenderer', 'text-highlighter/highlight-renderer.js', 'Editor highlight overlay', ['TEXT_HIGHLIGHTER']],
@@ -120,7 +122,10 @@ export function createClusterDependencies() {
     ['UI', 'StorageProgressTracker', 'REQUEST'],
     ['UI', 'OMU', 'LOG'], ['Documents', 'OMU', 'LOG'],
     ['UI', 'Explorer', 'REQUEST'], ['UI', 'VTE', 'REQUEST'],
-    ['UI', 'DFOM', 'REQUEST'], ['UI', 'TextHighlighter', 'REQUEST'],
+    ['UI', 'DFOM', 'REQUEST'],
+    ['UI', 'RenderCoordinator', 'REQUEST'],
+    ['RenderCoordinator', 'HighlightRenderer', 'REQUEST'],
+    ['RenderCoordinator', 'DFOM', 'REQUEST'], ['UI', 'TextHighlighter', 'REQUEST'],
     ['UI', 'HighlightRenderer', 'REQUEST'], ['UI', 'MatchingWindow', 'REQUEST'],
     ['UI', 'StoragePriority', 'REQUEST'], ['UI', 'ChineseTranscoder', 'REQUEST'],
     ['Explorer', 'OMU', 'LOG'], ['Explorer', 'LanguageProperty', 'REQUEST'],
