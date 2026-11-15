@@ -355,9 +355,9 @@ export class Explorer {
       button.className='explorer-inline-action'+(key==='delete'?' is-danger':'');
       const symbol=document.createElement('span');symbol.className='explorer-action-symbol';
       symbol.textContent=glyph;symbol.setAttribute('aria-hidden','true');
-      const caption=document.createElement('span');caption.className='explorer-action-label';
-      caption.textContent=label;
-      button.append(symbol,caption);
+      // Keep the action surface a single symbol; full names remain accessible
+      // via title, aria-label and the existing hover/focus hint.
+      button.append(symbol);
       button.dataset.action=key;
       button.title=label;
       button.setAttribute('aria-label',label);

@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 const main=readFileSync(new URL('../src/main.js',import.meta.url),'utf8');
 test('53.3 large resident text never enters full-slice Shiki path',()=>{
  assert.match(main,/const LARGE_HIGHLIGHT_THRESHOLD=64\*1024/);
- assert.match(main,/highlightViewportOnly=editor\.value\.length>LARGE_HIGHLIGHT_THRESHOLD/);
+ assert.match(main,/highlightViewportOnly=documentTransition\|\|editor\.value\.length>LARGE_HIGHLIGHT_THRESHOLD/);
  assert.match(main,/if\(highlightViewportOnly\)\{/);
  assert.match(main,/const MAX_VIEWPORT_TOKEN_CHARS=12\*1024/);
  assert.match(main,/if\(source\.length>MAX_VIEWPORT_TOKEN_CHARS\)/);
