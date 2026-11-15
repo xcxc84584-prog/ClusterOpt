@@ -6,11 +6,11 @@ import {createVTE} from '../src/vte/vte.js';
 const read=p=>readFileSync(new URL(p,import.meta.url),'utf8');
 test('50.1: release redirect, module cache, inventories and VTE',()=>{
   const root=read('../../index.html'),page=read('../index.html'),main=read('../src/main.js');
-  assert.match(root,/Program\/\?v=0\.0\.65/);
-  assert.match(root,/searchParams\.set\("v", "0\.0\.65"\)/);
-  assert.match(page,/Cluster Opt 0\.0\.65/);
-  assert.match(page,/main\.js\?v=opt065-native-r1/);
-  assert.match(main,/document\.title='Cluster Opt v0\.0\.65'/);
+  assert.match(root,/Program\/\?v=0\.0\.66/);
+  assert.match(root,/searchParams\.set\("v", "0\.0\.66"\)/);
+  assert.match(page,/Cluster Opt 0\.0\.66/);
+  assert.match(page,/main\.js\?v=opt066-conpty-r1/);
+  assert.match(main,/document\.title='Cluster Opt v0\.0\.66'/);
   const registry=createClusterDependencies();
   assert.equal(registry.list().length,48);
   assert.ok(registry.list().some(x=>x.name==='LineBenchmark'));
