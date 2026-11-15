@@ -10,7 +10,7 @@ export class UserFlagGateway {
     // USER takeover is handled by the session/FMC before MVCC commit.
     return this.#session.edit(index, content, 'USER');
   }
-  patch(index, change) { return this.#session.editPatch(index, change, this.#userId); }
+  patch(index, change) { return this.#session.editPatch(index, change, 'USER'); }
   status(index) { return this.#session.getFlagStatus(index); }
   owned() { return this.#session.listOwnedFlags(this.#userId); }
 }
