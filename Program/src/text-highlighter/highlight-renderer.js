@@ -42,7 +42,7 @@ export class HighlightRenderer {
   clear(){
     this.lastScheme=null;this.lastText='';this.starts=[0];
     this.windowStart=-1;this.windowEnd=-1;this.lineNodes.clear();
-    this.overlay.replaceChildren();this.overlay.style.transform='';this.editor.classList.remove('highlight-active');
+    this.overlay.replaceChildren();this.editor.classList.remove('highlight-active');
   }
   #lineHeight(){
     return Number.parseFloat(getComputedStyle(this.editor).lineHeight)||22;
@@ -96,8 +96,8 @@ export class HighlightRenderer {
     const bottom=document.createElement('div');
     bottom.style.height=((this.starts.length-last)*height)+'px';
     fragment.append(bottom);
-    this.overlay.replaceChildren(fragment);this.lineNodes=nodes;
-    this.overlay.firstElementChild?.style.setProperty('pointer-events','none');
+    const content=document.createElement('div');content.append(fragment);
+    this.overlay.replaceChildren(content);this.lineNodes=nodes;
   }
   render(scheme){
     if(scheme.status!=='OK'){this.clear();return;}
@@ -170,6 +170,6 @@ export class HighlightRenderer {
     this.#draw();
     // The overlay is overflow:hidden, so assigning scrollTop does not move it.
     // Move its content by the textarea's actual pixel scroll offset instead.
-    this.overlay.style.transform=`translate(${-this.editor.scrollLeft}px, ${-this.editor.scrollTop}px)`;
+    if(this.overlay.firstElementChild)this.overlay.firstElementChild.style.transform=`translate(${-this.editor.scrollLeft}px, ${-this.editor.scrollTop}px)`;
   }
 }
