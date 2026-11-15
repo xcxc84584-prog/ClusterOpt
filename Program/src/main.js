@@ -34,6 +34,15 @@ import {createGlobalPropertyRegistryClass} from './global-properties.js';
 import {createSyncStatusClass} from './sync-status.js';
 import {LanguageProperty} from './language.js?v=opt038-i18n';
 import {mountPowerShellUI} from './powershell-manager/powershell-ui.js?v=opt060-psm-r4';
+// Normalize stale bookmarked release query parameters without discarding user data.
+if(typeof window!=='undefined'&&window.location?.search){
+ const params=new URLSearchParams(window.location.search);
+ if(params.get('v')!=='0.0.60'||params.get('build')!=='opt060-psm-r4'){
+  params.set('v','0.0.60');params.set('build','opt060-psm-r4');
+  window.history.replaceState(window.history.state,'',window.location.pathname+'?'+params.toString()+window.location.hash);
+ }
+}
+
 // Cluster Opt 1: object state is private; contracts are the only cross-object channel.
 const contract=(ok,data=null,code=200,message='')=>Object.freeze({ok,code,data,message});
 const omu=new OMU();
