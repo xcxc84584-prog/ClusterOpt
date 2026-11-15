@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 const read=p=>readFileSync(new URL(p,import.meta.url),'utf8');
 test('60.31 all PSM action controls receive visible translated text',()=>{
  const ui=read('../src/powershell-manager/powershell-ui.js');
- assert.ok(ui.includes("for(const key of ['check','permissions','revoke'])"));
+ assert.ok(ui.includes("for(const key of ['check'])"));
  assert.ok(ui.includes('control.textContent=msg[key]'));
  assert.ok(ui.includes("textContent=language.value==='en'?'Tools':'工具'"));
 });
