@@ -1,4 +1,4 @@
-# ClusterOpt — Repository Architecture (v0.0.50.2)
+# ClusterOpt — Repository Architecture (v0.0.50.3)
 
 The repository root is the project root; no extra `Project/` directory is required.
 
@@ -61,3 +61,5 @@ UI (main.js)
 ## Verification
 
 GitHub Actions Node tests verify static contracts and isolated VTE tests; actual browser behavior, multi-GiB benchmarks, and full end-to-end MVCC/FLAG security acceptance require separate evidence.
+
+50.3: micro-slice index structural splice uses implicit treap; document boundary array still linear on edits.
