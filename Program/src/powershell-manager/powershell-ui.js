@@ -133,7 +133,7 @@ export function mountPowerShellUI({host,button,language,manager=new PowerShellMa
   appendOutput('PS> '+command);
   try{const result=await manager.executeCommand({action:'interactive',command});
    appendOutput(result.ok?String(result.output||('(exit '+result.exitCode+')')):(result.code||'Command failed'));
-  }catch(error){appendOutput((language.value==='en'?'Execution error: ':'執行錯誤：')+(error?.message||'UNKNOWN'));}
+  }catch(error){appendOutput((language.value==='en'?'Execution error: ':'執行錯誤：')+(error?.message==='PERMISSION_DENIED'?(language.value==='en'?'Permission denied: restart CMD and select Y to enable commands.':'權限不足：重新執行 CMD 並選擇 Y 授權執行命令。'):(error?.message||'UNKNOWN')));}
   finally{terminalBusy=false;commandInput.disabled=false;commandInput.focus();}
  });
  pane.addEventListener('click',async event=>{
@@ -154,7 +154,7 @@ export function mountPowerShellUI({host,button,language,manager=new PowerShellMa
      if(!ok){pairButton.disabled=false;setFeedback(language.value==='en'?'Token must be exactly 64 hexadecimal characters.':'Token 必須是 64 個十六進位字元。');return;}
      try{
        const state=await manager.checkConnection();
-       if(state.configured){setConnected(true);appendOutput(language.value==='en'?'Local Agent authenticated. Commands execute directly.':'本地代理驗證成功，命令可直接執行。');setFeedback('');}
+       if(state.configured){setConnected(true);appendOutput(language.value==='en'?'Local Agent authenticated. Command execution requires local FULL permission.':'本地代理驗證成功；執行命令需在本機 CMD 授予 FULL 權限。');setFeedback('');}
        else setFeedback((language.value==='en'?'Pairing failed: ':'配對失敗：')+(state.error||'NETWORK_UNAVAILABLE')+(language.value==='en'?'. Check agent, token and browser local-network access.':'。請確認代理視窗、Token 與瀏覽器本地網路權限。'));
      }catch{setFeedback(language.value==='en'?'Cannot reach local agent on 127.0.0.1:43881.':'無法連線至 127.0.0.1:43881。');}
      finally{pairButton.disabled=false;}
