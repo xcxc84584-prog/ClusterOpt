@@ -100,6 +100,13 @@ export class InterfacePalette {
     return brightness(this.#rgb);
   }
 
+  get explorerActiveColor() {
+    const light = this.mode === 'light';
+    return Object.freeze(light
+      ? {background:'#b8d7ff',hover:'#9cc6ff',text:'#102c4b',edge:'#145da0'}
+      : {background:'#274c70',hover:'#32628d',text:'#ffffff',edge:'#80c8ff'});
+  }
+
   set(rgb) {
     if (!Array.isArray(rgb) || !this.#valid(rgb)) {
       return Object.freeze({
@@ -160,10 +167,8 @@ export class InterfacePalette {
     );
 
     // Global Explorer selection colors follow the palette's actual mode.
-    const active = this.mode === 'light'
-      ? {bg:'#b8d7ff',hover:'#9cc6ff',text:'#102c4b',edge:'#145da0'}
-      : {bg:'#274c70',hover:'#32628d',text:'#ffffff',edge:'#80c8ff'};
-    root.style.setProperty('--explorer-active-bg',active.bg);
+    const active = this.explorerActiveColor;
+    root.style.setProperty('--explorer-active-bg',active.background);
     root.style.setProperty('--explorer-active-hover',active.hover);
     root.style.setProperty('--explorer-active-text',active.text);
     root.style.setProperty('--explorer-active-edge',active.edge);
