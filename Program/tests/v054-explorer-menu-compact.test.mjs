@@ -13,14 +13,14 @@ test('56: Explorer actions are embedded in the file row, not detached',()=>{
 });
 test('56: Explorer asset cache is invalidated',()=>{
  const html=read('../index.html');
- assert.match(html,/style\.css\?v=opt057-file-tool/);
- assert.match(html,/main\.js\?v=opt057-file-tool/);
+ assert.match(html,/style\.css\?v=opt058-file-tool-i18n/);
+ assert.match(html,/main\.js\?v=opt058-file-tool-i18n/);
 });
 
 test('56: entry module imports the same Explorer build as the page',()=>{
  const main=read('../src/main.js');
  const root=read('../../index.html');
- assert.match(main,/explorer\.js\?v=opt057-file-tool/);
- assert.match(root,/searchParams\.set\("v", "0\.0\.57"\)/);
- assert.match(root,/searchParams\.set\("build", "opt057-file-tool"\)/);
+ assert.match(main,/explorer\.js\?v=opt058-file-tool-i18n/);
+ assert.match(root,/searchParams\.set\("v", "0\.0\.58"\)/);
+ assert.match(root,/searchParams\.set\("build", "opt058-file-tool-i18n"\)/);
 });
