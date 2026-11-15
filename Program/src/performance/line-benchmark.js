@@ -27,7 +27,7 @@ export function runLineBenchmark({
     treeTimes.push(performance.now() - beforeTree);
     reference = reference.slice(0, offset) + '\n' + reference.slice(offset);
     const beforeFast = performance.now();
-    if (!fast.applyKnownPatch({start:offset, end:offset, text:'\\n',
+    if (!fast.applyKnownPatch({start:offset, end:offset, text:'\n',
       previousLength:reference.length-1}, reference)) {
       throw new Error('Known newline patch unexpectedly rejected');
     }
