@@ -197,9 +197,19 @@ let highlighterShortcut=DEFAULT_HIGHLIGHT_SHORTCUT;
 const highlightTasks=new HighlightTaskScheduler({onError:error=>
   omu.emit('TextHighlighter','HighlightTask',500,String(error),true)});
 function buildHighlightLineStarts(value){const starts=[0];for(let i=0;i<value.length;i++)if(value.charCodeAt(i)===10)starts.push(i+1);return starts;}
-function scheduleHighlight(){
+function scheduleHighlight({documentTransition=false}={}){
   // A large resident slice must never enter synchronous whole-slice Shiki.
-  highlightViewportOnly=editor.value.length>LARGE_HIGHLIGHT_THRESHOLD;
+  highlightViewportOnly=documentTransition||editor.value.length>LARGE_HIGHLIGHT_THRESHOLD;
+  // Avoid the synchronous whole-text LF scan and Shiki initialization during
+  // navigation or loading of an exceptionally large resident slice.
+  if(documentTransition&&editor.value.length>256*1024){
+    clearTimeout(highlightTimer);clearTimeout(lineHighlightTimer);
+    ++highlightGeneration;++lineHighlightGeneration;
+    highlightAbort?.abort();highlightTasks.cancel();
+    highlightRenderer.clear();
+    highlightViewportKey='';
+    return;
+  }
   highlightTasks.cancel();
   clearTimeout(lineHighlightTimer);
   lineHighlightGeneration++;
@@ -512,7 +522,7 @@ else{$('#filename').textContent=t('unnamed');
 editor.dataset.doc='';
 }updatePos();
 renderTabGuides();
-scheduleHighlight();
+if(changedDocument)scheduleHighlight({documentTransition:true});
 renderSyncStatus();
 }
 function switchDoc(id){
@@ -1363,7 +1373,7 @@ async function renderVirtualSlice(id, center = null) {
     editor.value = current.content;
     renderTabGuides();
     highlightRenderer.clear();
-    scheduleHighlight();
+    scheduleHighlight({documentTransition:true});
     editor.dataset.doc = id;
     editor.dataset.sliceReady = 'true';
     const position = session.getPosition(index);
