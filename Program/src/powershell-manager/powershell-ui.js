@@ -67,7 +67,7 @@ export function mountPowerShellUI({host,button,language,manager=new PowerShellMa
    q('[data-psm-action="download"]').textContent=extra.download;
    q('[data-psm-action="pair"]').textContent=extra.pair;
    button.title=msg.title;button.setAttribute('aria-label',msg.title);
-   const labels=language.value==='en'?{heading:'PowerShell · Local Agent',mode:'Read-only / Allowlisted',settings:'Connection settings',version:'PowerShell version',location:'Current directory',clear:'Clear output'}:{heading:'PowerShell · 本地代理',mode:'唯讀 / 白名單',settings:'連線設定',version:'PowerShell 版本',location:'目前目錄',clear:'清除輸出'};
+   const labels=language.value==='en'?{heading:'PowerShell · Local Agent',mode:'Interactive / Confirm each command',settings:'Connection settings',version:'PowerShell version',location:'Current directory',clear:'Clear output'}:{heading:'PowerShell · 本地代理',mode:'互動模式 / 每條命令需確認',settings:'連線設定',version:'PowerShell 版本',location:'目前目錄',clear:'清除輸出'};
    const runLabel=language.value==='en'?'Run':'執行';
    terminal.querySelector('[data-psm-action="run"]').textContent=runLabel;
    terminal.querySelector('#psmCommandInput').placeholder=language.value==='en'?'Enter PowerShell command':'輸入 PowerShell 命令';
@@ -161,7 +161,7 @@ export function mountPowerShellUI({host,button,language,manager=new PowerShellMa
      if(!ok){pairButton.disabled=false;setFeedback(language.value==='en'?'Token must be exactly 64 hexadecimal characters.':'Token 必須是 64 個十六進位字元。');return;}
      try{
        const state=await manager.checkConnection();
-       if(state.configured){setConnected(true);appendOutput(language.value==='en'?'Local Agent authenticated. Read-only commands are available.':'本地代理驗證成功，已開啟唯讀 PowerShell 介面。');setFeedback('');}
+       if(state.configured){setConnected(true);appendOutput(language.value==='en'?'Local Agent authenticated. Confirm each command before execution.':'本地代理驗證成功，命令執行前需逐條確認。');setFeedback('');}
        else setFeedback((language.value==='en'?'Pairing failed: ':'配對失敗：')+(state.error||'NETWORK_UNAVAILABLE')+(language.value==='en'?'. Check agent, token and browser local-network access.':'。請確認代理視窗、Token 與瀏覽器本地網路權限。'));
      }catch{setFeedback(language.value==='en'?'Cannot reach local agent on 127.0.0.1:43881.':'無法連線至 127.0.0.1:43881。');}
      finally{pairButton.disabled=false;}
