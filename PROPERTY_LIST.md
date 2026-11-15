@@ -61,3 +61,6 @@ Source of truth: `Program/src/dependency-registry.js`. Properties are shared nam
 
 | `HIGHLIGHT_DIRTY_RANGE` | HighlightRenderer |
 | `HIGHLIGHT_DOM_REUSE` | HighlightRenderer |
+
+| `HIGHLIGHT_TASK_GENERATION` | HighlightTaskScheduler |
+| `HIGHLIGHT_TASK_ABORT` | HighlightTaskScheduler |
