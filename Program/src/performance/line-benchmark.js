@@ -1,8 +1,8 @@
 // v0.0.50 PR-01: deterministic newline-edit workload, without DOM or user files.
 // Timing is diagnostic only: CI environments do not guarantee latency targets.
 import {performance} from 'node:perf_hooks';
-import {EditPath} from '../src/fmc/edit-path.js';
-import {PieceTree} from '../src/fmc/piece-tree.js';
+import {EditPath} from '../fmc/edit-path.js';
+import {PieceTree} from '../fmc/piece-tree.js';
 
 export function runLineBenchmark({
   lineCount = 10000, operations = 100, lineWidth = 48
