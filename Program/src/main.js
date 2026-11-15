@@ -1,7 +1,7 @@
 import {matchingWindow} from './text-highlighter/matching-window.js?v=opt038-matcher';
 import {transcodeToUtf8} from './fmc/chinese-transcoder.js';
 import {TextHighlighter,detectLanguage} from './text-highlighter/text-highlighter.js?v=opt039-dual-endpoint';
-import {HighlightRenderer} from './text-highlighter/highlight-renderer.js?v=opt038-bootstrap';
+import {HighlightRenderer} from './text-highlighter/highlight-renderer.js?v=opt045-scroll-alignment';
 import {Explorer} from './explorer.js?v=opt044-editor-dismiss';
 import {createVTE} from './vte/vte.js';
 import {handleDfomKeydown, handleDfomBeforeInput, buildTabGuideFragment} from './dfom.js';
