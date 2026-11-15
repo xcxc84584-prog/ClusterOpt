@@ -37,12 +37,15 @@ export class Explorer {
     this.#search=panel.querySelector('#explorerSearch');
     this.#openFile=openFile;this.#openDocument=openDocument;this.#closeFile=closeFile;this.#closeRoot=closeRoot;this.#newFile=newFile;this.#log=log;
     this.#search.addEventListener('input',()=>this.render());
-    this.#hint=document.createElement('div');
+    this.#hint=typeof document.createElement==='function'?
+      document.createElement('div'):null;
+    if(this.#hint){
     this.#hint.className='explorer-action-hint';
     this.#hint.setAttribute('role','status');
     this.#hint.setAttribute('aria-live','polite');
     this.#hint.hidden=true;
-    this.#search.insertAdjacentElement('afterend',this.#hint);
+    this.#search.insertAdjacentElement?.('afterend',this.#hint);
+    }
     panel.querySelector('#explorerAddFolder').addEventListener('click',()=>this.addDirectory());
     panel.querySelector('#explorerAddFile').addEventListener('click',()=>this.addFile());
     panel.querySelector('#explorerRefresh').addEventListener('click',()=>this.refresh());
@@ -264,11 +267,12 @@ export class Explorer {
     const state=this.#actionBar;
     this.#search.hidden=!!state;
     this.#search.disabled=!!state;
-    this.#hint.hidden=!state;
+    if(this.#hint)this.#hint.hidden=!state;
     if(!state)return;
     const node=this.#allNodes().find(item=>this.#key(item)===state.nodeKey);
     const target=node?.name||state.name;
     const fallback=this.#say('請選擇功能','Choose an action');
+    if(!this.#hint)return;
     this.#hint.textContent=this.#say('操作 ','Actions for ')+target+
       '（'+(action||fallback)+'）';
     this.#hint.title=this.#hint.textContent;
