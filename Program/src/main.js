@@ -243,7 +243,6 @@ function scheduleHighlight(){
         const background=(bg.match(/\d+/g)||['0','0','0']).slice(0,3).map(Number);
         const scheme=await TEXT_HIGHLIGHTER.highlightRegion({documentId:id,targetSliceId:String(targetIndex),revision:generation,language:detectLanguage(item.name),source,background,signal});
         if(signal.aborted||generation!==highlightGeneration||active!==id||editor.value!==target)return;
-        highlightRenderer.clear();
         if(scheme.status==='OK'){
           highlightRenderer.bootstrap(target);
           highlightRenderer.renderRegion({...scheme,startLine,endLine},target);
@@ -839,8 +838,12 @@ editor.addEventListener('scroll',()=>{
         const starts=highlightRenderer.lineIndexFor(editor.value);
         const metrics=measureTextMetrics(editor);
         const lineHeight=metrics.ok?metrics.data.lineHeight:22;
-        const first=Math.max(0,Math.floor(editor.scrollTop/lineHeight)-2);
-        const key=`${id}:${session?.center??0}:${first}`;
+        const viewport=calculateViewport({scrollTop:Math.max(0,editor.scrollTop),
+          viewportHeight:Math.max(0,editor.clientHeight),lineHeight,
+          lineCount:starts?.length??1,overscan:2});
+        const first=viewport.ok?viewport.data.start:0;
+        const last=viewport.ok?Math.min((starts?.length??1)-1,first+99,viewport.data.end-1):0;
+        const key=`${id}:${session?.center??0}:${first}:${last}`;
         if(key!==highlightViewportKey){highlightViewportKey=key;scheduleHighlight();}
       }
       syncGutterScroll();
