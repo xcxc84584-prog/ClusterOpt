@@ -34,12 +34,12 @@ export function mountPowerShellUI({host,button,language,manager=new PowerShellMa
  pane.innerHTML=`<div class="psm-top"><strong data-psm="title"></strong><div class="psm-actions"><span data-psm="status"></span><button type="button" data-psm-action="tool" aria-expanded="false" aria-label="PowerShell tools">⚙</button><button type="button" data-psm-action="close" aria-label="Close">×</button></div></div><div class="psm-menu" hidden><button type="button" data-psm-action="permissions"></button><button type="button" data-psm-action="revoke"></button></div><div class="psm-body"><div class="psm-intro"><span class="psm-glyph" aria-hidden="true">⌁</span><div><span class="psm-eyebrow">LOCAL CONNECTION · v0.0.60</span><h2 data-psm="setup"></h2><p data-psm="desc"></p></div></div><details class="psm-advanced"><summary data-psm="command"></summary><label for="psmCheckCommand" data-psm="hint"></label><input id="psmCheckCommand" readonly></details><div class="psm-footer"><button type="button" data-psm-action="check" class="psm-primary"></button><p role="status" aria-live="polite" data-psm="feedback"></p></div></div>`;
  host.append(pane);
  const terminal=document.createElement('section');
- terminal.className='psm-terminal';terminal.hidden=true;
- terminal.innerHTML='<div class="psm-terminal-head"><strong data-psm-terminal="heading"></strong><span data-psm-terminal="mode"></span><button type="button" data-psm-action="settings"></button></div><div class="psm-terminal-output" role="log" aria-live="polite" aria-label="PowerShell output"></div><form class="psm-terminal-input"><label for="psmCommandInput">PS&gt;</label><input id="psmCommandInput" type="text" autocomplete="off" spellcheck="false" aria-label="PowerShell command" placeholder="Get-Location"><button type="submit" data-psm-action="run">Run</button></form><div class="psm-terminal-actions"><button type="button" data-psm-action="version"></button><button type="button" data-psm-action="location"></button><button type="button" data-psm-action="clear"></button></div>';
+ terminal.className='psm-terminal psm-terminal-classic';terminal.hidden=true;
+ terminal.innerHTML='<div class="psm-terminal-head"><strong data-psm-terminal="heading"></strong><span class="psm-terminal-connection" data-psm-terminal="mode"></span><div class="psm-terminal-toolbar"><button type="button" data-psm-action="new-session"></button><button type="button" data-psm-action="close-session"></button><button type="button" data-psm-action="settings"></button></div></div><div class="psm-terminal-output" role="log" aria-live="polite" aria-label="PowerShell output"></div><form class="psm-terminal-input"><label for="psmCommandInput" data-psm-terminal="prompt">PS C:\\&gt;</label><input id="psmCommandInput" type="text" autocomplete="off" spellcheck="false" aria-label="PowerShell command" placeholder="Get-Location"><button type="submit" data-psm-action="run">Run</button></form><div class="psm-terminal-actions" hidden><button type="button" data-psm-action="version"></button><button type="button" data-psm-action="location"></button><button type="button" data-psm-action="clear"></button></div>';
  pane.append(terminal);
  function renderMode(){const setupView=pane.querySelector('.psm-body');setupView.hidden=connected;terminal.hidden=!connected;pane.classList.toggle('psm-connected',connected);}
  function appendOutput(message){const session=sessions.find(x=>x.id===selected);if(session)session.output.push(message);const line=document.createElement('pre');line.textContent=message;terminal.querySelector('.psm-terminal-output').append(line);terminal.querySelector('.psm-terminal-output').scrollTop=terminal.querySelector('.psm-terminal-output').scrollHeight;}
- function setConnected(value){connected=Boolean(value);renderMode();translate();}
+ function setConnected(value){connected=Boolean(value);renderMode();translate();if(connected&&open)requestAnimationFrame(()=>terminal.querySelector('#psmCommandInput')?.focus());}
 
  const setup=document.createElement('div');setup.className='psm-quick-setup';
  setup.innerHTML='<div class="psm-setup-step"><span class="psm-step-number">01</span><div><strong data-psm-extra="downloadTitle"></strong><p data-psm-extra="downloadHint"></p><button type="button" data-psm-action="download" class="psm-primary"></button></div></div><div class="psm-setup-step"><span class="psm-step-number">02</span><div><strong data-psm-extra="pairTitle"></strong><p data-psm-extra="pairHint"></p><div class="psm-pair-row"><input id="psmPairToken" type="password" autocomplete="off" spellcheck="false" placeholder="64-character token"><button type="button" data-psm-action="pair"></button></div></div></div><div class="psm-setup-step"><span class="psm-step-number">03</span><div><strong data-psm-extra="verifyTitle"></strong><p data-psm-extra="verifyHint"></p></div></div>';
@@ -67,7 +67,7 @@ export function mountPowerShellUI({host,button,language,manager=new PowerShellMa
    q('[data-psm-action="download"]').textContent=extra.download;
    q('[data-psm-action="pair"]').textContent=extra.pair;
    button.title=msg.title;button.setAttribute('aria-label',msg.title);
-   const labels=language.value==='en'?{heading:'PowerShell · Local Agent',mode:'Interactive / Confirm each command',settings:'Connection settings',version:'PowerShell version',location:'Current directory',clear:'Clear output'}:{heading:'PowerShell · 本地代理',mode:'互動模式 / 每條命令需確認',settings:'連線設定',version:'PowerShell 版本',location:'目前目錄',clear:'清除輸出'};
+   const labels=language.value==='en'?{heading:'PowerShell',mode:'Connected',settings:'PowerShell tools',version:'PowerShell version',location:'Current directory',clear:'Clear output','new-session':'+ Session','close-session':'Close session'}:{heading:'PowerShell',mode:'已連線',settings:'PowerShell 工具',version:'PowerShell 版本',location:'目前目錄',clear:'清除輸出','new-session':'+工作階段','close-session':'關閉工作階段'};
    const runLabel=language.value==='en'?'Run':'執行';
    terminal.querySelector('[data-psm-action="run"]').textContent=runLabel;
    terminal.querySelector('#psmCommandInput').placeholder=language.value==='en'?'Enter PowerShell command':'輸入 PowerShell 命令';
@@ -98,7 +98,7 @@ export function mountPowerShellUI({host,button,language,manager=new PowerShellMa
    q('[data-psm="feedback"]').textContent=sessions.find(x=>x.id===id).feedback||'';
    terminal.querySelector('.psm-terminal-output').replaceChildren();
    for(const message of sessions.find(x=>x.id===id).output){const line=document.createElement('pre');line.textContent=message;terminal.querySelector('.psm-terminal-output').append(line);}
-   renderMode();translate();syncTabs();
+   renderMode();translate();syncTabs();if(connected)requestAnimationFrame(()=>commandInput?.focus());
  }
  function createSession(){
    const session={id:++sequence,feedback:'',history:[],historyIndex:0,output:[]};sessions.push(session);
@@ -137,9 +137,10 @@ export function mountPowerShellUI({host,button,language,manager=new PowerShellMa
   if(!allowed)return;
   session.history.push(command);session.historyIndex=session.history.length;
   commandInput.value='';terminalBusy=true;commandInput.disabled=true;
-  appendOutput('PS> '+command);
+  appendOutput('PS C:\\> '+command);
   try{const result=await manager.executeCommand({action:'interactive',command,confirm:true});
    appendOutput(result.ok?String(result.output||('(exit '+result.exitCode+')')):(result.code||'Command failed'));
+   if(result.ok&&/^\s*(?:cd|set-location)\s+/i.test(command))appendOutput(language.value==='en'?'Note: each command runs in a new process; directory changes do not persist.':'注意：每條命令使用獨立行程，目錄變更不會保留。');
   }catch(error){appendOutput((language.value==='en'?'Execution error: ':'執行錯誤：')+(error?.message||'UNKNOWN'));}
   finally{terminalBusy=false;commandInput.disabled=false;commandInput.focus();}
  });
@@ -147,6 +148,8 @@ export function mountPowerShellUI({host,button,language,manager=new PowerShellMa
    const action=event.target.closest('[data-psm-action]')?.dataset.psmAction;
    if(!action)return;
    if(action==='run')return;
+   if(action==='new-session'){createSession();return;}
+   if(action==='close-session'){closeSession(selected);return;}
    if(action==='download'){
      const cmd=createSetupCmd();
      const url=URL.createObjectURL(new Blob([cmd],{type:'application/octet-stream'}));
