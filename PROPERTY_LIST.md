@@ -1,4 +1,4 @@
-# ClusterOpt Property List — v0.0.55
+# ClusterOpt Property List — v0.0.57
 
 Source of truth: `Program/src/dependency-registry.js`. Properties are shared names; the table lists objects declaring each property, not a persisted value store.
 
@@ -7,6 +7,8 @@ Source of truth: `Program/src/dependency-registry.js`. Properties are shared nam
 | `EXPLORER_ACTIVE_COLOR` | UI, GlobalPropertyRegistry, InterfacePalette, Explorer |
 | `DOCUMENT_STATUS` | UI, Documents, GlobalPropertyRegistry, SyncStatus, ExternalChangeMonitor |
 | `EDIT_REVISION` | PieceTree, MicroSliceDocument, EditPath |
+| `FILE_TOOL_BLOCKED_TYPES` | UI, GlobalPropertyRegistry, Explorer, FileTool |
+| `FILE_TOOL_THEME` | UI, GlobalPropertyRegistry, InterfacePalette, FileTool |
 | `FILE_TYPE_IDENTIFIER` | UI, GlobalPropertyRegistry |
 | `FONT_METRICS` | TextMetrics |
 | `LANGUAGE` | UI, GlobalPropertyRegistry, LanguageProperty, FILE_MENU, Explorer |
