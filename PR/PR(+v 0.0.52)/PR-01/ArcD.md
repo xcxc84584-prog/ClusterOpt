@@ -1,0 +1,2 @@
+# ArcD
+UI.Request.keydown → TextHighlighterShortcut.Request.matches/validate → TextHighlighter.Request.enabled → HighlightTaskScheduler.Request.cancel → HighlightRenderer.Response.clear/render。UI.Request.beforeinput/input → EditPath.Request.applyKnownPatch → HighlightLineIndex.Request.patch → MVCC/FLAG parent unchanged；OLR undo/redo → local content restore without refresh。屬性 HIGHLIGHT_SHORTCUT_KEY、HIGHLIGHT_SHORTCUT_SHIFT。錯誤使用 OMU/EHU。
