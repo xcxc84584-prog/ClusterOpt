@@ -8,7 +8,7 @@ import {createVTE} from '../src/vte/vte.js';
 test('52: default shortcut and allowed Ctrl+optional Shift+alphanumeric',()=>{
  assert.deepEqual(DEFAULT_HIGHLIGHT_SHORTCUT,{shift:true,key:'H'});
  assert.deepEqual(normalizeHighlightShortcut({shift:false,key:'8'}),{shift:false,key:'8'});
- assert.deepEqual(normalizeHighlightShortcut({shift:true,key:'v'}),{shift:true,key:'V'});
+ assert.deepEqual(normalizeHighlightShortcut({shift:true,key:'b'}),{shift:true,key:'B'});
  assert.equal(normalizeHighlightShortcut({shift:false,key:'C'}),null);
  assert.equal(normalizeHighlightShortcut({shift:false,key:'Z'}),null);
  assert.equal(normalizeHighlightShortcut({shift:true,key:'F1'}),null);
