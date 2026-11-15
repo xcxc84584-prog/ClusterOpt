@@ -1,7 +1,7 @@
 // v0.0.62 PR-02 — Browser UI only. Never runs OS commands.
 import {PowerShellManager} from './powershell-manager.js';
-import {PowerShellClient} from './powershell-client.js?v=opt063-native-r1';
-import {createSetupCmd,SETUP_FILENAME} from './cmd-setup.js?v=opt063-native-r1';
+import {PowerShellClient} from './powershell-client.js?v=opt064-port-r1';
+import {createSetupCmd,SETUP_FILENAME} from './cmd-setup.js?v=opt064-port-r1';
 const COPY={
  'zh-Hant':{title:'PowerShell',setup:'配置本地代理',desc:'尚未連線至 PowerShell Local Agent。此介面不可執行命令。',check:'檢查連線',tool:'PowerShell 工具',permissions:'權限管理',revoke:'撤銷本地權限',unavailable:'本地代理尚未提供。無法執行命令。',command:'環境檢查指令（CMD）',hint:'這是選用的環境診斷指令；請在 Windows CMD 執行。Token 僅輸入於上方配對欄位。',close:'關閉',status:'未配置',rule:'預設權限：可申請',notice:'權限管理需先配置可信任的本地代理；目前僅提供規則說明。'},
  en:{title:'PowerShell',setup:'Set up Local Agent',desc:'PowerShell Local Agent is not connected. Commands cannot be executed here.',check:'Check connection',tool:'PowerShell tools',permissions:'Permission management',revoke:'Revoke local access',unavailable:'Local Agent is not available. Commands are disabled.',command:'Environment check (CMD)',hint:'Optional environment diagnostics for Windows CMD. Enter the token only in the pairing field.',close:'Close',status:'Not configured',rule:'Default permission: Requestable',notice:'Permission management requires a trusted Local Agent. This is an informational preview.'}
@@ -87,10 +87,11 @@ export function mountPowerShellUI({host,button,language,manager=new PowerShellMa
  async function pollSessions(){for(const session of sessions){if(!session.remoteId||session.polling)continue;session.polling=true;try{const result=await remote.pollSession(session.remoteId);if(result.output)appendOutput(result.output,session.id);if(result.closed){session.remoteId=null;appendOutput('[Session closed]',session.id);}}catch(e){appendOutput('Connection: '+e.message,session.id);session.remoteId=null;}finally{session.polling=false;}}}
 
  const setup=document.createElement('div');setup.className='psm-quick-setup';
- setup.innerHTML='<div class="psm-setup-step"><span class="psm-step-number">01</span><div><strong data-psm-extra="downloadTitle"></strong><p data-psm-extra="downloadHint"></p><button type="button" data-psm-action="download" class="psm-primary"></button></div></div><div class="psm-setup-step"><span class="psm-step-number">02</span><div><strong data-psm-extra="pairTitle"></strong><p data-psm-extra="pairHint"></p><div class="psm-pair-row"><input id="psmPairToken" type="password" autocomplete="off" spellcheck="false" placeholder="64-character token"><button type="button" data-psm-action="pair"></button></div></div></div><div class="psm-setup-step"><span class="psm-step-number">03</span><div><strong data-psm-extra="verifyTitle"></strong><p data-psm-extra="verifyHint"></p></div></div>';
+ setup.innerHTML='<div class="psm-setup-step"><span class="psm-step-number">01</span><div><strong data-psm-extra="downloadTitle"></strong><p data-psm-extra="downloadHint"></p><button type="button" data-psm-action="download" class="psm-primary"></button></div></div><div class="psm-setup-step"><span class="psm-step-number">02</span><div><strong data-psm-extra="pairTitle"></strong><p data-psm-extra="pairHint"></p><div class="psm-pair-row"><input id="psmAgentPort" type="number" min="1024" max="65535" value="43881" aria-label="Local Agent port" title="Local Agent port" style="width:100px"><input id="psmPairToken" type="password" autocomplete="off" spellcheck="false" placeholder="64-character token"><button type="button" data-psm-action="pair"></button></div></div></div><div class="psm-setup-step"><span class="psm-step-number">03</span><div><strong data-psm-extra="verifyTitle"></strong><p data-psm-extra="verifyHint"></p></div></div>';
  pane.querySelector('.psm-body').prepend(setup);
  pane.classList.add('psm-compact-setup');
  const q=s=>pane.querySelector(s);
+ q('#psmAgentPort').value=String(remote.port||43881);
  q('#psmCheckCommand').value=CHECK;
  function t(){return COPY[language.value]||COPY['zh-Hant'];}
  function translate(){
@@ -208,6 +209,7 @@ export function mountPowerShellUI({host,button,language,manager=new PowerShellMa
    }
    if(action==='pair'){
      const pairButton=q('[data-psm-action="pair"]');pairButton.disabled=true;
+     if(!manager.agent.setPort(q('#psmAgentPort').value)){setFeedback('Port must be between 1024 and 65535.');pairButton.disabled=false;return;}
      const ok=manager.agent.pair(q('#psmPairToken').value);
      if(ok)q('#psmPairToken').value='';
      if(!ok){pairButton.disabled=false;setFeedback(language.value==='en'?'Token must be exactly 64 hexadecimal characters.':'Token 必須是 64 個十六進位字元。');return;}
