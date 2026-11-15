@@ -1,4 +1,4 @@
-// v0.0.60: browser-to-loopback transport. Token stays in memory, never in URL/storage.
+// v0.0.61: browser-to-loopback transport. Token stays in memory, never in URL/storage.
 const ENDPOINT='http://127.0.0.1:43881';
 export class PowerShellClient {
  #token='';
@@ -14,5 +14,10 @@ export class PowerShellClient {
  }
  async checkConnection(){return this.#post('/status');}
  async executeAuthorized(request){return this.#post('/execute',request.action==='interactive'?{action:'interactive',command:request.command}:{action:request.action});}
+ async startSession(){return this.#post('/session/start');}
+ async runSession(id,command){return this.#post('/session/run',{id,command});}
+ async pollSession(id){return this.#post('/session/poll',{id});}
+ async interruptSession(id){return this.#post('/session/interrupt',{id});}
+ async closeSession(id){return this.#post('/session/close',{id});}
  async revokeLocalAccess(){try{return await this.#post('/revoke');}finally{this.clear();}}
 }
