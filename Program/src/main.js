@@ -1512,7 +1512,7 @@ renderTabGuides();
 function renderLanguage() {
   document.documentElement.lang=LANGUAGE.value;
   explorer.setLocale(LANGUAGE.value, t);
-  document.title='Cluster Opt v0.0.51';
+  document.title='Cluster Opt v0.0.52';
   $('#menuBtn').textContent=t('file')+'⌄';
   for (const key of ['new','open','save','saveas','close','closeall']) {
     const button=$('#menu [data-action="'+key+'"]');
