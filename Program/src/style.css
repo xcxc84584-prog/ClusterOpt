@@ -1499,3 +1499,40 @@ body > .explorer-context .explorer-context-label { overflow-wrap:anywhere; }
 }
 .psm-pane.psm-connected .psm-terminal-input textarea::placeholder{color:transparent!important}
 .psm-pane.psm-connected .psm-terminal-input textarea:focus{outline:0!important;box-shadow:none!important}
+
+
+/* v0.0.69 — PowerShell toolbar follows the shared UI_PALETTE contract.
+   Overrides legacy fixed black controls in connected mode. */
+.psm-pane.psm-connected .psm-terminal-head,
+.psm-pane.psm-connected .psm-terminal-toolbar,
+.psm-pane.psm-connected .psm-terminal-classic {
+  background:var(--ui-panel,#111216)!important;
+  color:var(--ui-text-on-panel,#f1f2f5)!important;
+  border-color:var(--ui-border,#3c3e49)!important;
+}
+.psm-pane.psm-connected .psm-terminal-head strong {
+  color:var(--ui-text-on-panel,#f1f2f5)!important;
+  -webkit-text-fill-color:var(--ui-text-on-panel,#f1f2f5)!important;
+}
+.psm-pane.psm-connected .psm-terminal-head span {
+  color:var(--ui-text-on-panel,#f1f2f5)!important;
+  -webkit-text-fill-color:var(--ui-text-on-panel,#f1f2f5)!important;
+}
+.psm-pane.psm-connected .psm-terminal-toolbar button {
+  background:var(--ui-control,#343640)!important;
+  color:var(--ui-text-on-control,#f1f2f5)!important;
+  -webkit-text-fill-color:var(--ui-text-on-control,#f1f2f5)!important;
+  border-color:var(--ui-border,#3c3e49)!important;
+}
+.psm-pane.psm-connected .psm-terminal-toolbar button:hover {
+  background:var(--ui-hover,#474a58)!important;
+  color:var(--ui-text-on-control,#f1f2f5)!important;
+  -webkit-text-fill-color:var(--ui-text-on-control,#f1f2f5)!important;
+}
+.psm-pane.psm-connected .psm-terminal-toolbar button:focus-visible {
+  outline:2px solid var(--ui-accent,#7aafff)!important;
+  outline-offset:2px;
+}
+.psm-pane.psm-connected .psm-terminal-connection {
+  color:var(--ui-text-on-panel,#f1f2f5)!important;
+}
