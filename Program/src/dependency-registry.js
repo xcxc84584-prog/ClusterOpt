@@ -75,11 +75,11 @@ export class DependencyRegistry {
 export function createClusterDependencies() {
   const registry = new DependencyRegistry();
   const objects = [
-    ['UI', 'main.js', 'Browser interaction and coordination', ['LANGUAGE', 'UI_PALETTE', 'TEXT_HIGHLIGHTER', 'STORAGE_PRIORITY', 'DOCUMENT_STATUS', 'FILE_TYPE_IDENTIFIER']],
+    ['UI', 'main.js', 'Browser interaction and coordination', ['EXPLORER_ACTIVE_COLOR', 'LANGUAGE', 'UI_PALETTE', 'TEXT_HIGHLIGHTER', 'STORAGE_PRIORITY', 'DOCUMENT_STATUS', 'FILE_TYPE_IDENTIFIER']],
     ['Documents', 'documents.js', 'Document metadata and tabs', ['DOCUMENT_STATUS']],
     ['FileManager', 'file-manager.js', 'File operations', []],
-    ['GlobalPropertyRegistry', 'global-properties.js', 'Global property values', ['LANGUAGE', 'UI_PALETTE', 'TEXT_HIGHLIGHTER', 'STORAGE_PRIORITY', 'DOCUMENT_STATUS', 'STORAGE_PROGRESS', 'FILE_TYPE_IDENTIFIER']],
-    ['InterfacePalette', 'interface-palette.js', 'Theme color calculation', ['UI_PALETTE']],
+    ['GlobalPropertyRegistry', 'global-properties.js', 'Global property values', ['EXPLORER_ACTIVE_COLOR', 'LANGUAGE', 'UI_PALETTE', 'TEXT_HIGHLIGHTER', 'STORAGE_PRIORITY', 'DOCUMENT_STATUS', 'STORAGE_PROGRESS', 'FILE_TYPE_IDENTIFIER']],
+    ['InterfacePalette', 'interface-palette.js', 'Theme color calculation', ['UI_PALETTE','EXPLORER_ACTIVE_COLOR']],
     ['LanguageProperty', 'language.js', 'Localized strings', ['LANGUAGE']],
     ['OMU', 'omu.js', 'Event and EHU log collector', []],
     ['SyncStatus', 'sync-status.js', 'Per-document synchronization state', ['DOCUMENT_STATUS']],
@@ -109,7 +109,7 @@ export function createClusterDependencies() {
     ['NewlineEditIntent', 'fmc/newline-edit-intent.js', 'Pure UTF-16 beforeinput range and line delta', ['LINE_EDIT_DELTA','EDIT_RANGE']],
     ['ExternalChangeMonitor', 'main.js', 'External file change observation', ['DOCUMENT_STATUS']],
     ['FILE_MENU', 'main.js', 'File menu UI', ['LANGUAGE']],
-    ['Explorer', 'explorer.js', 'Workspace tree, context menu and file actions', ['LANGUAGE']],
+    ['Explorer', 'explorer.js', 'Workspace tree, context menu and file actions', ['LANGUAGE','EXPLORER_ACTIVE_COLOR']],
     ['VTE', 'vte/vte.js', 'Isolated virtual test environment', []],
     ['VisualLineMap', 'editor-render/visual-line-map.js', 'Resident-slice logical-to-visual soft-wrap model (not yet browser authoritative)', ['VISUAL_LINE_RANGE','WRAP_COLUMNS','WRAP_TAB_SIZE']],
     ['GutterWindow', 'editor-render/gutter-window.js', 'Bounded visible line-number window', ['GUTTER_VIEWPORT_RANGE','GUTTER_OVERSCAN']],
