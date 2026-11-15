@@ -79,7 +79,7 @@
           </nav>
         </div>
       </header>
-      <div id="clusterWorkspaceShell"><aside id="explorerPanel" hidden aria-label="Explorer"><div class="explorer-header"><strong id="explorerTitle">檔案總管</strong><button id="explorerClose" type="button" title="關閉">×</button></div><div class="explorer-actions"><button id="explorerAddFolder" type="button" title="導入本地資料夾">▣ 導入資料夾</button><button id="explorerAddFile" type="button" title="導入本地文件">◇ 導入文件</button><button id="explorerRefresh" type="button" title="重新整理" aria-label="重新整理">↻</button></div><input id="explorerSearch" type="search" name="cluster-explorer-filter" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="搜尋文件" autocomplete="off" aria-label="搜尋文件"><div id="explorerTree" role="tree"></div></aside><div id="clusterEditorColumn"><div id="tabs">
+      <div id="clusterWorkspaceShell"><aside id="explorerPanel" hidden aria-label="Explorer"><div class="explorer-header"><strong id="explorerTitle">檔案總管</strong><button id="explorerClose" type="button" title="關閉">×</button></div><div class="explorer-actions"><button id="explorerAddFolder" type="button" title="導入本地資料夾">▣ 導入資料夾</button><button id="explorerAddFile" type="button" title="導入本地文件">◇ 導入文件</button><button id="explorerRefresh" type="button" title="重新整理" aria-label="重新整理">↻</button></div><input id="explorerSearch" type="search" readonly data-lpignore="true" data-1p-ignore="true" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="搜尋文件" autocomplete="off" aria-label="搜尋文件"><div id="explorerTree" role="tree"></div></aside><div id="clusterEditorColumn"><div id="tabs">
       </div>
       <main id="workspace">
         <div id="empty">
@@ -218,7 +218,7 @@
       <div class="palette-modal-footer"><span>CLUSTER / TEXT</span><button id="highlighterDone" type="button">完成</button></div>
     </dialog>
     <input type="file" id="fileInput" multiple hidden>
-    <script type="module" src="./src/main.js?v=opt062-psm-r1&hotfix=2">
+    <script type="module" src="./src/main.js?v=opt062-psm-r1&hotfix=3">
     </script>
   <dialog id="blockedTypesDialog" class="file-tool-dialog" aria-labelledby="blockedTypesTitle">
     <div class="file-tool-dialog-head"><div><span class="file-tool-eyebrow">CLUSTER / FILE TOOL</span><h2 id="blockedTypesTitle">屏蔽檔案類型</h2><p id="blockedTypesDescription">隱藏 Explorer 中的指定副檔名，不會刪除原始檔案。</p></div><button type="button" id="blockedTypesClose" aria-label="關閉">×</button></div>
