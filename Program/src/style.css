@@ -1092,3 +1092,55 @@ body > .explorer-context .explorer-context-label { overflow-wrap:anywhere; }
 #gutter { position:relative; overflow:hidden; }
 #gutter .gutter-spacer { width:1px; pointer-events:none; }
 #gutter .gutter-labels { position:absolute; right:12px; top:16px; white-space:pre; text-align:right; line-height:inherit; pointer-events:none; }
+
+/* v0.0.52 — keybinding recorder: compact IDE-style settings card. */
+.highlighter-shortcut {
+  margin-top:16px; padding:16px; border:1px solid var(--ui-border);
+  border-radius:10px; background:var(--ui-panel); color:var(--ui-text-on-panel);
+}
+.highlighter-shortcut-heading {
+  display:flex; align-items:flex-start; justify-content:space-between; gap:12px;
+  margin-bottom:14px;
+}
+.highlighter-shortcut-heading h3 { margin:0 0 5px; font-size:14px; font-weight:650; }
+.highlighter-shortcut-heading p, #highlighterShortcutHelp {
+  margin:0; font-size:12px; line-height:1.6; opacity:.85;
+}
+.highlighter-shortcut-tag {
+  flex:none; font-size:10px; letter-spacing:.08em; border:1px solid var(--ui-border);
+  border-radius:4px; padding:4px 6px;
+}
+.highlighter-shortcut-input-label { display:block; margin-bottom:7px; font-size:12px; }
+.highlighter-shortcut-field {
+  display:flex; align-items:center; gap:8px; border:1px solid var(--ui-border);
+  border-radius:7px; background:var(--ui-control); padding:5px 6px 5px 11px;
+}
+.highlighter-shortcut-field:focus-within {
+  outline:2px solid var(--ui-accent, #5a9aff); outline-offset:1px;
+}
+.highlighter-shortcut-icon { flex:none; font-size:16px; }
+#highlighterShortcutInput {
+  flex:1; min-width:0; padding:7px 0; border:0; outline:0;
+  background:transparent; color:var(--ui-text-on-panel); font:inherit; font-size:13px;
+  cursor:text;
+}
+#highlighterShortcutInput::placeholder { color:var(--ui-text-on-panel); opacity:.7; }
+#highlighterShortcutReset {
+  flex:none; padding:6px 10px; border:1px solid var(--ui-border);
+  border-radius:5px; background:var(--ui-panel); color:var(--ui-text-on-panel);
+  cursor:pointer;
+}
+#highlighterShortcutHelp { margin-top:8px; }
+#highlighterShortcutStatus { min-height:18px; margin:8px 0 0; font-size:12px; }
+#highlighterShortcutStatus[data-state="error"] { color:#ed7979; }
+#highlighterShortcutStatus[data-state="ready"] { color:var(--ui-text-on-panel); }
+.highlighter-shortcut-actions { display:flex; justify-content:flex-end; margin-top:10px; }
+#highlighterShortcutSave {
+  padding:8px 14px; border:1px solid var(--ui-border); border-radius:6px;
+  background:var(--ui-control); color:var(--ui-text-on-panel); cursor:pointer;
+}
+#highlighterShortcutSave:disabled { opacity:.45; cursor:default; }
+@media(max-width:480px) {
+  .highlighter-shortcut { padding:12px; }
+  .highlighter-shortcut-heading { flex-wrap:wrap; }
+}
