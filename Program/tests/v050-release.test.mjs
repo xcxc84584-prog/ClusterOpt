@@ -9,10 +9,10 @@ test('50.1: release redirect, module cache, inventories and VTE',()=>{
   assert.match(root,/Program\/\?v=0\.0\.50/);
   assert.match(root,/searchParams\.set\("v", "0\.0\.50"\)/);
   assert.match(page,/Cluster Opt 0\.0\.50/);
-  assert.match(page,/main\.js\?v=opt050-pr01/);
+  assert.match(page,/main\.js\?v=opt050-pr02/);
   assert.match(main,/document\.title='Cluster Opt v0\.0\.50'/);
   const registry=createClusterDependencies();
-  assert.equal(registry.list().length,39);
+  assert.equal(registry.list().length,40);
   assert.ok(registry.list().some(x=>x.name==='LineBenchmark'));
   assert.match(read('../../OBJECT_LIST.md'),/\| LineBenchmark \|/);
   assert.match(read('../../PROPERTY_LIST.md'),/LINE_BENCHMARK_P95/);
