@@ -198,6 +198,12 @@ const highlightTasks=new HighlightTaskScheduler({onError:error=>
   omu.emit('TextHighlighter','HighlightTask',500,String(error),true)});
 function buildHighlightLineStarts(value){const starts=[0];for(let i=0;i<value.length;i++)if(value.charCodeAt(i)===10)starts.push(i+1);return starts;}
 function scheduleHighlight({documentTransition=false}={}){
+  if(active && binaryDocuments.get(active)?.type?.kind==='MEDIA'){
+    clearTimeout(highlightTimer);clearTimeout(lineHighlightTimer);
+    ++highlightGeneration;++lineHighlightGeneration;
+    highlightAbort?.abort();highlightTasks.cancel();
+    highlightRenderer.clear();highlightViewportKey='';return;
+  }
   // A large resident slice must never enter synchronous whole-slice Shiki.
   highlightViewportOnly=documentTransition||editor.value.length>LARGE_HIGHLIGHT_THRESHOLD;
   // Avoid the synchronous whole-text LF scan and Shiki initialization during
@@ -1118,6 +1124,17 @@ async function createBinary(item, type) {
   if (existing) { switchDoc(existing); return; }
   const created = docs.create(item.name, '', item.handle);
   const id = created.data.id;
+  // Media is metadata-only: do not turn compressed video/audio bytes into
+  // textarea content, trigger line counting, or tokenize random binary data.
+  if(type.kind==='MEDIA'){
+    const content='Media file (read-only)\\n'+item.name+'\\n'+
+      'Size: '+item.blob.size.toLocaleString()+' bytes\\n'+
+      'Format: '+(type.format||item.blob.type||'media')+'\\n'+
+      'Binary media is not rendered as text.';
+    binaryDocuments.set(id,{blob:item.blob,type,content,previewBytes:0,dirty:false});
+    active=id;syncStates.set(id,item.handle?'SYNCED':'UNVERIFIED');
+    refresh();status('MEDIA · metadata only (no byte decoding)');scheduleRecovery();return;
+  }
   // Byte-to-codepoint mapping is reversible (0x00–0xFF), unlike UTF-8 replacement.
   // Only materialize the first 256 KiB; preserve the untouched tail as raw Blob.
   const previewBytes = Math.min(item.blob.size, 256 * 1024);
