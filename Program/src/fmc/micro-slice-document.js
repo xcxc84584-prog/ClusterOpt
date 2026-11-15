@@ -69,7 +69,7 @@ export class MicroSliceDocument {
     this.#boundaries=[...left,...affected,...right];
     // An empty document always has one zero-length micro-slice.
     if(!this.#boundaries.length)this.#boundaries=this.#partition(0);
-    this.#index.rebuild(this.#boundaries.map(p=>p.length));
+    this.#index.splice(first,last-first+1,affected.map(p=>p.length));
     return this.revision;
   }
   insert(offset,text){return this.replace(offset,offset,text);}
