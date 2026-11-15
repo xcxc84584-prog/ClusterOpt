@@ -15,5 +15,5 @@ test('60.21 tool menu is viewport-bound and text has fallback palette colors',()
 });
 test('60.22 setup download has a distinct revision filename',()=>{
  const cmd=read('../src/powershell-manager/cmd-setup.js');
- assert.ok(cmd.includes('ClusterOpt-PLA-Setup-v0.0.60-r4.cmd'));
+ assert.ok(cmd.includes('ClusterOpt-PLA-Setup-v0.0.60-r5.cmd'));
 });
