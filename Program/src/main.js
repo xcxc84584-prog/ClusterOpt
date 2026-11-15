@@ -1,3 +1,4 @@
+import {PerformanceMonitor} from './performance/performance-monitor.js?v=opt046-pmu';
 import {matchingWindow} from './text-highlighter/matching-window.js?v=opt038-matcher';
 import {transcodeToUtf8} from './fmc/chinese-transcoder.js';
 import {TextHighlighter,detectLanguage} from './text-highlighter/text-highlighter.js?v=opt039-dual-endpoint';
@@ -25,6 +26,7 @@ import {LanguageProperty} from './language.js?v=opt038-i18n';
 // Cluster Opt 1: object state is private; contracts are the only cross-object channel.
 const contract=(ok,data=null,code=200,message='')=>Object.freeze({ok,code,data,message});
 const omu=new OMU();
+const PMU=new PerformanceMonitor();
 // Rule 07: VTE is a separate in-memory test environment, never a production editor session.
 window.VTE = createVTE();
 const fmc = new FileManagementCore();
@@ -217,12 +219,12 @@ function scheduleHighlight(){
       if(signal.aborted)return;
       const bg=getComputedStyle(document.documentElement).getPropertyValue('--ui-editor');
       const background=(bg.match(/\d+/g)||['0','0','0']).slice(0,3).map(Number);
-      const scheme=await TEXT_HIGHLIGHTER.highlightSlice({documentId:id,
+      const scheme=await PMU.measure('highlight.tokenize',()=>TEXT_HIGHLIGHTER.highlightSlice({documentId:id,
         targetSliceId:String(targetIndex),revision:generation,
         language:detectLanguage(item.name),previousSlice,targetSlice:target,nextSlice,
-        background,signal});
+        background,signal}));
       if(signal.aborted||generation!==highlightGeneration||active!==id||editor.value!==target)return;
-      highlightRenderer.render(scheme);
+      PMU.measure('highlight.render',()=>highlightRenderer.render(scheme));
       const state=document.querySelector('#highlighterState');
       if(state)state.textContent=scheme.status==='OK'?t('highlighterActive',scheme.language):
         t('highlighterFallback')+(scheme.error?' ('+t('highlighterUnavailable')+')':'');
@@ -1406,11 +1408,13 @@ const selectLogs=(options={},onlyEhu=false)=>{
   return entries;
 };
 const consoleApi=Object.freeze({
+  command:input=>PMU.command(input),
+  pmu:()=>PMU.snapshot(),
   log:(options={})=>selectLogs(options),
   ehu:(options={})=>selectLogs(options,true),
   dep:(objectName=null)=>dependencyRegistry.dep(objectName),
   objects:()=>dependencyRegistry.list(),
-  help:()=>Object.freeze(['Cluster.log()','Cluster.log({limit:20})','Cluster.log({code:404})','Cluster.ehu()','Cluster.dep()','Cluster.dep("FlagUnit")','Cluster.objects()'])
+  help:()=>Object.freeze(['Cluster.log()','Cluster.log({limit:20})','Cluster.log({code:404})','Cluster.ehu()','Cluster.dep()','Cluster.dep("FlagUnit")','Cluster.objects()','Cluster.command("pmu start")','Cluster.command("pmu status")','Cluster.command("pmu export json")'])
 });
 Object.defineProperty(window,'Cluster',{value:consoleApi,writable:false,configurable:false});
 window.ClusterOpt=Object.freeze({clearRecovery:()=>olr.clearAll(),fmcStatus:()=>({loadedSlices:fmc.loadedSliceCount}),
@@ -1425,7 +1429,7 @@ renderTabGuides();
 function renderLanguage() {
   document.documentElement.lang=LANGUAGE.value;
   explorer.setLocale(LANGUAGE.value, t);
-  document.title='Cluster Opt v0.0.45';
+  document.title='Cluster Opt v0.0.46';
   $('#menuBtn').textContent=t('file')+'⌄';
   for (const key of ['new','open','save','saveas','close','closeall']) {
     const button=$('#menu [data-action="'+key+'"]');
