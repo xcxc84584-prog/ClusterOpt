@@ -12,8 +12,10 @@ export function lineFor(starts,offset){
   while(lo<hi){const mid=(lo+hi+1)>>1;if(starts[mid]<=offset)lo=mid;else hi=mid-1;}
   return lo;
 }
-export function matchingWindow(text,caret,maxLines=MAX_CONTEXT_LINES){
-  const starts=lineStarts(text),anchor=lineFor(starts,Math.min(caret,text.length));
+export function matchingWindow(text,caret,maxLines=MAX_CONTEXT_LINES,knownStarts=null){
+  // The renderer maintains the LF index with micro-edit patches. Reuse it
+  // instead of scanning the entire resident slice on every keystroke.
+  const starts=knownStarts||lineStarts(text),anchor=lineFor(starts,Math.min(caret,text.length));
   const half=Math.floor((maxLines-1)/2);
   const lower=Math.max(0,anchor-half),upper=Math.min(starts.length-1,anchor+half);
   // Balance delimiters in a bounded scan. Angle brackets are considered
@@ -49,7 +51,9 @@ export function matchingWindow(text,caret,maxLines=MAX_CONTEXT_LINES){
     last=Math.max(anchor,lineFor(starts,match[1]));}
   // Block comments are delimiter pairs too; find the nearest /* ... */ pair
   // around the caret within the bounded search window.
-  const open=text.lastIndexOf('/*',caret);
+  // lastIndexOf on the whole resident slice is O(N) in the worst case.
+  const openInWindow=text.slice(begin,Math.min(caret+1,end)).lastIndexOf('/*');
+  const open=openInWindow<0?-1:begin+openInWindow;
   const close=open>=begin?text.indexOf('*/',open+2):-1;
   if(open>=begin&&close>=caret&&close<end){
     const a=lineFor(starts,open),b=lineFor(starts,close+1);
