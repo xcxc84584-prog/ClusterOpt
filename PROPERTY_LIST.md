@@ -58,3 +58,6 @@ Source of truth: `Program/src/dependency-registry.js`. Properties are shared nam
 
 | `TOKEN_CACHE_REVISION` | RevisionTokenCache |
 | `TOKEN_CACHE_BUDGET` | RevisionTokenCache |
+
+| `HIGHLIGHT_DIRTY_RANGE` | HighlightRenderer |
+| `HIGHLIGHT_DOM_REUSE` | HighlightRenderer |
