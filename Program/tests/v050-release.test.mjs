@@ -9,7 +9,7 @@ test('50.1: release redirect, module cache, inventories and VTE',()=>{
   assert.match(root,/Program\/\?v=0\.0\.62/);
   assert.match(root,/searchParams\.set\("v", "0\.0\.62"\)/);
   assert.match(page,/Cluster Opt 0\.0\.62/);
-  assert.match(page,/main\.js\?v=opt062-psm-r2/);
+  assert.match(page,/main\.js\?v=opt064-port-r1/);
   assert.match(main,/document\.title='Cluster Opt v0\.0\.62'/);
   const registry=createClusterDependencies();
   assert.equal(registry.list().length,48);
