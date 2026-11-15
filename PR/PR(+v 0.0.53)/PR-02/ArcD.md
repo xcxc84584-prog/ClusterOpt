@@ -1,0 +1,2 @@
+# Architecture
+paste capture (clipboardData) → beforeinput EditIntent (data fallback) → input retainDuringEdit → bounded resident (≤256 KiB) scheduleHighlight, larger scheduleLineHighlight (≤100 lines). HighlightRenderer.renderRegion/renderLine → binary-search token-window replacement; retained DOM. No physical block reload. Note: large paste beyond 100 lines may not be fully recolored until another highlight pass.
