@@ -11,8 +11,8 @@ test('60.18 port guard requires typed confirmation and verifies process identity
 });
 test('60.19 menu labels and setup actions are accessible',()=>{
  const ui=read('../src/powershell-manager/powershell-ui.js');
- assert.match(ui,/setAttribute\('aria-label',msg.tool\)/);
- assert.match(ui,/setAttribute\('aria-label',msg.close\)/);
+ assert.ok(ui.includes("setAttribute('aria-label',msg.tool)"));
+ assert.ok(ui.includes("setAttribute('aria-label',msg.close)"));
  const css=read('../src/style.css');
  assert.match(css,/\.psm-pane \.psm-menu:not\(\[hidden\]\)/);
  assert.match(css,/\.psm-pane \.psm-body \.psm-primary/);
