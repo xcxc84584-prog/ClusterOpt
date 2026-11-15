@@ -203,7 +203,10 @@ export class Explorer {
         else children.push(this.#node(handle,node));
       }
       node.children=this.#order(children,node);
-    }catch(error){this.#log('Explorer directory read: '+error);node.children=[];}
+    }catch(error){
+      // Transient permission/read failures must not erase a cached tree.
+      this.#log('Explorer directory read: '+error);
+    }
   }
   async syncExternal(){
     if(this.#syncing||this.#panel.hidden||document.hidden)return false;
