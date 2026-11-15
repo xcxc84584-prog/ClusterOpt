@@ -1258,7 +1258,7 @@ async function chooseLegacyEncoding(name, candidates) {
 }
 async function createVirtual(item) {
   if(FILE_TYPE_BLOCKLIST.has(item.name)){
-    status('File type excluded from Explorer/editor: '+item.name);
+    status(t('blockedTypesBlocked',item.name));
     return;
   }
   let type;
@@ -1459,6 +1459,20 @@ const actions={new:()=>create(),open:()=>explorer.addFile(),save:()=>doSave(),sa
 const blockedDialog=$('#blockedTypesDialog');
 const blockedList=$('#blockedTypesList');
 const blockedError=$('#blockedTypesError');
+function renderBlockedTypesLanguage(){
+  $('#blockedTypesBtn').innerHTML='▧ '+t('blockedTypes')+' <span class="file-tool-chevron">›</span>';
+  $('#blockedTypesTitle').textContent=t('blockedTypes');
+  $('#blockedTypesDescription').textContent=t('blockedTypesDescription');
+  $('#blockedTypesForm label').textContent=t('blockedTypesAddLabel');
+  $('#blockedTypesForm button[type="submit"]').textContent='＋ '+t('blockedTypesAdd');
+  $('#blockedTypesListLabel').textContent=t('blockedTypesList');
+  $('#blockedTypesReset').textContent=t('blockedTypesReset');
+  $('#blockedTypesFooter').textContent=t('blockedTypesFooter');
+  $('#blockedTypesDone').textContent=t('done');
+  $('#blockedTypesClose').setAttribute('aria-label',t('closeDialog'));
+  $('#blockedTypesInput').setAttribute('aria-label',t('blockedTypesAddLabel'));
+  if(blockedDialog.open)renderBlockedTypes();
+}
 function renderBlockedTypes(){
   blockedList.replaceChildren();
   const entries=FILE_TYPE_BLOCKLIST.value;
@@ -1467,13 +1481,13 @@ function renderBlockedTypes(){
     const row=document.createElement('div');row.className='file-tool-type-row';row.setAttribute('role','listitem');
     const name=document.createElement('code');name.textContent=ext;
     const controls=document.createElement('div');controls.className='file-tool-type-actions';
-    const edit=document.createElement('button');edit.type='button';edit.textContent='✎';edit.title='修改 '+ext;edit.setAttribute('aria-label','修改 '+ext);
-    const remove=document.createElement('button');remove.type='button';remove.textContent='×';remove.title='刪除 '+ext;remove.setAttribute('aria-label','刪除 '+ext);
+    const edit=document.createElement('button');edit.type='button';edit.textContent='✎';edit.title=t('blockedTypesEdit')+' '+ext;edit.setAttribute('aria-label',t('blockedTypesEdit')+' '+ext);
+    const remove=document.createElement('button');remove.type='button';remove.textContent='×';remove.title=t('blockedTypesDelete')+' '+ext;remove.setAttribute('aria-label',t('blockedTypesDelete')+' '+ext);
     edit.addEventListener('click',()=>{
-      const next=prompt('修改副檔名',ext);
+      const next=prompt(t('blockedTypesEditPrompt'),ext);
       if(next===null)return;
       try{FILE_TYPE_BLOCKLIST.replace(ext,next);blockedError.textContent='';renderBlockedTypes();}
-      catch(error){blockedError.textContent=String(error.message);}
+      catch(error){blockedError.textContent=error.message==='Extension already exists'?t('blockedTypesDuplicate'):t('blockedTypesInvalid');}
     });
     remove.addEventListener('click',()=>{FILE_TYPE_BLOCKLIST.remove(ext);renderBlockedTypes();});
     controls.append(edit,remove);row.append(name,controls);blockedList.append(row);
@@ -1481,7 +1495,7 @@ function renderBlockedTypes(){
 }
 $('#blockedTypesBtn').addEventListener('click',()=>{
   $('#menu').hidden=true;$('#toolOptions').hidden=true;
-  blockedError.textContent='';renderBlockedTypes();blockedDialog.showModal();
+  blockedError.textContent='';renderBlockedTypesLanguage();renderBlockedTypes();blockedDialog.showModal();
 });
 $('#blockedTypesClose').addEventListener('click',()=>blockedDialog.close());
 $('#blockedTypesDone').addEventListener('click',()=>blockedDialog.close());
@@ -1677,6 +1691,7 @@ function renderLanguage() {
   $('#paletteFooterHint').textContent=t('paletteAutosave');
   $('#paletteDone').textContent=t('done');
   $('#paletteClose').setAttribute('aria-label',t('closeDialog'));
+  renderBlockedTypesLanguage();
   $('#empty p').textContent=t('empty');
   $('#editor').setAttribute('aria-label',t('editor'));
   const priorityLabel = $('#toolOptions .priority-heading');
