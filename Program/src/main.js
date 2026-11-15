@@ -33,6 +33,7 @@ import {createFileManagerClass} from './file-manager.js';
 import {createGlobalPropertyRegistryClass} from './global-properties.js';
 import {createSyncStatusClass} from './sync-status.js';
 import {LanguageProperty} from './language.js?v=opt038-i18n';
+import {mountPowerShellUI} from './powershell-manager/powershell-ui.js';
 // Cluster Opt 1: object state is private; contracts are the only cross-object channel.
 const contract=(ok,data=null,code=200,message='')=>Object.freeze({ok,code,data,message});
 const omu=new OMU();
@@ -183,6 +184,7 @@ const GlobalPropertyRegistry = createGlobalPropertyRegistryClass();
 const SyncStatus = createSyncStatusClass();
 const LANGUAGE=new LanguageProperty();
 const UI_PALETTE = new InterfacePalette();
+mountPowerShellUI({host:document.querySelector('#clusterEditorColumn'),button:document.querySelector('#explorerPowerShell'),language:LANGUAGE});
 const FILE_TYPE_BLOCKLIST = new BlockedFileTypes();
 const TEXT_HIGHLIGHTER = new TextHighlighter();
 const highlightRenderer = new HighlightRenderer(document.querySelector('#editor'),document.querySelector('#highlightOverlay'));

@@ -1239,3 +1239,21 @@ body > .explorer-context .explorer-context-label { overflow-wrap:anywhere; }
 .file-tool-error {min-height:1.2em;font-size:12px;color:var(--ui-text-on-surface)}
 .file-tool-dialog-footer {border-top:1px solid var(--ui-border);border-bottom:0;font-size:11px}
 .file-tool-dialog-footer span {opacity:.75}
+
+/* v0.0.60 PR-02: isolated PowerShell setup view, palette-aware */
+#clusterEditorColumn{position:relative}
+#clusterEditorColumn.psm-mode #workspace,#clusterEditorColumn.psm-mode #tabs{visibility:hidden;pointer-events:none}
+.psm-pane[hidden]{display:none!important}
+.psm-pane{position:absolute;inset:0;z-index:8;display:flex;flex-direction:column;background:var(--ui-surface,#17191e);color:var(--ui-text-on-surface,#e9edf5);border:1px solid var(--ui-border,#404550);font-family:inherit}
+.psm-top{display:flex;align-items:center;justify-content:space-between;min-height:46px;padding:8px 15px;border-bottom:1px solid var(--ui-border,#444)}
+.psm-actions{display:flex;align-items:center;gap:9px;font-size:12px}
+.psm-actions button{padding:5px 10px}
+.psm-menu{position:absolute;right:42px;top:43px;z-index:10;display:grid;gap:4px;padding:8px;background:var(--ui-surface,#252831);border:1px solid var(--ui-border,#444);border-radius:7px;box-shadow:0 10px 30px #0007}
+.psm-menu[hidden]{display:none}
+.psm-body{width:min(540px,calc(100% - 36px));margin:auto;display:flex;flex-direction:column;align-items:stretch;gap:13px;padding:24px 0}
+.psm-body h2{margin:0;font-size:20px}
+.psm-body p{margin:0;font-size:13px;line-height:1.6}
+.psm-body label{font-size:12px;font-weight:600}
+.psm-body input{width:100%;padding:12px;border-radius:6px;background:var(--ui-control,#242733);color:var(--ui-text-on-control,#eee);border:1px solid var(--ui-border,#555);font-family:monospace}
+.psm-glyph{font-size:35px;opacity:.75}
+#explorerPowerShell{min-width:32px}

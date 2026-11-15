@@ -4,9 +4,9 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>
-      Cluster Opt 0.0.59
+      Cluster Opt 0.0.60
     </title>
-    <link rel="stylesheet" href="./src/style.css?v=opt059-shortcut-i18n">
+    <link rel="stylesheet" href="./src/style.css?v=opt060-psm-ui">
   </head>
   <body>
     <div id="app">
@@ -81,7 +81,7 @@
           </nav>
         </div>
       </header>
-      <div id="clusterWorkspaceShell"><aside id="explorerPanel" hidden aria-label="Explorer"><div class="explorer-header"><strong id="explorerTitle">檔案總管</strong><button id="explorerClose" type="button" title="關閉">×</button></div><div class="explorer-actions"><button id="explorerAddFolder" type="button" title="導入本地資料夾">▣ 導入資料夾</button><button id="explorerAddFile" type="button" title="導入本地文件">◇ 導入文件</button><button id="explorerRefresh" type="button" title="重新整理" aria-label="重新整理">↻</button></div><input id="explorerSearch" type="search" placeholder="搜尋文件" autocomplete="off" aria-label="搜尋文件"><div id="explorerTree" role="tree"></div></aside><div id="clusterEditorColumn"><div id="tabs">
+      <div id="clusterWorkspaceShell"><aside id="explorerPanel" hidden aria-label="Explorer"><div class="explorer-header"><strong id="explorerTitle">檔案總管</strong><button id="explorerClose" type="button" title="關閉">×</button></div><div class="explorer-actions"><button id="explorerAddFolder" type="button" title="導入本地資料夾">▣ 導入資料夾</button><button id="explorerAddFile" type="button" title="導入本地文件">◇ 導入文件</button><button id="explorerPowerShell" type="button" title="PowerShell" aria-label="PowerShell" aria-pressed="false">⌁</button><button id="explorerRefresh" type="button" title="重新整理" aria-label="重新整理">↻</button></div><input id="explorerSearch" type="search" placeholder="搜尋文件" autocomplete="off" aria-label="搜尋文件"><div id="explorerTree" role="tree"></div></aside><div id="clusterEditorColumn"><div id="tabs">
       </div>
       <main id="workspace">
         <div id="empty">
@@ -220,7 +220,7 @@
       <div class="palette-modal-footer"><span>CLUSTER / TEXT</span><button id="highlighterDone" type="button">完成</button></div>
     </dialog>
     <input type="file" id="fileInput" multiple hidden>
-    <script type="module" src="./src/main.js?v=opt059-shortcut-i18n">
+    <script type="module" src="./src/main.js?v=opt060-psm-ui">
     </script>
   <dialog id="blockedTypesDialog" class="file-tool-dialog" aria-labelledby="blockedTypesTitle">
     <div class="file-tool-dialog-head"><div><span class="file-tool-eyebrow">CLUSTER / FILE TOOL</span><h2 id="blockedTypesTitle">屏蔽檔案類型</h2><p id="blockedTypesDescription">隱藏 Explorer 中的指定副檔名，不會刪除原始檔案。</p></div><button type="button" id="blockedTypesClose" aria-label="關閉">×</button></div>
