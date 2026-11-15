@@ -53,7 +53,7 @@ while($true) {
   $listeners = @(Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue)
   if(-not $listeners){break}
   $ids = @($listeners | Select-Object -ExpandProperty OwningProcess -Unique)
-  foreach($id in $ids){$proc=Get-Process -Id $id -ErrorAction SilentlyContinue;Write-Host ('Occupied: PID '+$id+' '+$proc.ProcessName+' '+$proc.Path)}
+  foreach($processId in $ids){$proc=Get-Process -Id $processId -ErrorAction SilentlyContinue;Write-Host ('Occupied: PID '+$processId+' '+$proc.ProcessName+' '+$proc.Path)}
   $choice = (Read-Host '[F]orce stop / [P]ick another port / [C]ancel').Trim().ToUpperInvariant()
   if($choice -eq 'C'){throw 'Cancelled by user'}
   if($choice -eq 'P'){
@@ -65,7 +65,7 @@ while($true) {
   if($choice -eq 'F'){
     $confirm=Read-Host ('WARNING: stop PID '+($ids -join ',')+'? Type YES to confirm')
     if($confirm -cne 'YES'){continue}
-    foreach($id in $ids){Stop-Process -Id $id -Force -ErrorAction Stop}
+    foreach($processId in $ids){Stop-Process -Id $processId -Force -ErrorAction Stop}
     Start-Sleep -Milliseconds 600
     continue
   }
