@@ -13,7 +13,7 @@ export function createSetupCmd(){
  'if not exist "%AGENT_DIR%" mkdir "%AGENT_DIR%"',
  'set "INSTALLER=%AGENT_DIR%\\install-v064.ps1"',
  'echo [1/2] Downloading setup helper...',
- 'powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference=\'Stop\'; [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12; $u=\'https://raw.githubusercontent.com/xcxc84584-prog/ClusterOpt/main/Program/local-agent/install-v064.ps1\'; try { Invoke-WebRequest -UseBasicParsing -Uri $u -OutFile $env:INSTALLER -TimeoutSec 45 } catch { Write-Host $_.Exception.Message; exit 1 }"',
+ 'powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference=\'Stop\'; [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12; $u=\'https://raw.githubusercontent.com/xcxc84584-prog/ClusterOpt/main/Program/local-agent/install-v064.ps1\'; try { Invoke-WebRequest -UseBasicParsing -Uri $u -OutFile (Join-Path $env:USERPROFILE 'ClusterOpt-Agent\\install-v064.ps1') -TimeoutSec 45 } catch { Write-Host $_.Exception.Message; exit 1 }"',
  'if errorlevel 1 goto failed',
  'echo [2/2] Installing and starting agent...',
  'powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%INSTALLER%"',
