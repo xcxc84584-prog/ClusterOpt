@@ -6,7 +6,7 @@
     <title>
       Cluster Opt 0.0.52
     </title>
-    <link rel="stylesheet" href="./src/style.css?v=opt050-pr04">
+    <link rel="stylesheet" href="./src/style.css?v=opt052-shortcut-ui">
   </head>
   <body>
     <div id="app">
@@ -195,11 +195,30 @@
     </dialog>
     <dialog id="highlighterDialog" aria-labelledby="highlighterTitle" class="highlighter-dialog">
       <div class="palette-modal-header"><div><div class="palette-eyebrow">CLUSTER / EDITOR</div><h2 id="highlighterTitle">文本著色器</h2></div><button id="highlighterClose" class="palette-close" type="button" aria-label="關閉">×</button></div>
-      <div class="highlighter-content"><label class="highlighter-switch"><input id="highlighterEnabled" type="checkbox" checked> 啟用 Shiki 語法著色</label><p id="highlighterHint">依檔案類型自動識別語言；色彩跟隨介面調色盤。</p><p id="highlighterSlices">僅處理被著色切片及其相鄰切片，不修改文件。</p><label class="highlighter-switch"><input id="highlighterPerformance" type="checkbox"><span id="highlighterPerformanceLabel">效能化（僅著色可見文本）</span></label><p id="highlighterPerformanceHint">僅解析目前視窗中的文字；捲動離開後卸載舊著色資料。</p><div class="highlighter-shortcut"><label for="highlighterShortcutKey" id="highlighterShortcutLabel">切換快捷鍵（Ctrl + Shift 選用 + A–Z / 0–9）</label><div><span>Ctrl + </span><label><input id="highlighterShortcutShift" type="checkbox" checked> Shift + </label><select id="highlighterShortcutKey" aria-label="快捷鍵主按鍵"></select><button id="highlighterShortcutSave" type="button">儲存快捷鍵</button><button id="highlighterShortcutReset" type="button">預設</button></div><p id="highlighterShortcutStatus" role="status" aria-live="polite"></p></div><p id="highlighterState">語法引擎按需載入</p></div>
+      <div class="highlighter-content"><label class="highlighter-switch"><input id="highlighterEnabled" type="checkbox" checked> 啟用 Shiki 語法著色</label><p id="highlighterHint">依檔案類型自動識別語言；色彩跟隨介面調色盤。</p><p id="highlighterSlices">僅處理被著色切片及其相鄰切片，不修改文件。</p><label class="highlighter-switch"><input id="highlighterPerformance" type="checkbox"><span id="highlighterPerformanceLabel">效能化（僅著色可見文本）</span></label><p id="highlighterPerformanceHint">僅解析目前視窗中的文字；捲動離開後卸載舊著色資料。</p><section class="highlighter-shortcut" aria-labelledby="highlighterShortcutLabel">
+          <div class="highlighter-shortcut-heading">
+            <div><h3 id="highlighterShortcutLabel">切換快捷鍵</h3>
+              <p>點擊輸入框，直接按下想使用的快捷鍵。</p></div>
+            <span class="highlighter-shortcut-tag">EDITOR ONLY</span>
+          </div>
+          <label for="highlighterShortcutInput" class="highlighter-shortcut-input-label">快捷鍵組合</label>
+          <div class="highlighter-shortcut-field">
+            <span class="highlighter-shortcut-icon" aria-hidden="true">⌨</span>
+            <input id="highlighterShortcutInput" type="text" autocomplete="off"
+              spellcheck="false" inputmode="none" aria-describedby="highlighterShortcutHelp highlighterShortcutStatus"
+              placeholder="點擊後按 Ctrl + Shift + H" readonly>
+            <button id="highlighterShortcutReset" type="button" title="恢復預設快捷鍵">重設</button>
+          </div>
+          <p id="highlighterShortcutHelp">Ctrl 必選，Shift 可選；支援 A–Z、0–9。Esc 取消錄製。</p>
+          <p id="highlighterShortcutStatus" role="status" aria-live="polite"></p>
+          <div class="highlighter-shortcut-actions">
+            <button id="highlighterShortcutSave" type="button" disabled>儲存快捷鍵</button>
+          </div>
+        </section><p id="highlighterState">語法引擎按需載入</p></div>
       <div class="palette-modal-footer"><span>CLUSTER / TEXT</span><button id="highlighterDone" type="button">完成</button></div>
     </dialog>
     <input type="file" id="fileInput" multiple hidden>
-    <script type="module" src="./src/main.js?v=opt052-pr01">
+    <script type="module" src="./src/main.js?v=opt052-pr02">
     </script>
   <dialog id="ftiDialog" aria-labelledby="ftiDialogTitle" aria-describedby="ftiReason">
   <div class="fti-dialog-head"><span class="fti-symbol">◇</span><strong id="ftiDialogTitle">文件解析失敗</strong></div>
