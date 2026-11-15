@@ -1144,3 +1144,17 @@ body > .explorer-context .explorer-context-label { overflow-wrap:anywhere; }
   .highlighter-shortcut { padding:12px; }
   .highlighter-shortcut-heading { flex-wrap:wrap; }
 }
+
+/* v0.0.54 — labeled Explorer action strip, preserving graphite styling. */
+#explorerTree .explorer-entry:has(.explorer-inline-actions) { min-height:44px; }
+.explorer-inline-actions { gap:4px; padding:2px 0; }
+.explorer-inline-action {
+  flex:0 0 auto; min-width:52px; height:38px; padding:3px 6px;
+  display:inline-flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:1px; border-radius:7px; border-color:var(--ui-border);
+  background:var(--ui-control); color:var(--ui-text-on-control);
+}
+.explorer-action-symbol { font-size:15px; line-height:16px; }
+.explorer-action-label { font-size:10px; line-height:12px; white-space:nowrap; }
+.explorer-inline-action.is-danger { border-color:color-mix(in srgb,#d65c5c 45%,var(--ui-border)); }
+.explorer-inline-action.is-danger:hover { background:color-mix(in srgb,#d65c5c 17%,var(--ui-control)); }
