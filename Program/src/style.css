@@ -1087,3 +1087,8 @@ body > .explorer-context .explorer-context-label { overflow-wrap:anywhere; }
 /* Highlighter overlay shares the textarea's exact font metrics and clipped viewport. */
 #highlightOverlay {box-sizing:border-box;overflow:hidden;}
 #highlightOverlay > div {width:max-content;min-width:100%;will-change:transform;}
+
+/* v0.0.50.4: viewport-only gutter labels, preserving native scroll geometry. */
+#gutter { position:relative; overflow:hidden; }
+#gutter .gutter-spacer { width:1px; pointer-events:none; }
+#gutter .gutter-labels { position:absolute; right:12px; top:16px; white-space:pre; text-align:right; line-height:inherit; pointer-events:none; }
