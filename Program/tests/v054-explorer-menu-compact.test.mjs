@@ -20,7 +20,7 @@ test('56: Explorer asset cache is invalidated',()=>{
 test('56: entry module imports the same Explorer build as the page',()=>{
  const main=read('../src/main.js');
  const root=read('../../index.html');
- assert.match(main,/explorer\\.js\\?v=opt056-inline-explorer/);
- assert.match(root,/searchParams\\.set\\("v", "0\\.0\\.56"\\)/);
- assert.match(root,/searchParams\\.set\\("build", "opt056-inline-explorer"\\)/);
+ assert.match(main,/explorer\.js\?v=opt056-inline-explorer/);
+ assert.match(root,/searchParams\.set\("v", "0\.0\.56"\)/);
+ assert.match(root,/searchParams\.set\("build", "opt056-inline-explorer"\)/);
 });
