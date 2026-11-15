@@ -1189,3 +1189,34 @@ body > .explorer-context .explorer-context-label { overflow-wrap:anywhere; }
 }
 #explorerTree .explorer-action-symbol { font-size:15px; line-height:19px; }
 #explorerTree .explorer-action-label { display:none; }
+
+/* Explorer PR-04: single-column icon actions, never side-by-side. */
+#explorerTree .explorer-entry:has(.explorer-inline-actions) {
+  height:auto; min-height:32px; align-items:flex-start;
+}
+#explorerTree .explorer-inline-actions {
+  display:grid; grid-template-columns:minmax(0,1fr); grid-auto-flow:row;
+  gap:3px; overflow:visible; width:100%;
+}
+#explorerTree .explorer-inline-action {
+  display:flex; width:100%; height:27px; flex-direction:row;
+  justify-content:center; align-items:center; white-space:nowrap;
+}
+/* The active document must be unmistakable in both graphite and daylight themes. */
+#explorerTree .explorer-entry.active {
+  background:var(--explorer-active-bg, #274c70);
+  color:var(--explorer-active-text, #fff);
+  box-shadow:inset 3px 0 0 var(--explorer-active-edge, #80c8ff),
+             inset 0 0 0 1px var(--explorer-active-edge, #80c8ff);
+  font-weight:700;
+}
+#explorerTree .explorer-entry.active:hover {
+  background:var(--explorer-active-hover, #32628d);
+}
+#explorerPanel { --explorer-active-bg:#274c70; --explorer-active-hover:#32628d;
+  --explorer-active-text:#fff; --explorer-active-edge:#80c8ff; }
+body.day-mode #explorerPanel, body.light-mode #explorerPanel,
+body[data-theme="light"] #explorerPanel, [data-theme="light"] #explorerPanel {
+  --explorer-active-bg:#b8d7ff; --explorer-active-hover:#9cc6ff;
+  --explorer-active-text:#102c4b; --explorer-active-edge:#145da0;
+}
