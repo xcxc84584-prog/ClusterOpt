@@ -685,7 +685,7 @@ editor.addEventListener('beforeinput',event=>{
   const forward=editor.value[to]||'';
   lineStructureChanged=event.inputType==='insertLineBreak'||
     event.inputType==='insertParagraph'||
-    pendingEditIntent?.deltaLines!==0||
+    (pendingEditIntent!==null&&pendingEditIntent.deltaLines!==0)||
     removed.includes('\\n')||
     (event.inputType==='deleteContentBackward'&&from===to&&backward==='\\n')||
     (event.inputType==='deleteContentForward'&&from===to&&forward==='\\n');
