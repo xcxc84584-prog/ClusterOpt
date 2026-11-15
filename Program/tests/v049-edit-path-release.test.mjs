@@ -18,11 +18,11 @@ test('49.4: registry and published object/property lists include EditPath',()=>{
 });
 test('49.4: version, redirect and refreshed module are aligned',()=>{
  const root=read('../../index.html'),page=read('../index.html'),main=read('../src/main.js');
- assert.match(root,/Program\/\?v=0\.0\.54/);
- assert.match(root,/searchParams\.set\("v", "0\.0\.54"\)/);
- assert.match(page,/Cluster Opt 0\.0\.54/);
- assert.match(page,/main\.js\?v=opt054-pr03/);
- assert.match(main,/document\.title='Cluster Opt v0\.0\.54'/);
+ assert.match(root,/Program\/\?v=0\.0\.55/);
+ assert.match(root,/searchParams\.set\("v", "0\.0\.55"\)/);
+ assert.match(page,/Cluster Opt 0\.0\.55/);
+ assert.match(page,/main\.js\?v=opt055-context-popup/);
+ assert.match(main,/document\.title='Cluster Opt v0\.0\.55'/);
 });
 test('49.4: editor cache integration does not mutate VTE',()=>{
  const vte=createVTE();
