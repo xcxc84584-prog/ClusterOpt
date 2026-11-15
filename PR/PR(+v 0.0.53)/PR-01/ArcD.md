@@ -1,0 +1,2 @@
+# Architecture
+UI.input → HighlightRenderer.retainDuringEdit(EditIntent) → patchLineStarts (micro-edit LF patch) → HighlightRenderer.lineIndexFor(current resident text) → matchingWindow(knownStarts) / findLexicalRestart(knownStarts) → HighlightTaskScheduler → TextHighlighter.highlightRegion → HighlightRenderer.renderRegion. Unknown edits fallback to buildLineStarts. Physical slice FLAG/MVCC parent unchanged; micro-slices remain logical edit units. Existing VTE, OMU, EHU untouched.
