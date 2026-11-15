@@ -97,3 +97,7 @@ v0.0.52: File → Tool → 文本著色器可設定 Ctrl+(Shift)+A–Z/0–9；C
 ## v0.0.53 PR-02 — Paste Syntax Recovery & Token Splice
 
 - Ctrl+V clipboard fallback restores EditIntent where beforeinput.data is null; ≤256KiB resident paste triggers full syntax refresh, larger uses bounded local region. Token updates use binary search splice instead of whole-array filter+sort. Remaining: >100-line large paste incomplete recolor, Shiki main-thread latency, browser/IME tests pending. MVCC/FLAG/VTE unaffected.
+
+## v0.0.53 PR-03 — Large Highlight Freeze Guard
+
+- Large resident text >64KiB routes to viewport-only Shiki (≤100 lines, ≤12KiB source); over-budget viewport plain fallback. Scroll re-tokenizes visible window with debounce and retains previous token overlay. Addresses reported >10s freezes without touching FLAG/MVCC/VTE. Still requires browser verification; synchronous grammar on bounded source may remain slow.
