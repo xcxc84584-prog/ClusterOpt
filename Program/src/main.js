@@ -732,10 +732,12 @@ editor.addEventListener('beforeinput',event=>{
     (event.inputType==='deleteContentForward'&&from===to&&forward==='\n');
 
 },true);
-editor.addEventListener('input',()=>{
+editor.addEventListener('input',event=>{
+ const historyEdit=['historyUndo','historyRedo'].includes(event.inputType);
  const inputIntent=pendingEditIntent;
  pendingEditIntent=null;
- scheduleLineHighlight();
+ // Native undo/redo can alter lines beyond the bounded caret region.
+ if(historyEdit)scheduleHighlight();else scheduleLineHighlight();
  scheduleTabGuides();
  if(!active || editor.readOnly)return;
 const abortSave = saveAbortControllers.get(active);
@@ -879,7 +881,9 @@ editor.addEventListener('keydown',e=>{
     updateLines();
     updatePos();
     highlightRenderer.retainDuringEdit();
-    scheduleLineHighlight();
+    // OLR undo/redo changes the entire resident value; a 100-line region
+    // cannot reliably restore syntax colors for all affected lines.
+    scheduleHighlight();
     scheduleTabGuides();
     scheduleRecovery();
     return;

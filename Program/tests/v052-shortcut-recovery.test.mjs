@@ -37,6 +37,6 @@ test('52: Ctrl undo no longer forces full refresh and VTE stays isolated',()=>{
  const undo=main.slice(main.indexOf("editor.addEventListener('keydown',e=>{"),
    main.indexOf('async function doSave('));
  assert.doesNotMatch(undo,/\brefresh\(\)/);
- assert.match(undo,/scheduleLineHighlight\(\)/);
+ assert.match(undo,/scheduleHighlight\(\)/);
  const vte=createVTE();assert.equal(vte.Status().data.files.length,0);
 });
