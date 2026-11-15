@@ -32,7 +32,7 @@ export class Explorer {
   #panel;#tree;#search;#openFile;#openDocument;#closeFile;#closeRoot;#newFile;#log;
   #state=readState();#clipboard=null;#actionBar=null;#hint=null;#rename=null;
   #hold=null;#drag=null;#selected=null;#revealGeneration=0;#suppressClick=false;#draft=null;
-  #syncing=false;#syncTimer=null;#contextPopup=null;
+  #syncing=false;#syncTimer=null;#contextPopup=null;#blockedTypes=null;
   constructor({panel,openFile,openDocument,closeFile=async()=>false,closeRoot=async()=>true,newFile=()=>{},log=()=>{}}){
     this.#panel=panel;this.#tree=panel.querySelector('#explorerTree');
     this.#search=panel.querySelector('#explorerSearch');
@@ -86,6 +86,7 @@ export class Explorer {
       if(!document.hidden)void this.syncExternal();
     });
   }
+  setBlockedFileTypes(policy){this.#blockedTypes=policy;this.render();}
   get #en(){return this.#locale==='en';}
   #say(zh,en){return this.#en?en:zh;}
   #save(){writeState(this.#state);}
@@ -607,6 +608,7 @@ export class Explorer {
     // Open editor tabs are managed by the editor, not duplicated in Explorer.
     const nodes=[];
     const walk=(node,depth)=>{
+      if(node.kind==='file'&&this.#blockedTypes?.has(node.name))return;
       const matches=!query||node.name.toLocaleLowerCase().includes(query);
       const descendants=[];
       if(node.children){for(const child of node.children){
