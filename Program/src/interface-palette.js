@@ -159,7 +159,15 @@ export class InterfacePalette {
       rgbText(readableText(surfaces.panel))
     );
 
-    // Explorer active row uses palette mode rather than non-existent body classes.\n    const active = this.mode === 'light'\n      ? {bg:'#b8d7ff',hover:'#9cc6ff',text:'#102c4b',edge:'#145da0'}\n      : {bg:'#274c70',hover:'#32628d',text:'#ffffff',edge:'#80c8ff'};\n    root.style.setProperty('--explorer-active-bg',active.bg);\n    root.style.setProperty('--explorer-active-hover',active.hover);\n    root.style.setProperty('--explorer-active-text',active.text);\n    root.style.setProperty('--explorer-active-edge',active.edge);\n    root.style.colorScheme = this.mode;
+    // Global Explorer selection colors follow the palette's actual mode.
+    const active = this.mode === 'light'
+      ? {bg:'#b8d7ff',hover:'#9cc6ff',text:'#102c4b',edge:'#145da0'}
+      : {bg:'#274c70',hover:'#32628d',text:'#ffffff',edge:'#80c8ff'};
+    root.style.setProperty('--explorer-active-bg',active.bg);
+    root.style.setProperty('--explorer-active-hover',active.hover);
+    root.style.setProperty('--explorer-active-text',active.text);
+    root.style.setProperty('--explorer-active-edge',active.edge);
+    root.style.colorScheme = this.mode;
     root.style.setProperty('--ui-accent', rgbText(this.#rgb));
   }
 }
