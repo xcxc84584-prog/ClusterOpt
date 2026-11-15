@@ -1,4 +1,5 @@
 import {PieceTree} from './piece-tree.js';
+import {MicroSliceIndex} from './micro-slice-index.js';
 
 // 49.2: logical micro-slices within ONE registered physical slice.
 // Offsets use UTF-16 units, matching PieceTree and textarea. This object
@@ -6,6 +7,7 @@ import {PieceTree} from './piece-tree.js';
 export class MicroSliceDocument {
   #tree;
   #boundaries;
+  #index;
   #maxLength;
   #parentId;
   #nextId=1;
@@ -17,6 +19,7 @@ export class MicroSliceDocument {
     this.#tree=new PieceTree(text);
     this.#maxLength=maxLength;
     this.#boundaries=this.#partition(text.length);
+    this.#index=new MicroSliceIndex(this.#boundaries.map(p=>p.length));
   }
   #partition(length){
     if(!length)return [{id:this.#nextId++,length:0}];
@@ -34,25 +37,18 @@ export class MicroSliceDocument {
   slice(start=0,end=this.length){return this.#tree.slice(start,end);}
   toString(){return this.#tree.toString();}
   list(){
-    let offset=0;
-    return this.#boundaries.map(part=>{
-      const result=Object.freeze({id:part.id,parentSliceId:this.#parentId,
-        start:offset,end:offset+part.length,length:part.length});
-      offset+=part.length;
-      return result;
+    return this.#boundaries.map((part,i)=>{
+      const start=this.#index.prefix(i);
+      return Object.freeze({id:part.id,parentSliceId:this.#parentId,
+        start,end:start+part.length,length:part.length});
     });
   }
   locate(offset){
-    if(!Number.isSafeInteger(offset)||offset<0||offset>this.length)return null;
-    let start=0;
-    for(const part of this.#boundaries){
-      const end=start+part.length;
-      if(offset<end||offset===this.length&&end===this.length)
-        return Object.freeze({id:part.id,parentSliceId:this.#parentId,
-          start,end,localOffset:offset-start});
-      start=end;
-    }
-    return null;
+    const i=this.#index.locate(offset);
+    if(i===null)return null;
+    const part=this.#boundaries[i],start=this.#index.prefix(i);
+    return Object.freeze({id:part.id,parentSliceId:this.#parentId,
+      start,end:start+part.length,localOffset:offset-start});
   }
   replace(start,end,text){
     if(!Number.isSafeInteger(start)||!Number.isSafeInteger(end)||
@@ -62,11 +58,7 @@ export class MicroSliceDocument {
     // Preserve unaffected micro-slice IDs; replace only intersecting pieces.
     // Boundary insertion belongs to the slice on its right, except EOF.
     const previous=this.list();
-    let first=previous.findIndex(p=>p.end>start);
-    if(first<0)first=previous.length-1;
-    let last=previous.findIndex(p=>p.end>=end&&p.start<end);
-    if(last<0)last=first;
-    if(end===start)last=first;
+    const {first,last}=this.#index.intersect(start,end);
     const left=previous.slice(0,first).map(p=>({id:p.id,length:p.length}));
     const right=previous.slice(last+1).map(p=>({id:p.id,length:p.length}));
     const anchorStart=previous[first].start;
@@ -77,6 +69,7 @@ export class MicroSliceDocument {
     this.#boundaries=[...left,...affected,...right];
     // An empty document always has one zero-length micro-slice.
     if(!this.#boundaries.length)this.#boundaries=this.#partition(0);
+    this.#index.rebuild(this.#boundaries.map(p=>p.length));
     return this.revision;
   }
   insert(offset,text){return this.replace(offset,offset,text);}
