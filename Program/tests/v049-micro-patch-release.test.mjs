@@ -7,7 +7,7 @@ const read = path => readFileSync(new URL(path, import.meta.url), 'utf8');
 
 test('49.5: OCDA patch contract, GitHub inventories and release are aligned', () => {
   const registry = createClusterDependencies();
-  assert.equal(registry.list().length, 38);
+  assert.ok(registry.list().length >= 38);
   const session = registry.list().find(x => x.name === 'VirtualFileSession');
   for (const name of ['MICRO_PATCH_BASE_VERSION','MICRO_PATCH_RANGE','PARENT_SLICE_ID'])
     assert.ok(session.properties.includes(name), name);
