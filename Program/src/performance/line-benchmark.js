@@ -14,9 +14,11 @@ export function runLineBenchmark({
     String(i).padStart(lineWidth, 'x')).join('\n');
   const tree = new PieceTree(original);
   const edit = new EditPath('benchmark:0', original);
+  const fast = new EditPath('benchmark:fast', original);
   let reference = original;
   const treeTimes = [];
   const reconcileTimes = [];
+  const fastPathTimes = [];
   const scanTimes = [];
   for (let i = 0; i < operations; i++) {
     const offset = Math.floor(reference.length / 2);
@@ -24,6 +26,12 @@ export function runLineBenchmark({
     tree.insert(offset, '\n');
     treeTimes.push(performance.now() - beforeTree);
     reference = reference.slice(0, offset) + '\n' + reference.slice(offset);
+    const beforeFast = performance.now();
+    if (!fast.applyKnownPatch({start:offset, end:offset, text:'\\n',
+      previousLength:reference.length-1}, reference)) {
+      throw new Error('Known newline patch unexpectedly rejected');
+    }
+    fastPathTimes.push(performance.now() - beforeFast);
     const beforeReconcile = performance.now();
     edit.reconcile(reference);
     reconcileTimes.push(performance.now() - beforeReconcile);
@@ -31,6 +39,7 @@ export function runLineBenchmark({
     const scanned = 1 + (reference.match(/\n/g)?.length ?? 0);
     scanTimes.push(performance.now() - beforeScan);
     if (tree.lineCount !== scanned || edit.lineCount !== scanned ||
+        fast.lineCount !== scanned ||
         tree.length !== reference.length) {
       throw new Error('Line benchmark reference mismatch');
     }
@@ -50,6 +59,7 @@ export function runLineBenchmark({
     finalLines: tree.lineCount,
     pieceTreeInsert: summarize(treeTimes),
     editPathReconcile: summarize(reconcileTimes),
+    editPathKnownPatch: summarize(fastPathTimes),
     fullNewlineScan: summarize(scanTimes),
     environment: 'node:perf_hooks; excludes textarea DOM, paint, IndexedDB'
   };
