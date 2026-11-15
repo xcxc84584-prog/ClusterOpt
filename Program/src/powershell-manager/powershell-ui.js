@@ -11,7 +11,7 @@ export function mountPowerShellUI({host,button,language,manager=new PowerShellMa
  if(!host||!button||!language)throw new Error('PSM_UI_MISSING_DEPENDENCY');
  let open=false;
  const toolMenu=()=>pane.querySelector('.psm-menu');
- const toolButton=()=>pane.querySelector('[data-psm-action="tool"]');
+ const toolButton=()=>pane.querySelector(connected?'[data-psm-action="settings"]':'[data-psm-action="tool"]');
  function closeToolMenu(){const menu=toolMenu();if(!menu)return;menu.hidden=true;toolButton()?.setAttribute('aria-expanded','false');}
  function positionToolMenu(){const menu=toolMenu(),trigger=toolButton();if(!menu||menu.hidden||!trigger)return;const a=trigger.getBoundingClientRect();const w=menu.offsetWidth||200,h=menu.offsetHeight||100;menu.style.left=Math.max(8,Math.min(a.right-w,window.innerWidth-w-8))+'px';menu.style.top=Math.max(8,Math.min(a.bottom+6,window.innerHeight-h-8))+'px';}
  function onOutsideClick(event){if(!toolMenu()?.hidden&&!toolMenu().contains(event.target)&&!toolButton().contains(event.target))closeToolMenu();}
@@ -31,7 +31,7 @@ export function mountPowerShellUI({host,button,language,manager=new PowerShellMa
  const pane=document.createElement('section');
  pane.id='powershellManagerPane';pane.className='psm-pane';pane.hidden=true;
  pane.setAttribute('aria-label','PowerShell');
- pane.innerHTML=`<div class="psm-top"><strong data-psm="title"></strong><div class="psm-actions"><span data-psm="status"></span><button type="button" data-psm-action="tool" aria-expanded="false" aria-label="PowerShell tools">⚙</button><button type="button" data-psm-action="close" aria-label="Close">×</button></div></div><div class="psm-menu" hidden><button type="button" data-psm-action="permissions"></button><button type="button" data-psm-action="revoke"></button></div><div class="psm-body"><div class="psm-intro"><span class="psm-glyph" aria-hidden="true">⌁</span><div><span class="psm-eyebrow">LOCAL CONNECTION · v0.0.60</span><h2 data-psm="setup"></h2><p data-psm="desc"></p></div></div><details class="psm-advanced"><summary data-psm="command"></summary><label for="psmCheckCommand" data-psm="hint"></label><input id="psmCheckCommand" readonly></details><div class="psm-footer"><button type="button" data-psm-action="check" class="psm-primary"></button><p role="status" aria-live="polite" data-psm="feedback"></p></div></div>`;
+ pane.innerHTML=`<div class="psm-top"><strong data-psm="title"></strong><div class="psm-actions"><span data-psm="status"></span><button type="button" data-psm-action="tool" aria-expanded="false" aria-label="PowerShell tools">⚙</button><button type="button" data-psm-action="close" aria-label="Close">×</button></div></div><div class="psm-menu" hidden><button type="button" data-psm-action="connection-settings"></button><button type="button" data-psm-action="clear"></button><button type="button" data-psm-action="permissions"></button><button type="button" data-psm-action="revoke"></button></div><div class="psm-body"><div class="psm-intro"><span class="psm-glyph" aria-hidden="true">⌁</span><div><span class="psm-eyebrow">LOCAL CONNECTION · v0.0.60</span><h2 data-psm="setup"></h2><p data-psm="desc"></p></div></div><details class="psm-advanced"><summary data-psm="command"></summary><label for="psmCheckCommand" data-psm="hint"></label><input id="psmCheckCommand" readonly></details><div class="psm-footer"><button type="button" data-psm-action="check" class="psm-primary"></button><p role="status" aria-live="polite" data-psm="feedback"></p></div></div>`;
  host.append(pane);
  const terminal=document.createElement('section');
  terminal.className='psm-terminal psm-terminal-classic';terminal.hidden=true;
@@ -56,6 +56,8 @@ export function mountPowerShellUI({host,button,language,manager=new PowerShellMa
    for(const key of ['check','permissions','revoke']){
      const control=q('[data-psm-action="'+key+'"]');if(control){control.textContent=msg[key];control.setAttribute('aria-label',msg[key]);}
    }
+   q('[data-psm-action="connection-settings"]').textContent=language.value==='en'?'Connection settings':'連線設定';
+   q('.psm-menu [data-psm-action="clear"]').textContent=language.value==='en'?'Clear output':'清除輸出';
    q('[data-psm-action="tool"]').title=msg.tool;
    q('[data-psm-action="tool"]').setAttribute('aria-label',msg.tool);
    q('[data-psm-action="tool"]').textContent=language.value==='en'?'Tools':'工具';
@@ -170,8 +172,9 @@ export function mountPowerShellUI({host,button,language,manager=new PowerShellMa
      finally{pairButton.disabled=false;}
    }
    if(action==='close')closeSession(selected);
-   if(action==='settings'){setConnected(false);closeToolMenu();}
-   if(action==='clear'){terminal.querySelector('.psm-terminal-output').replaceChildren();const session=sessions.find(x=>x.id===selected);if(session)session.output=[];}
+   if(action==='settings'||action==='tool'){const menu=toolMenu();const shouldOpen=menu.hidden;closeToolMenu();if(shouldOpen){menu.hidden=false;toolButton().setAttribute('aria-expanded','true');positionToolMenu();}return;}
+   if(action==='connection-settings'){setConnected(false);closeToolMenu();return;}
+   if(action==='clear'){terminal.querySelector('.psm-terminal-output').replaceChildren();const session=sessions.find(x=>x.id===selected);if(session)session.output=[];closeToolMenu();}
    if((action==='version'||action==='location')&&!terminalBusy){
      terminalBusy=true;
      appendOutput('PS> '+(action==='version'?'$PSVersionTable.PSVersion.ToString()':'(Get-Location).Path'));
@@ -179,7 +182,7 @@ export function mountPowerShellUI({host,button,language,manager=new PowerShellMa
      catch{appendOutput(language.value==='en'?'Connection lost. Return to settings and pair again.':'連線中斷，請返回設定重新配對。');setConnected(false);}
      finally{terminalBusy=false;}
    }
-   if(action==='tool'){const menu=toolMenu();const shouldOpen=menu.hidden;closeToolMenu();if(shouldOpen){menu.hidden=false;toolButton().setAttribute('aria-expanded','true');positionToolMenu();}}
+
    if(action==='permissions'){setFeedback(t().rule+' — '+t().notice);closeToolMenu();}
    if(action==='revoke'){try{const result=await manager.revokeLocalAccess();setConnected(false);setFeedback(result.ok?'Revoked':t().unavailable);}catch{setFeedback(t().unavailable);}closeToolMenu();}
    if(action==='check'){const state=await manager.checkConnection();if(state.configured){setConnected(true);appendOutput(language.value==='en'?'Connected to local agent.':'已連線至本地代理。');}else setFeedback((language.value==='en'?'Connection failed: ':'連線失敗：')+(state.error||'NETWORK_UNAVAILABLE'));}
