@@ -338,6 +338,9 @@ const t=(key,...args)=>LANGUAGE.t(key,...args);
 const docs=new Documents(),files=new FileManager(),GLOBALS=new GlobalPropertyRegistry(),syncStates=new SyncStatus();
 GLOBALS.register('LANGUAGE',LANGUAGE);
 GLOBALS.register('UI_PALETTE', UI_PALETTE);
+// Derived global UI color property: palette is the sole writer.
+GLOBALS.register('EXPLORER_ACTIVE_COLOR', UI_PALETTE.explorerActiveColor);
+UI_PALETTE.subscribe(() => GLOBALS.set('EXPLORER_ACTIVE_COLOR', UI_PALETTE.explorerActiveColor));
 GLOBALS.register('TEXT_HIGHLIGHTER', TEXT_HIGHLIGHTER);
 GLOBALS.register('STORAGE_PRIORITY', readStoragePriority());
 GLOBALS.register('DOCUMENT_STATUS',syncStates);
