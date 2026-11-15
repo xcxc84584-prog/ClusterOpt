@@ -21,7 +21,7 @@ test('49.4: version, redirect and refreshed module are aligned',()=>{
  assert.match(root,/Program\/\?v=0\.0\.51/);
  assert.match(root,/searchParams\.set\("v", "0\.0\.51"\)/);
  assert.match(page,/Cluster Opt 0\.0\.51/);
- assert.match(page,/main\.js\?v=opt051-pr04/);
+ assert.match(page,/main\.js\?v=opt051-pr05/);
  assert.match(main,/document\.title='Cluster Opt v0\.0\.51'/);
 });
 test('49.4: editor cache integration does not mutate VTE',()=>{
