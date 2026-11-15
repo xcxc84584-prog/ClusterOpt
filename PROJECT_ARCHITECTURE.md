@@ -1,4 +1,4 @@
-# ClusterOpt — Repository Architecture (v0.0.49.4)
+# ClusterOpt — Repository Architecture (v0.0.49.5)
 
 The repository root is the project root; no extra `Project/` directory is required.
 
@@ -43,7 +43,7 @@ UI (main.js)
   -> OMU (events, EHU)
 ```
 
-**Boundary:** `EditPath` is a derived cache for resident virtual slices. `VirtualFileSession.edit()` still owns actual full-slice commits. Logical micro-slices do not yet own independent FLAG leases or MVCC transactions; this is planned for 49.5. Do not claim multi-GB editor latency is verified.
+**Boundary:** `EditPath` is a derived cache for resident virtual slices. `VirtualFileSession.edit()` still owns actual full-slice commits. 49.5 adds an opt-in micro-range patch API guarded by the physical parent slice WTF and MVCC base version. Micro-slices still do not own independent leases or versions. The legacy full-slice edit API remains in place. Do not claim multi-GB editor latency is verified.
 
 ## Source-of-truth policy
 
