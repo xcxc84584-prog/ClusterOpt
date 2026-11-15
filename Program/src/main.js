@@ -666,6 +666,11 @@ function scheduleTabGuides(){
 }
 let lineStructureChanged=true;
 editor.addEventListener('beforeinput',event=>{
+  if(active&&virtualSessions.has(active)&&!editor.readOnly&&editor.value.length<=1024*1024){
+    const key=active+':'+virtualSessions.get(active).center;
+    if(!activeEditPath||activeEditPath.key!==key)
+      activeEditPath={key,buffer:new EditPath(key,editor.value)};
+  }
   const from=editor.selectionStart,to=editor.selectionEnd;
   const removed=editor.value.slice(from,to);
   const backward=from>0?editor.value[from-1]:'';
