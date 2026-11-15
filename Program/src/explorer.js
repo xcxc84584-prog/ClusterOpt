@@ -414,26 +414,52 @@ export class Explorer {
     if(closed&&this.#selected===this.#key(node))this.#selected=null;
     this.render();
   }
-  #cancelRename(){this.#rename=null;this.render();}
-  #startRename(node){this.#rename=this.#key(node);this.render();
-    this.#tree.querySelector('.explorer-rename')?.focus();}
+  #cancelRename(){
+    this.#rename=null;
+    this.render();
+  }
+  #startRename(node){
+    if(!node.parent||node.kind!=='file')return;
+    this.#rename=this.#key(node);
+    this.render();
+    this.#tree.querySelector('.explorer-rename')?.focus();
+  }
   async #renameNode(node,newName){
-    const name=newName.trim();if(!name||name===node.name){this.#cancelRename();return;}
-    if(!node.parent){this.#log('Root name cannot be changed from Explorer');this.#cancelRename();return;}
+    const oldKey=this.#key(node);
+    // Enter and blur can fire together. Consume the edit before awaiting I/O.
+    if(this.#rename!==oldKey)return;
+    this.#rename=null;
+    const name=newName.trim();
+    if(!name||name===node.name){this.render();return;}
+    if(!node.parent||node.kind!=='file'){this.render();return;}
+    if(name==='.'||name==='..'||name.includes('/')||name.includes('\\\\')){
+      this.#log('Invalid rename target: '+name);
+      this.render();return;
+    }
+    const parent=node.parent.handle;
+    const oldName=node.name;
     try{
-      const parent=node.parent.handle;
-      if(node.kind==='file'){
-        const file=await node.handle.getFile();
-        const target=await parent.getFileHandle(name,{create:true});
-        const writer=await target.createWritable();await writer.write(file);await writer.close();
-      }else{
-        this.#log('Folder rename is not supported by File System Access API');this.#cancelRename();return;
+      for await(const existing of parent.keys()){
+        if(existing===name)throw new Error('Entry already exists: '+name);
       }
-      await parent.removeEntry(node.name);
-      node.name=name;node.handle=await parent.getFileHandle(name);
-      this.#state.order??={};this.#state.order[this.#key(node.parent)]=(node.parent.children||[]).map(n=>n.name);
-      this.#save();this.render();
-    }catch(error){this.#log('Rename failed: '+error);this.#cancelRename();}
+      const file=await node.handle.getFile();
+      const target=await parent.getFileHandle(name,{create:true});
+      const writer=await target.createWritable();
+      try{await writer.write(file);await writer.close();}
+      catch(error){await writer.abort().catch(()=>{});throw error;}
+      try{await parent.removeEntry(oldName);}
+      catch(error){
+        await parent.removeEntry(name).catch(()=>{});
+        throw error;
+      }
+      node.name=name;
+      node.handle=target;
+      if(this.#selected===oldKey)this.#selected=this.#key(node);
+      this.#state.order??={};
+      this.#state.order[this.#key(node.parent)]=(node.parent.children||[]).map(n=>n.name);
+      this.#save();
+    }catch(error){this.#log('Rename failed: '+error);}
+    finally{this.render();}
   }
   async #delete(node){
     if(!node.parent){this.#roots=this.#roots.filter(n=>n!==node);this.#state.rootOrder=this.#roots.map(n=>n.key);this.#save();try{await handleTransaction('readwrite',store=>store.delete(node.key));}catch(error){this.#log(String(error));}this.render();return;}
