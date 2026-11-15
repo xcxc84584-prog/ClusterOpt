@@ -31,7 +31,7 @@ export function mountPowerShellUI({host,button,language,manager=new PowerShellMa
  const pane=document.createElement('section');
  pane.id='powershellManagerPane';pane.className='psm-pane';pane.hidden=true;
  pane.setAttribute('aria-label','PowerShell');
- pane.innerHTML=`<div class="psm-top"><strong data-psm="title"></strong><div class="psm-actions"><span data-psm="status"></span><button type="button" data-psm-action="tool" aria-expanded="false" aria-label="PowerShell tools">⚙</button><button type="button" data-psm-action="close" aria-label="Close">×</button></div></div><div class="psm-menu" hidden><button type="button" data-psm-action="permissions"></button><button type="button" data-psm-action="revoke"></button></div><div class="psm-body"><div class="psm-intro"><span class="psm-glyph" aria-hidden="true">⌁</span><div><span class="psm-eyebrow">LOCAL CONNECTION · v0.0.60</span><h2 data-psm="setup"></h2><p data-psm="desc"></p></div></div><details class="psm-advanced"><summary data-psm="command"></summary><label for="psmCheckCommand" data-psm="hint"></label><input id="psmCheckCommand" readonly></details><div class="psm-footer"><button type="button" data-psm-action="check" class="psm-primary"></button><p role="status" aria-live="polite" data-psm="feedback"></p></div></div>`;
+ pane.innerHTML=`<div class="psm-top"><strong data-psm="title"></strong><div class="psm-actions"><span data-psm="status"></span><button type="button" data-psm-action="close" aria-label="Close">×</button></div></div><div class="psm-body"><div class="psm-intro"><span class="psm-glyph" aria-hidden="true">⌁</span><div><span class="psm-eyebrow">LOCAL CONNECTION · v0.0.60</span><h2 data-psm="setup"></h2><p data-psm="desc"></p></div></div><details class="psm-advanced"><summary data-psm="command"></summary><label for="psmCheckCommand" data-psm="hint"></label><input id="psmCheckCommand" readonly></details><div class="psm-footer"><button type="button" data-psm-action="check" class="psm-primary"></button><p role="status" aria-live="polite" data-psm="feedback"></p></div></div>`;
  host.append(pane);
  const terminal=document.createElement('section');
  terminal.className='psm-terminal';terminal.hidden=true;
@@ -53,12 +53,12 @@ export function mountPowerShellUI({host,button,language,manager=new PowerShellMa
    for(const key of ['title','status','setup','desc','command','hint','check','permissions','revoke']){
      const node=q('[data-psm="'+key+'"]');if(node)node.textContent=msg[key];
    }
-   for(const key of ['check','permissions','revoke']){
+   for(const key of ['check']){
      const control=q('[data-psm-action="'+key+'"]');if(control){control.textContent=msg[key];control.setAttribute('aria-label',msg[key]);}
    }
-   q('[data-psm-action="tool"]').title=msg.tool;
-   q('[data-psm-action="tool"]').setAttribute('aria-label',msg.tool);
-   q('[data-psm-action="tool"]').textContent=language.value==='en'?'Tools':'工具';
+
+
+
    q('[data-psm-action="close"]').title=msg.close;
    q('[data-psm-action="close"]').setAttribute('aria-label',msg.close);
    q('[data-psm-action="close"]').textContent=msg.close;
@@ -128,12 +128,10 @@ export function mountPowerShellUI({host,button,language,manager=new PowerShellMa
   const command=commandInput.value.trim();if(!command)return;
   if(command.length>2048){appendOutput(language.value==='en'?'Script exceeds 2048 characters.':'腳本超過 2048 字元限制。');return;}
   const session=sessions.find(x=>x.id===selected);if(!session)return;
-  const allowed=window.confirm((language.value==='en'?'Execute this PowerShell script on your computer?':'確定要在本機執行以下 PowerShell 腳本嗎？')+'\\n\\n'+command);
-  if(!allowed)return;
   session.history.push(command);session.historyIndex=session.history.length;
   commandInput.value='';terminalBusy=true;commandInput.disabled=true;
   appendOutput('PS> '+command);
-  try{const result=await manager.executeCommand({action:'interactive',command,confirm:true});
+  try{const result=await manager.executeCommand({action:'interactive',command});
    appendOutput(result.ok?String(result.output||('(exit '+result.exitCode+')')):(result.code||'Command failed'));
   }catch(error){appendOutput((language.value==='en'?'Execution error: ':'執行錯誤：')+(error?.message||'UNKNOWN'));}
   finally{terminalBusy=false;commandInput.disabled=false;commandInput.focus();}
@@ -156,7 +154,7 @@ export function mountPowerShellUI({host,button,language,manager=new PowerShellMa
      if(!ok){pairButton.disabled=false;setFeedback(language.value==='en'?'Token must be exactly 64 hexadecimal characters.':'Token 必須是 64 個十六進位字元。');return;}
      try{
        const state=await manager.checkConnection();
-       if(state.configured){setConnected(true);appendOutput(language.value==='en'?'Local Agent authenticated. Confirm each command before execution.':'本地代理驗證成功，命令執行前需逐條確認。');setFeedback('');}
+       if(state.configured){setConnected(true);appendOutput(language.value==='en'?'Local Agent authenticated. Commands execute directly.':'本地代理驗證成功，命令可直接執行。');setFeedback('');}
        else setFeedback((language.value==='en'?'Pairing failed: ':'配對失敗：')+(state.error||'NETWORK_UNAVAILABLE')+(language.value==='en'?'. Check agent, token and browser local-network access.':'。請確認代理視窗、Token 與瀏覽器本地網路權限。'));
      }catch{setFeedback(language.value==='en'?'Cannot reach local agent on 127.0.0.1:43881.':'無法連線至 127.0.0.1:43881。');}
      finally{pairButton.disabled=false;}
@@ -164,9 +162,9 @@ export function mountPowerShellUI({host,button,language,manager=new PowerShellMa
    if(action==='close')closeSession(selected);
    
 
-   if(action==='tool'){const menu=toolMenu();const shouldOpen=menu.hidden;closeToolMenu();if(shouldOpen){menu.hidden=false;toolButton().setAttribute('aria-expanded','true');positionToolMenu();}}
-   if(action==='permissions'){setFeedback(t().rule+' — '+t().notice);closeToolMenu();}
-   if(action==='revoke'){try{const result=await manager.revokeLocalAccess();setConnected(false);setFeedback(result.ok?'Revoked':t().unavailable);}catch{setFeedback(t().unavailable);}closeToolMenu();}
+
+
+
    if(action==='check'){const state=await manager.checkConnection();if(state.configured){setConnected(true);appendOutput(language.value==='en'?'Connected to local agent.':'已連線至本地代理。');}else setFeedback((language.value==='en'?'Connection failed: ':'連線失敗：')+(state.error||'NETWORK_UNAVAILABLE'));}
  });
  function setFeedback(value){q('[data-psm="feedback"]').textContent=value;const session=sessions.find(x=>x.id===selected);if(session)session.feedback=value;}
