@@ -4,9 +4,9 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>
-      Cluster Opt 0.0.56
+      Cluster Opt 0.0.57
     </title>
-    <link rel="stylesheet" href="./src/style.css?v=opt056-inline-explorer">
+    <link rel="stylesheet" href="./src/style.css?v=opt057-file-tool">
   </head>
   <body>
     <div id="app">
@@ -19,7 +19,7 @@
             Cluster
           </strong>
           <small>
-            v0.0.56
+            v0.0.57
           </small>
         </div>
         <div class="header-utility"><button id="explorerToggle" type="button" aria-controls="explorerPanel" aria-expanded="false" title="檔案總管">☰ Explorer</button></div><div class="menu-wrap">
@@ -53,6 +53,7 @@
               工具 ›
             </button>
             <div id="toolOptions" hidden role="group" aria-label="工具">
+                <div class="file-tool-heading">FILE TOOL <span>WORKSPACE</span></div>
               <button id="languageBtn" type="button" aria-expanded="false">
                 語言 ›
               </button>
@@ -68,6 +69,7 @@
               <button id="paletteBtn" type="button" aria-expanded="false">
                 介面調色盤 ›
               </button>
+              <button id="blockedTypesBtn" type="button" aria-haspopup="dialog">▧ 屏蔽檔案類型 <span class="file-tool-chevron">›</span></button>
               <div class="menu-divider"></div>
               <label class="priority-heading" for="priority">儲存優先級</label>
               <select id="priority" title="存儲優先級" aria-label="儲存優先級">
@@ -218,8 +220,18 @@
       <div class="palette-modal-footer"><span>CLUSTER / TEXT</span><button id="highlighterDone" type="button">完成</button></div>
     </dialog>
     <input type="file" id="fileInput" multiple hidden>
-    <script type="module" src="./src/main.js?v=opt056-inline-explorer">
+    <script type="module" src="./src/main.js?v=opt057-file-tool">
     </script>
+  <dialog id="blockedTypesDialog" class="file-tool-dialog" aria-labelledby="blockedTypesTitle">
+    <div class="file-tool-dialog-head"><div><span class="file-tool-eyebrow">CLUSTER / FILE TOOL</span><h2 id="blockedTypesTitle">屏蔽檔案類型</h2><p id="blockedTypesDescription">隱藏 Explorer 中的指定副檔名，不會刪除原始檔案。</p></div><button type="button" id="blockedTypesClose" aria-label="關閉">×</button></div>
+    <div class="file-tool-dialog-body">
+      <form id="blockedTypesForm" class="file-tool-add-form"><label for="blockedTypesInput">新增副檔名</label><div class="file-tool-input-row"><input id="blockedTypesInput" placeholder=".mp4" maxlength="21" autocomplete="off" required><button type="submit">＋ 新增</button></div></form>
+      <div class="file-tool-list-head"><span>已屏蔽類型 <strong id="blockedTypesCount">0</strong></span><button type="button" id="blockedTypesReset">還原預設</button></div>
+      <div id="blockedTypesList" class="file-tool-list" role="list"></div>
+      <p id="blockedTypesError" class="file-tool-error" role="status" aria-live="polite"></p>
+    </div>
+    <div class="file-tool-dialog-footer"><span>變更自動儲存並立即套用 Explorer</span><button type="button" id="blockedTypesDone">完成</button></div>
+  </dialog>
   <dialog id="ftiDialog" aria-labelledby="ftiDialogTitle" aria-describedby="ftiReason">
   <div class="fti-dialog-head"><span class="fti-symbol">◇</span><strong id="ftiDialogTitle">文件解析失敗</strong></div>
   <p id="ftiFileName"></p>
