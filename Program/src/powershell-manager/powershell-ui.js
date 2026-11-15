@@ -1,4 +1,4 @@
-// v0.0.62 PR-02 — Browser UI only. Never runs OS commands.
+// v0.0.64 PR-02 — Browser UI only. Never runs OS commands.
 import {PowerShellManager} from './powershell-manager.js';
 import {PowerShellClient} from './powershell-client.js?v=opt064-port-r2';
 import {createSetupCmd,SETUP_FILENAME} from './cmd-setup.js?v=opt064-port-r2';
@@ -33,7 +33,7 @@ export function mountPowerShellUI({host,button,language,manager=new PowerShellMa
  const pane=document.createElement('section');
  pane.id='powershellManagerPane';pane.className='psm-pane';pane.hidden=true;
  pane.setAttribute('aria-label','PowerShell');
- pane.innerHTML=`<div class="psm-top"><strong data-psm="title"></strong><div class="psm-actions"><span data-psm="status"></span><button type="button" data-psm-action="tool" aria-expanded="false" aria-label="PowerShell tools">⚙</button><button type="button" data-psm-action="close" aria-label="Close">×</button></div></div><div class="psm-menu" hidden><button type="button" data-psm-action="connection-settings"></button><button type="button" data-psm-action="clear"></button></div><div class="psm-body"><div class="psm-intro"><span class="psm-glyph" aria-hidden="true">⌁</span><div><span class="psm-eyebrow">LOCAL CONNECTION · v0.0.62</span><h2 data-psm="setup"></h2><p data-psm="desc"></p></div></div><details class="psm-advanced"><summary data-psm="command"></summary><label for="psmCheckCommand" data-psm="hint"></label><input id="psmCheckCommand" readonly></details><div class="psm-footer"><button type="button" data-psm-action="check" class="psm-primary"></button><p role="status" aria-live="polite" data-psm="feedback"></p></div></div>`;
+ pane.innerHTML=`<div class="psm-top"><strong data-psm="title"></strong><div class="psm-actions"><span data-psm="status"></span><button type="button" data-psm-action="tool" aria-expanded="false" aria-label="PowerShell tools">⚙</button><button type="button" data-psm-action="close" aria-label="Close">×</button></div></div><div class="psm-menu" hidden><button type="button" data-psm-action="connection-settings"></button><button type="button" data-psm-action="clear"></button></div><div class="psm-body"><div class="psm-intro"><span class="psm-glyph" aria-hidden="true">⌁</span><div><span class="psm-eyebrow">LOCAL CONNECTION · v0.0.64</span><h2 data-psm="setup"></h2><p data-psm="desc"></p></div></div><details class="psm-advanced"><summary data-psm="command"></summary><label for="psmCheckCommand" data-psm="hint"></label><input id="psmCheckCommand" readonly></details><div class="psm-footer"><button type="button" data-psm-action="check" class="psm-primary"></button><p role="status" aria-live="polite" data-psm="feedback"></p></div></div>`;
  host.append(pane);
  const terminal=document.createElement('section');
  terminal.className='psm-terminal psm-terminal-classic';terminal.hidden=true;
