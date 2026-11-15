@@ -1213,3 +1213,14 @@ body > .explorer-context .explorer-context-label { overflow-wrap:anywhere; }
 #explorerTree .explorer-entry.active:hover {
   background:var(--explorer-active-hover, #32628d);
 }
+
+/* v0.0.55 — enforce one action per row at every Explorer width. */
+#explorerTree .explorer-inline-actions {
+  display:flex; flex-direction:column; flex-wrap:nowrap;
+  align-items:stretch; gap:3px; min-width:0;
+}
+#explorerTree .explorer-inline-actions > .explorer-inline-action {
+  display:flex; flex:0 0 27px; width:100%; min-width:0;
+  height:27px; max-height:27px; justify-content:center;
+}
+#explorerTree .explorer-inline-action .explorer-action-label { display:none !important; }
