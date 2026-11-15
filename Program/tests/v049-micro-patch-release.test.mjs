@@ -7,7 +7,7 @@ const read = path => readFileSync(new URL(path, import.meta.url), 'utf8');
 
 test('49.5: OCDA patch contract, GitHub inventories and release are aligned', () => {
   const registry = createClusterDependencies();
-  assert.equal(registry.list().length, 38);
+  assert.ok(registry.list().length >= 38);
   const session = registry.list().find(x => x.name === 'VirtualFileSession');
   for (const name of ['MICRO_PATCH_BASE_VERSION','MICRO_PATCH_RANGE','PARENT_SLICE_ID'])
     assert.ok(session.properties.includes(name), name);
@@ -17,8 +17,8 @@ test('49.5: OCDA patch contract, GitHub inventories and release are aligned', ()
     assert.ok(read('../../PROPERTY_LIST.md').includes(name));
   assert.match(read('../../物件清單.md'), /49\.5/);
   assert.match(read('../../屬性清單.md'), /49\.5/);
-  assert.match(read('../../index.html'), /Program\/\?v=0\.0\.49/);
-  assert.match(read('../index.html'), /Cluster Opt 0\.0\.49/);
+  assert.match(read('../../index.html'), /Program\/\?v=0\.0\.50/);
+  assert.match(read('../index.html'), /Cluster Opt 0\.0\.50/);
   const vte = createVTE();
   registry.list();
   assert.equal(vte.Status().data.files.length, 0);

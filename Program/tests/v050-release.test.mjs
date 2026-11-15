@@ -1,0 +1,22 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {createClusterDependencies} from '../src/dependency-registry.js';
+import {createVTE} from '../src/vte/vte.js';
+const read=p=>readFileSync(new URL(p,import.meta.url),'utf8');
+test('50.1: release redirect, module cache, inventories and VTE',()=>{
+  const root=read('../../index.html'),page=read('../index.html'),main=read('../src/main.js');
+  assert.match(root,/Program\/\?v=0\.0\.50/);
+  assert.match(root,/searchParams\.set\("v", "0\.0\.50"\)/);
+  assert.match(page,/Cluster Opt 0\.0\.50/);
+  assert.match(page,/main\.js\?v=opt050-pr01/);
+  assert.match(main,/document\.title='Cluster Opt v0\.0\.50'/);
+  const registry=createClusterDependencies();
+  assert.equal(registry.list().length,39);
+  assert.ok(registry.list().some(x=>x.name==='LineBenchmark'));
+  assert.match(read('../../OBJECT_LIST.md'),/\| LineBenchmark \|/);
+  assert.match(read('../../PROPERTY_LIST.md'),/LINE_BENCHMARK_P95/);
+  const vte=createVTE();
+  registry.list();
+  assert.equal(vte.Status().data.files.length,0);
+});
