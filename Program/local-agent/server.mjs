@@ -34,7 +34,7 @@ export function createLocalAgent({token=randomBytes(32).toString('hex'),origins=
    try{for await(const chunk of req){raw+=chunk;if(raw.length>4096)throw new Error('PAYLOAD_TOO_LARGE');}}
    catch{return json(res,413,{ok:false,code:'PAYLOAD_TOO_LARGE'},origin);}
    let body;try{body=JSON.parse(raw||'{}');}catch{return json(res,400,{ok:false,code:'INVALID_JSON'},origin);}
-   if(req.url==='/status')return json(res,200,{ok:true,connected:true,mode:'READ_ONLY'},origin);
+   if(req.url==='/status')return json(res,200,{ok:true,connected:true,mode:'INTERACTIVE_CONFIRM'},origin);
    if(req.url==='/revoke'){revoked=true;return json(res,200,{ok:true,revoked:true},origin);}
    if(body.action==='interactive'){
     if(body.confirm!==true||typeof body.command!=='string'||!body.command.trim()||body.command.length>2048)return json(res,403,{ok:false,code:'COMMAND_APPROVAL_REQUIRED'},origin);
@@ -72,7 +72,7 @@ export function runInteractive(command){
   child.on('error',e=>{if(!finished){finished=true;clearTimeout(timer);reject(e);}});
   child.on('close',code=>{clearTimeout(timer);if(finished)return;finished=true;
    if(output.length+error.length>65536)return reject(new Error('OUTPUT_LIMIT'));
-   resolve({output:[output.trim(),error.trim()].filter(Boolean).join('\\n'),exitCode:code});
+   resolve({output:[output.trim(),error.trim()].filter(Boolean).join('\n'),exitCode:code});
   });
  });
 }
