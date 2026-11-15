@@ -36,6 +36,12 @@ export class Explorer {
   constructor({panel,openFile,openDocument,closeFile=async()=>false,closeRoot=async()=>true,newFile=()=>{},log=()=>{}}){
     this.#panel=panel;this.#tree=panel.querySelector('#explorerTree');
     this.#search=panel.querySelector('#explorerSearch');
+    this.#search.value='';
+    this.#search.setAttribute('autocomplete','off');
+    this.#search.setAttribute('autocorrect','off');
+    this.#search.setAttribute('autocapitalize','off');
+    this.#search.setAttribute('spellcheck','false');
+    this.#search.setAttribute('name','cluster-explorer-filter');
     this.#openFile=openFile;this.#openDocument=openDocument;this.#closeFile=closeFile;this.#closeRoot=closeRoot;this.#newFile=newFile;this.#log=log;
     this.#search.addEventListener('input',()=>this.render());
     this.#hint=typeof document.createElement==='function'?
