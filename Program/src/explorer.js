@@ -30,13 +30,19 @@ export class Explorer {
   #roots=[];#documents=[];#active=null;#locale='zh-Hant';
   #translate=(key)=>key;
   #panel;#tree;#search;#openFile;#openDocument;#closeFile;#closeRoot;#newFile;#log;
-  #state=readState();#clipboard=null;#menu=null;#rename=null;
+  #state=readState();#clipboard=null;#actionBar=null;#hint=null;#rename=null;
   #hold=null;#drag=null;#selected=null;#revealGeneration=0;#suppressClick=false;#draft=null;
   constructor({panel,openFile,openDocument,closeFile=async()=>false,closeRoot=async()=>true,newFile=()=>{},log=()=>{}}){
     this.#panel=panel;this.#tree=panel.querySelector('#explorerTree');
     this.#search=panel.querySelector('#explorerSearch');
     this.#openFile=openFile;this.#openDocument=openDocument;this.#closeFile=closeFile;this.#closeRoot=closeRoot;this.#newFile=newFile;this.#log=log;
     this.#search.addEventListener('input',()=>this.render());
+    this.#hint=document.createElement('div');
+    this.#hint.className='explorer-action-hint';
+    this.#hint.setAttribute('role','status');
+    this.#hint.setAttribute('aria-live','polite');
+    this.#hint.hidden=true;
+    this.#search.insertAdjacentElement('afterend',this.#hint);
     panel.querySelector('#explorerAddFolder').addEventListener('click',()=>this.addDirectory());
     panel.querySelector('#explorerAddFile').addEventListener('click',()=>this.addFile());
     panel.querySelector('#explorerRefresh').addEventListener('click',()=>this.refresh());
@@ -61,7 +67,9 @@ export class Explorer {
     document.addEventListener('pointermove',e=>this.#pointerMove(e));
     document.addEventListener('pointerup',e=>this.#pointerUp(e));
     document.addEventListener('pointercancel',()=>{this.#clearHold();this.#drag=null;this.#tree.querySelectorAll('.drag-ready,.drag-target').forEach(el=>el.classList.remove('drag-ready','drag-target'));});
-    document.addEventListener('click',e=>{if(this.#menu&&!this.#menu.contains(e.target))this.#closeMenu();});
+    document.addEventListener('click',e=>{
+      if(this.#actionBar&&!e.target.closest('.explorer-inline-actions'))this.#closeMenu();
+    });
     document.addEventListener('keydown',e=>{if(e.key==='Escape'){this.#closeMenu();this.#cancelRename();}});
     this.#restoreRoots();
   }
@@ -246,114 +254,99 @@ export class Explorer {
   }
   #allNodes(){const out=[];const visit=nodes=>{for(const n of nodes){out.push(n);if(n.children)visit(n.children);}};visit(this.#roots);return out;}
   #nodeAt(row){return this.#allNodes().find(n=>this.#key(n)===row?.dataset.path);}
-  #closeMenu(){this.#menu?.remove();this.#menu=null;}
+  #closeMenu(){
+    if(!this.#actionBar)return;
+    this.#actionBar=null;
+    this.#updateHint();
+    this.render();
+  }
+  #updateHint(action=''){
+    const state=this.#actionBar;
+    this.#search.hidden=!!state;
+    this.#search.disabled=!!state;
+    this.#hint.hidden=!state;
+    if(!state)return;
+    const node=this.#allNodes().find(item=>this.#key(item)===state.nodeKey);
+    const target=node?.name||state.name;
+    const fallback=this.#say('請選擇功能','Choose an action');
+    this.#hint.textContent=this.#say('操作 ','Actions for ')+target+
+      '（'+(action||fallback)+'）';
+    this.#hint.title=this.#hint.textContent;
+  }
   #context(event){
     const row=event.target.closest('.explorer-entry[data-path]');
-    if(!row)return;event.preventDefault();
-    const node=this.#nodeAt(row);if(!node)return;
-    this.#selected=this.#key(node);this.render();
-    this.#openMenu(node,event.clientX,event.clientY);
+    if(!row)return;
+    event.preventDefault();
+    const node=this.#nodeAt(row);
+    if(!node)return;
+    this.#selected=this.#key(node);
+    this.#actionBar={nodeKey:this.#key(node),name:node.name,level:'primary'};
+    this.#updateHint();
+    this.render();
   }
-  #openMenu(node,clientX,clientY){
-    this.#closeMenu();
-    const menu=document.createElement('div');
-    menu.className='explorer-context';
-    menu.setAttribute('role','menu');
-    menu.setAttribute('aria-label',this.#say('檔案操作','File actions'));
-    menu.tabIndex=-1;
-    menu.addEventListener('click',event=>event.stopPropagation());
-    const header=document.createElement('div');
-    header.className='explorer-context-header';
-    const icon=document.createElement('span');
-    icon.className='explorer-context-header-icon';
-    icon.textContent=node.kind==='directory'?'▣':'◇';
-    icon.setAttribute('aria-hidden','true');
-    const details=document.createElement('div');
-    details.className='explorer-context-details';
-    const title=document.createElement('div');
-    title.className='explorer-context-title';
-    title.textContent=node.name;
-    title.title=node.name;
-    const subtitle=document.createElement('div');
-    subtitle.className='explorer-context-subtitle';
-    subtitle.textContent=node.kind==='directory'?
-      this.#say('資料夾','Folder'):this.#say('文件','File');
-    details.append(title,subtitle);
-    header.append(icon,details);
-    menu.append(header);
-    const groups=[
-      [
-        ['file','＋',this.#say('建立新文件','New File'),()=>this.#createIn(node,'file')],
-        ['folder','▣',this.#say('建立新資料夾','New Folder'),()=>this.#createIn(node,'directory')]
-      ],
-      [
-        ['rename','✎',this.#say('重新命名','Rename'),()=>this.#startRename(node)],
-        ['cut','✂',this.#say('剪下','Cut'),()=>this.#clipboard={node,cut:true}],
-        ['copy','▤',this.#say('複製','Copy'),()=>this.#clipboard={node,cut:false}],
-        ['paste','▧',this.#say('貼上','Paste'),()=>this.#paste(node)]
-      ],
-      [
-        ['close','×',this.#say('關閉','Close'),()=>this.#closeEntry(node)],
-        ['delete','⌫',this.#say('刪除','Delete'),()=>this.#delete(node)]
-      ]
+  #inlineActions(node){
+    const toolbar=document.createElement('span');
+    toolbar.className='explorer-inline-actions';
+    toolbar.setAttribute('role','toolbar');
+    toolbar.setAttribute('aria-label',this.#say('檔案操作','File actions'));
+    const primary=[
+      ['folder','▣+',this.#say('建立新資料夾','New folder'),()=>this.#createIn(node,'directory')],
+      ['file','◇+',this.#say('建立新文件','New file'),()=>this.#createIn(node,'file')],
+      ['close','×',this.#say('關閉','Close'),()=>this.#closeEntry(node)],
+      ['more','⋯',this.#say('操作','More actions'),null]
     ];
+    const secondary=[
+      ['rename','✎',this.#say('重新命名','Rename'),()=>this.#startRename(node)],
+      ['cut','✂',this.#say('剪下','Cut'),()=>{this.#clipboard={node,cut:true};}],
+      ['copy','▤',this.#say('複製','Copy'),()=>{this.#clipboard={node,cut:false};}],
+      ['paste','▧',this.#say('貼上','Paste'),()=>this.#paste(node)],
+      ['delete','⌫',this.#say('刪除','Delete'),()=>this.#delete(node)]
+    ];
+    const items=this.#actionBar.level==='primary'?primary:secondary;
     const buttons=[];
-    for(const [groupIndex,items] of groups.entries()){
-      if(groupIndex){
-        const separator=document.createElement('div');
-        separator.className='explorer-context-separator';
-        separator.setAttribute('role','separator');
-        menu.append(separator);
-      }
-      for(const [key,symbol,label,action] of items){
-        const button=document.createElement('button');
-        button.type='button';
-        button.className='explorer-context-item'+(key==='delete'?' is-danger':'');
-        button.dataset.action=key;
-        button.setAttribute('role','menuitem');
-        button.tabIndex=-1;
-        const glyph=document.createElement('span');
-        glyph.className='explorer-context-icon';
-        glyph.textContent=symbol;
-        glyph.setAttribute('aria-hidden','true');
-        const caption=document.createElement('span');
-        caption.className='explorer-context-label';
-        caption.textContent=label;
-        button.append(glyph,caption);
-        button.addEventListener('click',()=>{
-          this.#closeMenu();
-          Promise.resolve().then(action).catch(error=>this.#log(String(error)));
-        });
-        buttons.push(button);
-        menu.append(button);
-      }
+    for(const [key,glyph,label,action] of items){
+      const button=document.createElement('button');
+      button.type='button';
+      button.className='explorer-inline-action'+(key==='delete'?' is-danger':'');
+      button.textContent=glyph;
+      button.dataset.action=key;
+      button.title=label;
+      button.setAttribute('aria-label',label);
+      button.disabled=(key==='rename'&&!node.parent)||
+        (key==='paste'&&!this.#clipboard)||
+        (key==='folder'&&!node.parent&&node.kind!=='directory')||
+        (key==='file'&&!node.parent&&node.kind!=='directory');
+      button.addEventListener('pointerenter',()=>this.#updateHint(label));
+      button.addEventListener('pointerleave',()=>this.#updateHint());
+      button.addEventListener('focus',()=>this.#updateHint(label));
+      button.addEventListener('blur',()=>this.#updateHint());
+      button.addEventListener('click',event=>{
+        event.stopPropagation();
+        if(key==='more'){
+          this.#actionBar.level='secondary';
+          this.#updateHint();
+          this.render();
+          this.#tree.querySelector('.explorer-inline-action')?.focus({preventScroll:true});
+          return;
+        }
+        this.#closeMenu();
+        Promise.resolve().then(action).catch(error=>this.#log(String(error)));
+      });
+      toolbar.append(button);
+      buttons.push(button);
     }
-    menu.addEventListener('keydown',event=>{
-      const index=buttons.indexOf(document.activeElement);
-      if(event.key==='Escape'){event.preventDefault();this.#closeMenu();return;}
-      if(event.key==='ArrowDown'||event.key==='ArrowUp'){
+    toolbar.addEventListener('click',event=>event.stopPropagation());
+    toolbar.addEventListener('keydown',event=>{
+      const current=buttons.indexOf(document.activeElement);
+      if(event.key==='ArrowRight'||event.key==='ArrowLeft'){
         event.preventDefault();
-        const direction=event.key==='ArrowDown'?1:-1;
-        buttons[(index+direction+buttons.length)%buttons.length].focus();
+        const step=event.key==='ArrowRight'?1:-1;
+        buttons[(current+step+buttons.length)%buttons.length].focus();
       }
       if(event.key==='Home'){event.preventDefault();buttons[0].focus();}
       if(event.key==='End'){event.preventDefault();buttons.at(-1).focus();}
     });
-    // Portal outside the clipped workspace; never cover the Explorer itself.
-    document.body.append(menu);
-    this.#menu=menu;
-    const rect=this.#panel.getBoundingClientRect();
-    const left=Math.ceil(rect.right);
-    const available=Math.max(0,window.innerWidth-left-8);
-    menu.style.position='fixed';
-    menu.style.left=left+'px';
-    menu.style.width=Math.min(224,available)+'px';
-    menu.style.maxWidth=available+'px';
-    menu.style.maxHeight=Math.max(0,window.innerHeight-16)+'px';
-    // Fixed horizontal anchor; vertical position stays within the viewport.
-    const height=menu.offsetHeight;
-    menu.style.top=Math.max(8,Math.min(clientY,window.innerHeight-height-8))+'px';
-    buttons[0]?.focus({preventScroll:true});
+    return toolbar;
   }
   async #createIn(node,kind){
     const directory=node.kind==='directory'?node:node.parent;
@@ -547,6 +540,14 @@ export class Explorer {
           this.#closeMenu();
           void this.#expand(node);
         };
+      }
+      if(this.#actionBar?.nodeKey===this.#key(node)){
+        // A toolbar must not be nested inside the ordinary row button.
+        const toolbar=this.#inlineActions(node);
+        const label=row.querySelector('.explorer-name');
+        label.replaceWith(toolbar);
+        row.title='';
+        row.onclick=null;
       }
       if(this.#rename===this.#key(node)){
         const input=document.createElement('input');input.className='explorer-rename';
