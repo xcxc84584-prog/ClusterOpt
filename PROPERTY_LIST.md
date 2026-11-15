@@ -1,4 +1,4 @@
-# ClusterOpt Property List — v0.0.51.3
+# ClusterOpt Property List — v0.0.51.4
 
 Source of truth: `Program/src/dependency-registry.js`. Properties are shared names; the table lists objects declaring each property, not a persisted value store.
 
@@ -55,3 +55,6 @@ Source of truth: `Program/src/dependency-registry.js`. Properties are shared nam
 
 | `LEXICAL_RESTART_LINE` | LexicalCheckpoints |
 | `LEXICAL_CONTEXT_LIMIT` | LexicalCheckpoints |
+
+| `TOKEN_CACHE_REVISION` | RevisionTokenCache |
+| `TOKEN_CACHE_BUDGET` | RevisionTokenCache |
