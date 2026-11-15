@@ -75,10 +75,10 @@ export class DependencyRegistry {
 export function createClusterDependencies() {
   const registry = new DependencyRegistry();
   const objects = [
-    ['UI', 'main.js', 'Browser interaction and coordination', ['EXPLORER_ACTIVE_COLOR', 'LANGUAGE', 'UI_PALETTE', 'TEXT_HIGHLIGHTER', 'STORAGE_PRIORITY', 'DOCUMENT_STATUS', 'FILE_TYPE_IDENTIFIER']],
+    ['UI', 'main.js', 'Browser interaction and coordination', ['EXPLORER_ACTIVE_COLOR', 'FILE_TOOL_BLOCKED_TYPES', 'FILE_TOOL_THEME', 'LANGUAGE', 'UI_PALETTE', 'TEXT_HIGHLIGHTER', 'STORAGE_PRIORITY', 'DOCUMENT_STATUS', 'FILE_TYPE_IDENTIFIER']],
     ['Documents', 'documents.js', 'Document metadata and tabs', ['DOCUMENT_STATUS']],
     ['FileManager', 'file-manager.js', 'File operations', []],
-    ['GlobalPropertyRegistry', 'global-properties.js', 'Global property values', ['EXPLORER_ACTIVE_COLOR', 'LANGUAGE', 'UI_PALETTE', 'TEXT_HIGHLIGHTER', 'STORAGE_PRIORITY', 'DOCUMENT_STATUS', 'STORAGE_PROGRESS', 'FILE_TYPE_IDENTIFIER']],
+    ['GlobalPropertyRegistry', 'global-properties.js', 'Global property values', ['EXPLORER_ACTIVE_COLOR', 'FILE_TOOL_BLOCKED_TYPES', 'FILE_TOOL_THEME', 'LANGUAGE', 'UI_PALETTE', 'TEXT_HIGHLIGHTER', 'STORAGE_PRIORITY', 'DOCUMENT_STATUS', 'STORAGE_PROGRESS', 'FILE_TYPE_IDENTIFIER']],
     ['InterfacePalette', 'interface-palette.js', 'Theme color calculation', ['UI_PALETTE','EXPLORER_ACTIVE_COLOR']],
     ['LanguageProperty', 'language.js', 'Localized strings', ['LANGUAGE']],
     ['OMU', 'omu.js', 'Event and EHU log collector', []],
