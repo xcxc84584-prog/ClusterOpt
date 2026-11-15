@@ -101,10 +101,18 @@ export class InterfacePalette {
   }
 
   get explorerActiveColor() {
+    // Derived from the current RGB palette, not merely a light/dark switch.
+    // Keep a saturated accent even when the chosen palette is near grayscale.
     const light = this.mode === 'light';
-    return Object.freeze(light
-      ? {background:'#b8d7ff',hover:'#9cc6ff',text:'#102c4b',edge:'#145da0'}
-      : {background:'#274c70',hover:'#32628d',text:'#ffffff',edge:'#80c8ff'});
+    const accent = blend(this.#rgb, light ? [24, 94, 173] : [105, 181, 255], 0.55);
+    const background = blend(light ? [235, 243, 255] : [20, 35, 55], accent, light ? 0.30 : 0.38);
+    const hover = blend(background, accent, light ? 0.22 : 0.20);
+    const text = readableText(background);
+    const edge = light ? blend(accent, [0, 0, 0], 0.30) : blend(accent, [255, 255, 255], 0.25);
+    return Object.freeze({
+      background:rgbText(background), hover:rgbText(hover),
+      text:rgbText(text), edge:rgbText(edge)
+    });
   }
 
   set(rgb) {
