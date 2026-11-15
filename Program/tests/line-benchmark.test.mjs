@@ -8,7 +8,7 @@ test('50.1: newline benchmark is deterministic in content and isolated from VTE'
   const result=runLineBenchmark({lineCount:60,operations:12,lineWidth:16});
   assert.equal(result.finalLines,72);
   assert.equal(result.operations,12);
-  for(const name of ['pieceTreeInsert','editPathReconcile','fullNewlineScan']){
+  for(const name of ['pieceTreeInsert','editPathReconcile','editPathKnownPatch','fullNewlineScan']){
     assert.ok(Number.isFinite(result[name].p95Ms));
     assert.ok(result[name].p95Ms>=0);
   }

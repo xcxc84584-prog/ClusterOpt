@@ -9,4 +9,4 @@ Local-first browser IDE (GitHub Pages). Current release: **v0.0.50** (through st
 - [OCDA object index](OBJECT_LIST.md) · [OCDA property index](PROPERTY_LIST.md)
 - [QuestionList1](QuestionList1/) · [QuestionList2](QuestionList2/) · [PR history](PR/)
 
-**Implementation status:** 49.1 Piece Tree, 49.2 micro-slices, 49.3 micro-slice index and 49.4 resident edit reconciliation are merged. 50.1 benchmark infrastructure; 49.5 parent-slice FLAG/MVCC-guarded micro-patch API is implemented; independent micro-slice leases are not. CI PASS does not imply browser or GB-file benchmarks.
+**Implementation status:** 49.1 Piece Tree, 49.2 micro-slices, 49.3 micro-slice index and 49.4 resident edit reconciliation are merged. 50.1 benchmarks and 50.2 incremental newline intent path; 49.5 parent-slice FLAG/MVCC-guarded micro-patch API is implemented; independent micro-slice leases are not. CI PASS does not imply browser or GB-file benchmarks.

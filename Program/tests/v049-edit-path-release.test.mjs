@@ -21,13 +21,13 @@ test('49.4: version, redirect and refreshed module are aligned',()=>{
  assert.match(root,/Program\/\?v=0\.0\.50/);
  assert.match(root,/searchParams\.set\("v", "0\.0\.50"\)/);
  assert.match(page,/Cluster Opt 0\.0\.50/);
- assert.match(page,/main\.js\?v=opt050-pr01/);
+ assert.match(page,/main\.js\?v=opt050-pr02/);
  assert.match(main,/document\.title='Cluster Opt v0\.0\.50'/);
 });
 test('49.4: editor cache integration does not mutate VTE',()=>{
  const vte=createVTE();
  const main=read('../src/main.js');
- assert.match(main,/reconcileResidentEdit\(id,index,content\)/);
+ assert.match(main,/reconcileResidentEdit\(id,index,content,inputIntent\)/);
  assert.match(main,/session\.edit\(index, content\)/);
  assert.equal(vte.Status().data.files.length,0);
 });

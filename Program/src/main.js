@@ -15,7 +15,8 @@ import {VirtualFileSession} from './fmc/virtual-file-session.js';
 import {FileTypeIdentifier} from './fmc/file-type-identifier.js';
 import {OverloadRestorer} from './fmc/overload-restorer.js';
 import {LineTree} from './fmc/line-tree.js';
-import {EditPath} from './fmc/edit-path.js?v=opt049-pr04';
+import {EditPath} from './fmc/edit-path.js?v=opt050-pr02';
+import {deriveEditIntent} from './fmc/newline-edit-intent.js?v=opt050-pr02';
 import {WindowLoader} from './fmc/window-loader.js';
 import {FileManagementCore} from './fmc/file-management-core.js';
 import {SliceLoader} from './fmc/slice-loader.js';
@@ -50,14 +51,16 @@ const rebuildingDocuments = new Set();
 let virtualEditQueue = Promise.resolve();
 // At most one resident logical edit buffer; large slices use the existing safe path.
 let activeEditPath = null;
-function reconcileResidentEdit(id,index,text){
+let pendingEditIntent = null;
+function reconcileResidentEdit(id,index,text,intent=null){
   if(text.length>1024*1024){activeEditPath=null;return;}
   const key=id+':'+index;
   if(!activeEditPath||activeEditPath.key!==key){
     activeEditPath={key,buffer:new EditPath(key,text)};
     return;
   }
-  activeEditPath.buffer.reconcile(text);
+  if(!intent || !activeEditPath.buffer.applyKnownPatch(intent,text))
+    activeEditPath.buffer.reconcile(text);
 }
 let recoveryTimer = null;
 let restoring = false;
@@ -671,27 +674,26 @@ editor.addEventListener('beforeinput',event=>{
     if(!activeEditPath||activeEditPath.key!==key)
       activeEditPath={key,buffer:new EditPath(key,editor.value)};
   }
+  pendingEditIntent=deriveEditIntent({
+    inputType:event.inputType,data:event.data,isComposing:event.isComposing,
+    start:editor.selectionStart,end:editor.selectionEnd,value:editor.value
+  });
+  pendingLineDelta=pendingEditIntent?.deltaLines??null;
   const from=editor.selectionStart,to=editor.selectionEnd;
   const removed=editor.value.slice(from,to);
   const backward=from>0?editor.value[from-1]:'';
   const forward=editor.value[to]||'';
-  const inserted=event.data;
-  // For ordinary typing/paste, derive line count from the exact replacement.
-  // History, composition and unknown input operations use the full-count fallback.
-  pendingLineDelta=(typeof inserted==='string'&&
-    (event.inputType==='insertText'||event.inputType==='insertFromPaste'||
-     event.inputType==='insertLineBreak'||event.inputType==='insertParagraph'))?
-    (inserted.match(/\n/g)?.length||0)-(removed.match(/\n/g)?.length||0):null;
-  if(event.inputType==='insertLineBreak'||event.inputType==='insertParagraph')
-    pendingLineDelta=1-(removed.match(/\n/g)?.length||0);
   lineStructureChanged=event.inputType==='insertLineBreak'||
     event.inputType==='insertParagraph'||
-    inserted===null||inserted===undefined||inserted.includes('\n')||
+    (pendingEditIntent!==null&&pendingEditIntent.deltaLines!==0)||
     removed.includes('\n')||
     (event.inputType==='deleteContentBackward'&&from===to&&backward==='\n')||
     (event.inputType==='deleteContentForward'&&from===to&&forward==='\n');
+
 },true);
 editor.addEventListener('input',()=>{
+ const inputIntent=pendingEditIntent;
+ pendingEditIntent=null;
  scheduleLineHighlight();
  scheduleTabGuides();
  if(!active || editor.readOnly)return;
@@ -716,7 +718,7 @@ if (virtualSessions.has(active)) {
   const session = virtualSessions.get(id);
   const index = session.center;
   const content = editor.value;
-  try { reconcileResidentEdit(id,index,content); }
+  try { reconcileResidentEdit(id,index,content,inputIntent); }
   catch(error){activeEditPath=null;omu.emit('EditPath','Reconcile',500,String(error),true);}
   session.setPosition(index, {
     scrollTop: editor.scrollTop, scrollLeft: editor.scrollLeft,
