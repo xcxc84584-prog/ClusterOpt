@@ -28,14 +28,14 @@ test('50.2: selection replacement, paste and fallback cases',()=>{
   const path=new EditPath('test:0','a\nb\nc',{maxLength:3});
   const paste=intent(path.text,'insertFromPaste',1,4,'x\ny\n');
   assert.equal(paste.deltaLines,0);
-  assert.equal(path.applyKnownPatch(paste,'ax\ny\n\nc'),true);
+  assert.equal(path.applyKnownPatch(paste,'ax\ny\nc'),true);
   assert.equal(path.lineCount,3);
   assert.equal(intent(path.text,'historyUndo',1),null);
   assert.equal(intent(path.text,'insertText',1,1,'中',true),null);
   assert.equal(intent(path.text,'insertFromPaste',1,1,null),null);
   const edit=intent(path.text,'insertLineBreak',1);
   assert.equal(path.applyKnownPatch(edit,'unexpected'),false);
-  assert.equal(path.text,'ax\ny\n\nc');
+  assert.equal(path.text,'ax\ny\nc');
   path.reconcile('changed\nline');
   assert.equal(path.lineCount,2);
 });
