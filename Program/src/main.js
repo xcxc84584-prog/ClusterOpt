@@ -10,7 +10,7 @@ import {DEFAULT_HIGHLIGHT_SHORTCUT,normalizeHighlightShortcut,matchesHighlightSh
 import {transcodeToUtf8} from './fmc/chinese-transcoder.js';
 import {TextHighlighter,detectLanguage} from './text-highlighter/text-highlighter.js?v=opt039-dual-endpoint';
 import {HighlightRenderer} from './text-highlighter/highlight-renderer.js?v=opt048-render';
-import {Explorer} from './explorer.js?v=opt044-editor-dismiss';
+import {Explorer} from './explorer.js?v=opt054-external-sync';
 import {createVTE} from './vte/vte.js';
 import {handleDfomKeydown, handleDfomBeforeInput, buildTabGuideFragment} from './dfom.js';
 import {readStoragePriority, writeStoragePriority, fileSignature} from './storage-priority.js';
@@ -1559,7 +1559,7 @@ renderTabGuides();
 function renderLanguage() {
   document.documentElement.lang=LANGUAGE.value;
   explorer.setLocale(LANGUAGE.value, t);
-  document.title='Cluster Opt v0.0.53';
+  document.title='Cluster Opt v0.0.54';
   $('#menuBtn').textContent=t('file')+'⌄';
   for (const key of ['new','open','save','saveas','close','closeall']) {
     const button=$('#menu [data-action="'+key+'"]');
