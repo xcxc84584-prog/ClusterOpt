@@ -1,3 +1,5 @@
+import {calculateViewport} from '../editor-render/viewport-calculator.js';
+import {measureTextMetrics} from '../editor-render/text-metrics.js';
 // ClusterOpt v0.0.33: viewport-windowed read-only overlay.
 // CodeMirror's visible-range decorations inspired this approach. The native
 // textarea remains the sole owner of text, selection, IME and undo history.
@@ -45,7 +47,8 @@ export class HighlightRenderer {
     this.overlay.replaceChildren();this.editor.classList.remove('highlight-active');
   }
   #lineHeight(){
-    return Number.parseFloat(getComputedStyle(this.editor).lineHeight)||22;
+    const metrics=measureTextMetrics(this.editor);
+    return metrics.ok?metrics.data.lineHeight:22;
   }
   #paint(node,index){
     const start=this.starts[index],end=index+1<this.starts.length?
@@ -76,10 +79,11 @@ export class HighlightRenderer {
   #draw(force=false){
     if(!this.lastScheme)return;
     const height=this.#lineHeight();
-    const margin=this.viewportOnly?2:12;
-    const first=Math.max(0,Math.floor(this.editor.scrollTop/height)-margin);
-    const last=Math.min(this.starts.length,Math.ceil(
-      (this.editor.scrollTop+this.editor.clientHeight)/height)+margin);
+    const range=calculateViewport({scrollTop:Math.max(0,this.editor.scrollTop),
+      viewportHeight:Math.max(0,this.editor.clientHeight),lineHeight:height,
+      lineCount:this.starts.length,overscan:this.viewportOnly?2:12});
+    if(!range.ok)return;
+    const first=range.data.start,last=range.data.end;
     if(!force&&first===this.windowStart&&last===this.windowEnd)return;
     this.windowStart=first;this.windowEnd=last;
     const fragment=document.createDocumentFragment(),nodes=new Map();
@@ -162,9 +166,10 @@ export class HighlightRenderer {
   setViewportOnly(value){this.viewportOnly=Boolean(value);this.windowStart=-1;this.#draw(true);this.sync();}
   visibleRange(){
     const height=this.#lineHeight();
-    const first=Math.max(0,Math.floor(this.editor.scrollTop/height)-2);
-    const last=Math.min(this.starts.length,Math.ceil((this.editor.scrollTop+this.editor.clientHeight)/height)+2);
-    return {first,last};
+    const range=calculateViewport({scrollTop:Math.max(0,this.editor.scrollTop),
+      viewportHeight:Math.max(0,this.editor.clientHeight),lineHeight:height,
+      lineCount:this.starts.length,overscan:2});
+    return range.ok?{first:range.data.start,last:range.data.end}:{first:0,last:0};
   }
   sync(){
     this.#draw();

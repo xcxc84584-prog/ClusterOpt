@@ -1,9 +1,11 @@
+import {calculateViewport} from './editor-render/viewport-calculator.js?v=opt048-viewport';
+import {measureTextMetrics} from './editor-render/text-metrics.js?v=opt048-metrics';
 import {RenderCoordinator} from './editor-render/render-coordinator.js?v=opt047-pr03';
 import {PerformanceMonitor} from './performance/performance-monitor.js?v=opt046-pmu';
 import {matchingWindow} from './text-highlighter/matching-window.js?v=opt038-matcher';
 import {transcodeToUtf8} from './fmc/chinese-transcoder.js';
 import {TextHighlighter,detectLanguage} from './text-highlighter/text-highlighter.js?v=opt039-dual-endpoint';
-import {HighlightRenderer} from './text-highlighter/highlight-renderer.js?v=opt045-scroll-alignment';
+import {HighlightRenderer} from './text-highlighter/highlight-renderer.js?v=opt048-render';
 import {Explorer} from './explorer.js?v=opt044-editor-dismiss';
 import {createVTE} from './vte/vte.js';
 import {handleDfomKeydown, handleDfomBeforeInput, buildTabGuideFragment} from './dfom.js';
@@ -192,9 +194,15 @@ function scheduleHighlight(){
     try{
       if(highlightViewportOnly){
         const starts=buildHighlightLineStarts(target);
-        const lineHeight=Number.parseFloat(getComputedStyle(editor).lineHeight)||22;
-        const startLine=Math.max(0,Math.floor(editor.scrollTop/lineHeight)-2);
-        const endLine=Math.min(starts.length-1,startLine+99,Math.ceil((editor.scrollTop+editor.clientHeight)/lineHeight)+2);
+        const metrics=measureTextMetrics(editor);
+        const lineHeight=metrics.ok?metrics.data.lineHeight:22;
+        const viewport=calculateViewport({scrollTop:Math.max(0,editor.scrollTop),
+          viewportHeight:Math.max(0,editor.clientHeight),lineHeight,
+          lineCount:starts.length,overscan:2});
+        if(!viewport.ok)return;
+        const startLine=viewport.data.start;
+        const endLine=Math.min(starts.length-1,startLine+99,viewport.data.end-1);
+        if(endLine<startLine)return;
         const from=starts[startLine],to=endLine+1<starts.length?starts[endLine+1]-1:target.length;
         const source=target.slice(from,to);
         const bg=getComputedStyle(document.documentElement).getPropertyValue('--ui-editor');
@@ -1440,7 +1448,7 @@ renderTabGuides();
 function renderLanguage() {
   document.documentElement.lang=LANGUAGE.value;
   explorer.setLocale(LANGUAGE.value, t);
-  document.title='Cluster Opt v0.0.47';
+  document.title='Cluster Opt v0.0.48';
   $('#menuBtn').textContent=t('file')+'⌄';
   for (const key of ['new','open','save','saveas','close','closeall']) {
     const button=$('#menu [data-action="'+key+'"]');

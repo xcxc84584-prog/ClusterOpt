@@ -71,7 +71,7 @@ export class DependencyRegistry {
   edges() { return this.dep().data.relations; }
 }
 
-/** Single source of truth for the current v0.0.47 static OCDA declarations. */
+/** Single source of truth for the current v0.0.48 static OCDA declarations. */
 export function createClusterDependencies() {
   const registry = new DependencyRegistry();
   const objects = [
@@ -132,6 +132,9 @@ export function createClusterDependencies() {
     ['UI', 'StoragePriority', 'REQUEST'], ['UI', 'ChineseTranscoder', 'REQUEST'],
     ['Explorer', 'OMU', 'LOG'], ['Explorer', 'LanguageProperty', 'REQUEST'],
     ['HighlightRenderer', 'TextHighlighter', 'REQUEST'],
+    ['HighlightRenderer', 'ViewportCalculator', 'REQUEST'],
+    ['HighlightRenderer', 'TextMetrics', 'REQUEST'],
+    ['UI', 'ViewportCalculator', 'REQUEST'],
     ['TextHighlighter', 'TextContrast', 'REQUEST'],
     ['FileManager', 'OMU', 'LOG'], ['FILE_MENU', 'LanguageProperty', 'REQUEST'],
     ['LanguageProperty', 'UI', 'SUBSCRIBE'],
