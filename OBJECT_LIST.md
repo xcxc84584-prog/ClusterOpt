@@ -1,4 +1,4 @@
-# ClusterOpt Object List — v0.0.55
+# ClusterOpt Object List — v0.0.57
 
 Source of truth: `Program/src/dependency-registry.js` (createClusterDependencies). Registry entries: **42**. Runtime UI objects and implementation modules are not automatically additional OCDA registry objects.
 
@@ -60,3 +60,7 @@ Updated for 50.1: isolated LineBenchmark added (P50/P95/P99); 49.5: 48 objects r
 ## v0.0.55 Explorer UI
 
 Explorer (`explorer.js`) remains the workspace tree object. Its context actions are single-column glyph-only buttons. The existing `InterfacePalette` and `GlobalPropertyRegistry` objects own the derived `EXPLORER_ACTIVE_COLOR` property; no additional OCDA object is introduced.
+
+## v0.0.57 File Tool
+
+`BlockedFileTypes` (`Program/src/file-type-blocklist.js`) is the persistent file-extension exclusion policy, integrated through `UI` and `Explorer`. The File Tool settings dialog is a UI view of this property; no new independent editor or file-storage object is created. The existing `InterfacePalette` supplies global CSS tokens to the menu and dialog.
