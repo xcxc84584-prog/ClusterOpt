@@ -1,13 +1,13 @@
 // v0.0.60: setup CMD downloads a pinned agent and starts it; token printed by PLA.
 export const PLA_SOURCE='https://raw.githubusercontent.com/xcxc84584-prog/ClusterOpt/2aa46615c72bfc789b50a131260d3ab7203060db/Program/local-agent/server.mjs';
-export const SETUP_FILENAME='ClusterOpt-PLA-Setup-v0.0.60-r4.cmd';
+export const SETUP_FILENAME='ClusterOpt-PLA-Setup-v0.0.60-r5.cmd';
 export function createSetupCmd(){
  const lines=[
  '@echo off',
  'setlocal EnableExtensions DisableDelayedExpansion',
- 'title ClusterOpt Local Agent v0.0.60 r4',
+ 'title ClusterOpt Local Agent v0.0.60 r5',
  'echo ==========================================',
- 'echo ClusterOpt PowerShell Local Agent v0.0.60 r4',
+ 'echo ClusterOpt PowerShell Local Agent v0.0.60 r5',
  'echo ==========================================',
  'where node.exe >nul 2>nul',
  'if errorlevel 1 goto missing_node',
