@@ -1,4 +1,4 @@
-// ClusterOpt PLA v0.0.61 — loopback agent with locally authorized command permissions.
+// ClusterOpt PLA v0.0.62 — loopback agent with locally authorized command permissions.
 import {createServer} from 'node:http';
 import {randomBytes,timingSafeEqual} from 'node:crypto';
 import {spawn} from 'node:child_process';
@@ -73,12 +73,23 @@ export function createPersistentSession(){
  const child=spawn('powershell.exe',['-NoLogo','-NoProfile','-Command','-'],{shell:false,windowsHide:true,stdio:['pipe','pipe','pipe']});
  const pending=[];let running=null;let closed=false;let output='';let partial='';
  const maxBuffer=256*1024;
- const capture=chunk=>{output+=chunk.toString('utf8');if(output.length>maxBuffer)output=output.slice(-maxBuffer);};
+ const capture=chunk=>{output+=String(chunk);if(output.length>maxBuffer)output=output.slice(-maxBuffer);};
  child.stdout.on('data',chunk=>{
    partial+=chunk.toString('utf8');
-   const marker=running?.marker;
-   if(marker){const at=partial.indexOf(marker);if(at>=0){capture(partial.slice(0,at));partial=partial.slice(at+marker.length);running=null;drain();}}
-   if(partial.length>8192){capture(partial.slice(0,-4096));partial=partial.slice(-4096);}
+   // Keep only the possible marker prefix buffered; stream all other output immediately.
+   while(partial){
+     const marker=running?.marker;
+     if(!marker){capture(partial);partial='';break;}
+     const at=partial.indexOf(marker);
+     if(at>=0){capture(partial.slice(0,at));partial=partial.slice(at+marker.length);running=null;drain();continue;}
+     let keep=0;
+     for(let n=Math.min(marker.length-1,partial.length);n>0;n--){
+       if(partial.endsWith(marker.slice(0,n))){keep=n;break;}
+     }
+     if(partial.length>keep)capture(partial.slice(0,partial.length-keep));
+     partial=keep?partial.slice(-keep):'';
+     break;
+   }
  });
  child.stderr.on('data',capture);
  child.on('error',e=>{capture(String(e.message));closed=true;running=null;});
