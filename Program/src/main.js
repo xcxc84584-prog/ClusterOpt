@@ -33,12 +33,12 @@ import {createFileManagerClass} from './file-manager.js';
 import {createGlobalPropertyRegistryClass} from './global-properties.js';
 import {createSyncStatusClass} from './sync-status.js';
 import {LanguageProperty} from './language.js?v=opt038-i18n';
-import {mountPowerShellUI} from './powershell-manager/powershell-ui.js?v=opt063-native-r1';
+import {mountPowerShellUI} from './powershell-manager/powershell-ui.js?v=opt064-port-r1';
 // Normalize stale bookmarked release query parameters without discarding user data.
 if(typeof window!=='undefined'&&window.location?.search){
  const params=new URLSearchParams(window.location.search);
- if(params.get('v')!=='0.0.62'||params.get('build')!=='opt062-psm-r2'){
-  params.set('v','0.0.62');params.set('build','opt062-psm-r2');
+ if(params.get('v')!=='0.0.62'||params.get('build')!=='opt064-port-r1'){
+  params.set('v','0.0.62');params.set('build','opt064-port-r1');
   window.history.replaceState(window.history.state,'',window.location.pathname+'?'+params.toString()+window.location.hash);
  }
 }
