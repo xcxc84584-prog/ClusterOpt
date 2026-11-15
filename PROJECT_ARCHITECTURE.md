@@ -89,3 +89,7 @@ v0.0.52: File → Tool → 文本著色器可設定 Ctrl+(Shift)+A–Z/0–9；C
 ## v0.0.52 PR-03 — Ctrl+Z/Y 著色恢復
 
 - OLR Ctrl+Z/Y 與原生 historyUndo/historyRedo 在修改 resident text 後重建語法著色，不重新載入實體 Block。一般輸入保留 100 行局部著色。已加入 Node 回歸測試；大檔、IME、實機瀏覽器待驗收。
+
+## v0.0.53 PR-01 — Incremental Highlight LF Index
+
+- Reuse HighlightRenderer line index patched by known micro-edits for matchingWindow and lexical checkpoint; bound comment scan. Unknown edits still full-index fallback. Shiki remains main-thread; Worker and persistent grammar state deferred. No FLAG/MVCC change. Browser typing/IME/Undo/large-file performance requires user acceptance.

@@ -1,13 +1,13 @@
 // Conservative lexical checkpoints for bounded C-family re-tokenization.
 // These are NOT Shiki grammar stacks. Unsupported syntax returns null.
 const SUPPORTED=new Set(['c','cpp','css','java','javascript','typescript']);
-export function findLexicalRestart(source,caret,language,{maxLines=100}={}){
+export function findLexicalRestart(source,caret,language,{maxLines=100,knownStarts=null}={}){
   if(typeof source!=='string'||!Number.isSafeInteger(caret)||caret<0||
     caret>source.length||!Number.isSafeInteger(maxLines)||maxLines<1)
     throw new RangeError('Invalid lexical checkpoint request');
   if(!SUPPORTED.has(language))return null;
-  const starts=[0];
-  for(let i=0;i<source.length;i++)if(source.charCodeAt(i)===10)starts.push(i+1);
+  const starts=knownStarts||[0];
+  if(!knownStarts)for(let i=0;i<source.length;i++)if(source.charCodeAt(i)===10)starts.push(i+1);
   let lo=0,hi=starts.length-1;
   while(lo<hi){const mid=Math.ceil((lo+hi)/2);
     if(starts[mid]<=caret)lo=mid;else hi=mid-1;}

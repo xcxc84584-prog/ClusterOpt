@@ -119,6 +119,9 @@ export class HighlightRenderer {
     for(const [i,node] of this.lineNodes)if(!nodes.has(i))node.remove();
     this.lineNodes=nodes;
   }
+  // A snapshot is valid only for the current resident text. Never expose
+  // stale LF offsets after a document switch or unknown editor mutation.
+  lineIndexFor(text){return this.lastScheme&&text===this.lastText?this.starts:null;}
   render(scheme){
     if(scheme.status!=='OK'){this.clear();return;}
     this.lastText=this.editor.value;

@@ -282,10 +282,13 @@ function scheduleLineHighlight(){
   const sliceId=virtualSessions.get(id)?.center??0;
   lineHighlightTimer=setTimeout(()=>{
     if(generation!==lineHighlightGeneration||active!==id)return;
+    // The input event already patched the renderer's LF index. Avoid
+    // re-indexing the entire resident slice during the 100-line task.
     highlightRenderer.retainDuringEdit();
-    const window=matchingWindow(value,caret,100);
+    const indexedStarts=highlightRenderer.lineIndexFor(value);
+    const window=matchingWindow(value,caret,100,indexedStarts);
     const {startLine,endLine,starts}=window;
-    const checkpoint=findLexicalRestart(value,caret,detectLanguage(item.name));
+    const checkpoint=findLexicalRestart(value,caret,detectLanguage(item.name),{knownStarts:indexedStarts});
     const safeStart=checkpoint&&endLine-checkpoint.restartLine<100?
       Math.min(startLine,checkpoint.restartLine):startLine;
     const from=starts[safeStart];
@@ -736,6 +739,9 @@ editor.addEventListener('input',event=>{
  const historyEdit=['historyUndo','historyRedo'].includes(event.inputType);
  const inputIntent=pendingEditIntent;
  pendingEditIntent=null;
+ // Apply the known micro-edit before scheduling tokenization, so the
+ // shared LF index is current when matchingWindow executes.
+ highlightRenderer.retainDuringEdit(inputIntent);
  // Native undo/redo can alter lines beyond the bounded caret region.
  if(historyEdit)scheduleHighlight();else scheduleLineHighlight();
  scheduleTabGuides();
@@ -1516,7 +1522,7 @@ renderTabGuides();
 function renderLanguage() {
   document.documentElement.lang=LANGUAGE.value;
   explorer.setLocale(LANGUAGE.value, t);
-  document.title='Cluster Opt v0.0.52';
+  document.title='Cluster Opt v0.0.53';
   $('#menuBtn').textContent=t('file')+'⌄';
   for (const key of ['new','open','save','saveas','close','closeall']) {
     const button=$('#menu [data-action="'+key+'"]');
