@@ -1,4 +1,4 @@
-# ClusterOpt Property List — v0.0.50.3
+# ClusterOpt Property List — v0.0.50.4
 
 Source of truth: `Program/src/dependency-registry.js`. Properties are shared names; the table lists objects declaring each property, not a persisted value store.
 
@@ -39,3 +39,6 @@ Source of truth: `Program/src/dependency-registry.js`. Properties are shared nam
 49.4 EditPath declares PARENT_SLICE_ID, EDIT_REVISION, TEXT_LENGTH and LINE_COUNT. MicroSliceDocument remains under physical-slice MVCC/FLAG authority.
 
 | `MICRO_SLICE_SPLICE` | MicroSliceIndex — structural O(log N + inserted pieces) index splice |
+
+| `GUTTER_VIEWPORT_RANGE` | GutterWindow |
+| `GUTTER_OVERSCAN` | GutterWindow |
