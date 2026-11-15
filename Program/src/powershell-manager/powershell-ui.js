@@ -1,6 +1,6 @@
 // v0.0.62 PR-02 — Browser UI only. Never runs OS commands.
 import {PowerShellManager} from './powershell-manager.js';
-import {PowerShellClient} from './powershell-client.js?v=opt062-psm-r1';
+import {PowerShellClient} from './powershell-client.js?v=opt062-psm-r1&hotfix=2';
 import {createSetupCmd,SETUP_FILENAME} from './cmd-setup.js?v=opt062-psm-r1';
 const COPY={
  'zh-Hant':{title:'PowerShell',setup:'配置本地代理',desc:'尚未連線至 PowerShell Local Agent。此介面不可執行命令。',check:'檢查連線',tool:'PowerShell 工具',permissions:'權限管理',revoke:'撤銷本地權限',unavailable:'本地代理尚未提供。無法執行命令。',command:'環境檢查指令（CMD）',hint:'這是選用的環境診斷指令；請在 Windows CMD 執行。Token 僅輸入於上方配對欄位。',close:'關閉',status:'未配置',rule:'預設權限：可申請',notice:'權限管理需先配置可信任的本地代理；目前僅提供規則說明。'},
