@@ -328,80 +328,52 @@ export class Explorer {
     this.#actionBar={nodeKey:this.#key(node),name:node.name,level:'primary'};
     this.#updateHint();
     this.render();
-    this.#showContextPopup();
-  }
-  #showContextPopup(){
-    this.#contextPopup?.remove();this.#contextPopup=null;
-    if(!this.#actionBar)return;
-    const row=[...this.#tree.querySelectorAll('.explorer-entry[data-path]')]
-      .find(item=>item.dataset.path===this.#actionBar.nodeKey);
-    const node=this.#allNodes().find(item=>this.#key(item)===this.#actionBar.nodeKey);
-    if(!row||!node)return;
-    const popup=this.#inlineActions(node);
-    popup.classList.add('explorer-vscode-popup');
-    document.body.append(popup);this.#contextPopup=popup;
-    const rect=row.getBoundingClientRect();
-    const panel=this.#panel.getBoundingClientRect();
-    const width=220, margin=8;
-    const right=panel.right+4;
-    const left=right+width+margin<=window.innerWidth?right:Math.max(margin,panel.left-width-4);
-    popup.style.left=left+'px';
-    popup.style.top=Math.max(margin,Math.min(rect.top,window.innerHeight-popup.offsetHeight-margin))+'px';
-    popup.querySelector('button:not(:disabled)')?.focus({preventScroll:true});
   }
   #inlineActions(node){
-    const menu=document.createElement('div');
+    const menu=document.createElement('span');
     menu.className='explorer-inline-actions';
-    menu.setAttribute('role','menu');
+    menu.setAttribute('role','toolbar');
     menu.setAttribute('aria-label',this.#say('檔案操作','File actions'));
-    const entries=[
+    const primary=[
       ['file','◇',this.#say('新增檔案','New File'),()=>this.#createIn(node,'file')],
+      ['rename','✎',this.#say('重新命名','Rename'),()=>this.#startRename(node)],
+      ['more','⋯',this.#say('更多操作','More actions'),null],
+      ['close','×',this.#say('關閉','Close'),()=>this.#closeEntry(node)]
+    ];
+    const secondary=[
+      ['back','‹',this.#say('返回','Back'),null],
       ['folder','▣',this.#say('新增資料夾','New Folder'),()=>this.#createIn(node,'directory')],
-      ['separator'],
       ['cut','✂',this.#say('剪下','Cut'),()=>{this.#clipboard={node,cut:true};}],
       ['copy','▤',this.#say('複製','Copy'),()=>{this.#clipboard={node,cut:false};}],
       ['paste','▧',this.#say('貼上','Paste'),()=>this.#paste(node)],
-      ['separator'],
-      ['rename','✎',this.#say('重新命名','Rename'),()=>this.#startRename(node)],
-      ['delete','⌫',this.#say('刪除','Delete'),()=>this.#delete(node)],
-      ['separator'],
-      ['close','×',this.#say('關閉','Close'),()=>this.#closeEntry(node)]
+      ['delete','⌫',this.#say('刪除','Delete'),()=>this.#delete(node)]
     ];
-    const buttons=[];
+    const entries=this.#actionBar?.level==='secondary'?secondary:primary;
     for(const [key,glyph,label,action] of entries){
-      if(key==='separator'){
-        const divider=document.createElement('div');divider.className='explorer-menu-divider';
-        divider.setAttribute('role','separator');menu.append(divider);continue;
-      }
       const button=document.createElement('button');
-      button.type='button';button.className='explorer-inline-action'+(key==='delete'?' is-danger':'');
-      button.setAttribute('role','menuitem');button.dataset.action=key;
-      button.title=label;button.setAttribute('aria-label',label);
-      const icon=document.createElement('span');icon.className='explorer-action-symbol';
-      icon.textContent=glyph;icon.setAttribute('aria-hidden','true');
-      const name=document.createElement('span');name.className='explorer-action-label';name.textContent=label;
-      button.append(icon,name);
+      button.type='button';
+      button.className='explorer-inline-action'+(key==='delete'?' is-danger':'');
+      button.dataset.action=key;button.title=label;
+      button.setAttribute('aria-label',label);
+      const symbol=document.createElement('span');
+      symbol.className='explorer-action-symbol';symbol.textContent=glyph;
+      symbol.setAttribute('aria-hidden','true');button.append(symbol);
       button.disabled=(key==='rename'&&(!node.parent||node.kind==='directory'))||
         (key==='paste'&&!this.#clipboard)||
         ((key==='folder'||key==='file')&&!node.parent&&node.kind!=='directory');
+      button.addEventListener('pointerdown',event=>event.stopPropagation());
       button.addEventListener('click',event=>{
-        event.stopPropagation();this.#closeMenu();
+        event.stopPropagation();
+        if(key==='more'||key==='back'){
+          this.#actionBar.level=key==='more'?'secondary':'primary';
+          this.render();return;
+        }
+        this.#closeMenu();
         Promise.resolve().then(action).catch(error=>this.#log(String(error)));
       });
-      menu.append(button);buttons.push(button);
+      menu.append(button);
     }
     menu.addEventListener('click',event=>event.stopPropagation());
-    menu.addEventListener('keydown',event=>{
-      const enabled=buttons.filter(button=>!button.disabled);
-      const current=enabled.indexOf(document.activeElement);
-      if(event.key==='ArrowDown'||event.key==='ArrowUp'){
-        event.preventDefault();
-        const step=event.key==='ArrowDown'?1:-1;
-        enabled[(current+step+enabled.length)%enabled.length]?.focus();
-      }
-      if(event.key==='Home'){event.preventDefault();enabled[0]?.focus();}
-      if(event.key==='End'){event.preventDefault();enabled.at(-1)?.focus();}
-    });
     return menu;
   }
   async #createIn(node,kind){
@@ -603,6 +575,10 @@ export class Explorer {
       const row=this.#button(node.name,node.kind,depth);
       row.dataset.path=this.#key(node);
       if(row.dataset.path===this.#selected)row.classList.add('active');
+      if(this.#actionBar?.nodeKey===row.dataset.path){
+        row.classList.add('has-inline-actions');
+        row.append(this.#inlineActions(node));
+      }
       row.querySelector('.explorer-arrow').textContent=node.kind==='directory'?(node.expanded?'⌄':'›'):'';
       // Left click selects only; context actions belong exclusively to right click.
       row.onclick=event=>{
@@ -666,7 +642,6 @@ export class Explorer {
       }
     }
     this.#tree.replaceChildren(fragment);
-    if(this.#actionBar)this.#showContextPopup();
   }
   #button(name,kind,depth){
     const button=document.createElement('div');button.setAttribute('role','button');
