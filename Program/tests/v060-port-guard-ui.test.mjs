@@ -3,11 +3,12 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createSetupCmd} from '../src/powershell-manager/cmd-setup.js';
 const read=p=>readFileSync(new URL(p,import.meta.url),'utf8');
-test('60.18 port takeover requires Y but does not verify process identity',()=>{
+test('60.18 port takeover is delegated to explicit user-confirmed installer',()=>{
  const cmd=createSetupCmd();
- for(const part of ['Get-NetTCPConnection','Force use port 43881? [Y/N]','if /I not "%CONFIRM%"=="Y" goto cancel_replace','Stop-Process','goto unsafe_replace'])assert.ok(cmd.includes(part),part);
- assert.ok(!cmd.includes('Get-CimInstance Win32_Process'));
- assert.ok(cmd.indexOf('Stop-Process')<cmd.indexOf('Start-Process'));
+ assert.ok(cmd.includes('install-v064.ps1'));
+ const installer=read('../local-agent/install-v064.ps1');
+ for(const part of ['Get-NetTCPConnection','Get-Process','Stop-Process','Read-Host','Enter TCP port','Type YES'])assert.ok(installer.includes(part),part);
+ assert.ok(installer.indexOf('Type YES')<installer.indexOf('Stop-Process'));
 });
 test('60.19 menu labels and setup actions are accessible',()=>{
  const ui=read('../src/powershell-manager/powershell-ui.js');
