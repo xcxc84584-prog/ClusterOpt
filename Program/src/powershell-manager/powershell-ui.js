@@ -1,7 +1,7 @@
 // v0.0.60 PR-02 — Browser UI only. Never runs OS commands.
 import {PowerShellManager} from './powershell-manager.js';
-import {PowerShellClient} from './powershell-client.js?v=opt060-psm-r4';
-import {createSetupCmd,SETUP_FILENAME} from './cmd-setup.js?v=opt060-psm-r4';
+import {PowerShellClient} from './powershell-client.js?v=opt060-psm-r5';
+import {createSetupCmd,SETUP_FILENAME} from './cmd-setup.js?v=opt060-psm-r5';
 const COPY={
  'zh-Hant':{title:'PowerShell',setup:'配置本地代理',desc:'尚未連線至 PowerShell Local Agent。此介面不可執行命令。',check:'檢查連線',tool:'PowerShell 工具',permissions:'權限管理',revoke:'撤銷本地權限',unavailable:'本地代理尚未提供。無法執行命令。',command:'環境檢查指令（CMD）',hint:'請在 Windows CMD 執行以下唯讀環境檢查。正式安裝器尚未發布，請勿輸入 Token。',close:'關閉',status:'未配置',rule:'預設權限：可申請',notice:'權限管理需先配置可信任的本地代理；目前僅提供規則說明。'},
  en:{title:'PowerShell',setup:'Set up Local Agent',desc:'PowerShell Local Agent is not connected. Commands cannot be executed here.',check:'Check connection',tool:'PowerShell tools',permissions:'Permission management',revoke:'Revoke local access',unavailable:'Local Agent is not available. Commands are disabled.',command:'Environment check (CMD)',hint:'Run this read-only check in Windows CMD. The verified installer is not yet published; do not enter a token.',close:'Close',status:'Not configured',rule:'Default permission: Requestable',notice:'Permission management requires a trusted Local Agent. This is an informational preview.'}
