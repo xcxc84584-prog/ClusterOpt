@@ -53,10 +53,15 @@ export function mountPowerShellUI({host,button,language,manager=new PowerShellMa
    for(const key of ['title','status','setup','desc','command','hint','check','permissions','revoke']){
      const node=q('[data-psm="'+key+'"]');if(node)node.textContent=msg[key];
    }
+   for(const key of ['check','permissions','revoke']){
+     const control=q('[data-psm-action="'+key+'"]');if(control){control.textContent=msg[key];control.setAttribute('aria-label',msg[key]);}
+   }
    q('[data-psm-action="tool"]').title=msg.tool;
    q('[data-psm-action="tool"]').setAttribute('aria-label',msg.tool);
+   q('[data-psm-action="tool"]').textContent=language.value==='en'?'Tools':'工具';
    q('[data-psm-action="close"]').title=msg.close;
    q('[data-psm-action="close"]').setAttribute('aria-label',msg.close);
+   q('[data-psm-action="close"]').textContent=msg.close;
    const extra=language.value==='en'?{downloadTitle:'Download setup CMD',downloadHint:'Run CMD to start the agent and see its token. If port 43881 is busy, press Y to force-release port 43881; this may stop an unrelated service.',download:'Download .cmd',pairTitle:'Pair local agent',pairHint:'Copy the 64-character token shown in CMD. It is kept only in browser memory.',pair:'Pair',verifyTitle:'Verify connection',verifyHint:'Click Check connection. Never expose the local port publicly.'}:{downloadTitle:'下載快速配置 CMD',downloadHint:'執行 CMD 後顯示 Token。若 43881 已占用，輸入 Y 即可強制釋放連接埠，可能中斷其他程式。',download:'下載 .cmd',pairTitle:'配對本地代理',pairHint:'複製 CMD 顯示的 64 字元 Token，僅存於瀏覽器記憶體。',pair:'配對',verifyTitle:'驗證連線',verifyHint:'點擊下方「檢查連線」，勿公開本地連接埠。'};
    for(const key of ['downloadTitle','downloadHint','pairTitle','pairHint','verifyTitle','verifyHint'])q('[data-psm-extra="'+key+'"]').textContent=extra[key];
    q('[data-psm-action="download"]').textContent=extra.download;
@@ -122,12 +127,16 @@ export function mountPowerShellUI({host,button,language,manager=new PowerShellMa
      setTimeout(()=>URL.revokeObjectURL(url),1000);
    }
    if(action==='pair'){
+     const pairButton=q('[data-psm-action="pair"]');pairButton.disabled=true;
      const ok=manager.agent.pair(q('#psmPairToken').value);
-     q('#psmPairToken').value='';
-     if(!ok){setFeedback(language.value==='en'?'Invalid token format.':'Token 格式錯誤。');return;}
-     const state=await manager.checkConnection();
-     if(state.configured){setConnected(true);appendOutput(language.value==='en'?'Connected to local agent. Only approved read-only actions are available.':'已連線至本地代理，目前僅提供核准的唯讀操作。');}
-     else setFeedback(language.value==='en'?'Token could not be verified with local agent.':'Token 無法通過本地代理驗證，請確認 CMD 仍在執行。');
+     if(ok)q('#psmPairToken').value='';
+     if(!ok){pairButton.disabled=false;setFeedback(language.value==='en'?'Token must be exactly 64 hexadecimal characters.':'Token 必須是 64 個十六進位字元。');return;}
+     try{
+       const state=await manager.checkConnection();
+       if(state.configured){setConnected(true);appendOutput(language.value==='en'?'Local Agent authenticated. Read-only commands are available.':'本地代理驗證成功，已開啟唯讀 PowerShell 介面。');setFeedback('');}
+       else setFeedback(language.value==='en'?'Connection rejected: check token, agent window and browser local-network permission.':'連線未通過：請檢查 Token、CMD 代理視窗及瀏覽器本地網路存取權限。');
+     }catch{setFeedback(language.value==='en'?'Cannot reach local agent on 127.0.0.1:43881.':'無法連線至 127.0.0.1:43881。');}
+     finally{pairButton.disabled=false;}
    }
    if(action==='close')closeSession(selected);
    if(action==='settings'){setConnected(false);closeToolMenu();}
@@ -142,7 +151,7 @@ export function mountPowerShellUI({host,button,language,manager=new PowerShellMa
    if(action==='tool'){const menu=toolMenu();const shouldOpen=menu.hidden;closeToolMenu();if(shouldOpen){menu.hidden=false;toolButton().setAttribute('aria-expanded','true');positionToolMenu();}}
    if(action==='permissions'){setFeedback(t().rule+' — '+t().notice);closeToolMenu();}
    if(action==='revoke'){try{const result=await manager.revokeLocalAccess();setConnected(false);setFeedback(result.ok?'Revoked':t().unavailable);}catch{setFeedback(t().unavailable);}closeToolMenu();}
-   if(action==='check'){try{const state=await manager.checkConnection();if(state.configured){setConnected(true);appendOutput(language.value==='en'?'Connected to local agent.':'已連線至本地代理。');}else setFeedback(t().unavailable);}catch{setFeedback(language.value==='en'?'Connection failed. Verify CMD is still running and token is paired.':'連線失敗，請確認 CMD 仍在執行且已完成 Token 配對。');}}
+   if(action==='check'){const state=await manager.checkConnection();if(state.configured){setConnected(true);appendOutput(language.value==='en'?'Connected to local agent.':'已連線至本地代理。');}else setFeedback(language.value==='en'?'Connection failed. Check token, agent and local-network permissions.':'連線失敗：請確認 Token、代理視窗與本地網路權限。');}
  });
  function setFeedback(value){q('[data-psm="feedback"]').textContent=value;const session=sessions.find(x=>x.id===selected);if(session)session.feedback=value;}
  const unsubscribe=language.subscribe(()=>{translate();syncTabs();});
