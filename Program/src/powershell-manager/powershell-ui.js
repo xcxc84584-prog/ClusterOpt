@@ -44,6 +44,7 @@ export function mountPowerShellUI({host,button,language,manager=new PowerShellMa
  const setup=document.createElement('div');setup.className='psm-quick-setup';
  setup.innerHTML='<div class="psm-setup-step"><span class="psm-step-number">01</span><div><strong data-psm-extra="downloadTitle"></strong><p data-psm-extra="downloadHint"></p><button type="button" data-psm-action="download" class="psm-primary"></button></div></div><div class="psm-setup-step"><span class="psm-step-number">02</span><div><strong data-psm-extra="pairTitle"></strong><p data-psm-extra="pairHint"></p><div class="psm-pair-row"><input id="psmPairToken" type="password" autocomplete="off" spellcheck="false" placeholder="64-character token"><button type="button" data-psm-action="pair"></button></div></div></div><div class="psm-setup-step"><span class="psm-step-number">03</span><div><strong data-psm-extra="verifyTitle"></strong><p data-psm-extra="verifyHint"></p></div></div>';
  pane.querySelector('.psm-body').prepend(setup);
+ pane.classList.add('psm-compact-setup');
  const q=s=>pane.querySelector(s);
  q('#psmCheckCommand').value=CHECK;
  function t(){return COPY[language.value]||COPY['zh-Hant'];}
