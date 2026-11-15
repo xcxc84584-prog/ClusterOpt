@@ -75,3 +75,17 @@ export class VisualLineMap{
   return result;
  }
 }
+
+/** Compute a bounded visual-line window and its logical-line coverage. */
+export function calculateWrappedViewport(map,{scrollTop,viewportHeight,lineHeight,overscan=2}){
+ if(!(map instanceof VisualLineMap)||![scrollTop,viewportHeight,lineHeight,overscan].every(Number.isFinite)||
+   scrollTop<0||viewportHeight<0||lineHeight<=0||!Number.isSafeInteger(overscan)||overscan<0)
+   throw new RangeError('Invalid wrapped viewport');
+ const total=map.visualLineCount;
+ const start=Math.min(total,Math.max(0,Math.floor(scrollTop/lineHeight)-overscan));
+ const end=Math.min(total,Math.max(start,Math.ceil((scrollTop+viewportHeight)/lineHeight)+overscan));
+ const first=start<end?map.visualToLogical(start).logicalLine:null;
+ const last=start<end?map.visualToLogical(end-1).logicalLine:null;
+ return Object.freeze({visualStart:start,visualEnd:end,logicalStart:first,
+  logicalEnd:last===null?null:last+1});
+}
