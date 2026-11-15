@@ -122,7 +122,7 @@ export class TextHighlighter {
     const identity={documentId,targetSliceId,revision,language};
     if(!this.enabled||language==='text')return {...identity,status:'FALLBACK',ranges:[]};
     const cacheMeta={documentId:String(documentId),sliceId:String(targetSliceId),
-      revision,language,source:previousSlice+'\u0000'+targetSlice+'\u0000'+nextSlice};
+      revision,language,source:JSON.stringify([previousSlice,targetSlice,nextSlice])};
     let ranges=this.#tokenCache.get(cacheMeta);
     if(!ranges){
       try{
