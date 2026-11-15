@@ -1,4 +1,4 @@
-# ClusterOpt Property List — v0.0.51.1
+# ClusterOpt Property List — v0.0.51.2
 
 Source of truth: `Program/src/dependency-registry.js`. Properties are shared names; the table lists objects declaring each property, not a persisted value store.
 
@@ -49,3 +49,6 @@ Source of truth: `Program/src/dependency-registry.js`. Properties are shared nam
 
 | `HIGHLIGHT_INDEX_P95` | HighlightBenchmark |
 | `HIGHLIGHT_REMAP_P95` | HighlightBenchmark |
+
+| `HIGHLIGHT_EDIT_RANGE` | HighlightLineIndex |
+| `HIGHLIGHT_LINE_DELTA` | HighlightLineIndex |
