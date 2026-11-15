@@ -1,13 +1,13 @@
 // v0.0.60: setup CMD downloads a pinned agent and starts it; token printed by PLA.
 export const PLA_SOURCE='https://raw.githubusercontent.com/xcxc84584-prog/ClusterOpt/2aa46615c72bfc789b50a131260d3ab7203060db/Program/local-agent/server.mjs';
-export const SETUP_FILENAME='ClusterOpt-PLA-Setup-v0.0.60-r2.cmd';
+export const SETUP_FILENAME='ClusterOpt-PLA-Setup-v0.0.60-r3.cmd';
 export function createSetupCmd(){
  const lines=[
  '@echo off',
  'setlocal EnableExtensions DisableDelayedExpansion',
- 'title ClusterOpt Local Agent v0.0.60 r2',
+ 'title ClusterOpt Local Agent v0.0.60 r3',
  'echo ==========================================',
- 'echo ClusterOpt PowerShell Local Agent v0.0.60 r2',
+ 'echo ClusterOpt PowerShell Local Agent v0.0.60 r3',
  'echo ==========================================',
  'where node.exe >nul 2>nul',
  'if errorlevel 1 goto missing_node',
@@ -23,19 +23,16 @@ export function createSetupCmd(){
  'if errorlevel 12 goto port_busy',
  'goto launch_agent',
  ':port_busy',
- 'echo [NOTICE] Port 43881 is already in use.',
- 'echo Existing processes will NOT be stopped without your confirmation.',
- 'powershell.exe -NoProfile -Command "$c=Get-NetTCPConnection -LocalAddress 127.0.0.1 -LocalPort 43881 -State Listen -ErrorAction SilentlyContinue; $c | ForEach-Object { Get-CimInstance Win32_Process -Filter (\'ProcessId=\'+$_.OwningProcess) | Select-Object ProcessId,Name,CommandLine | Format-List }"',
- 'echo.',
- 'echo Only an existing ClusterOpt-Agent node process may be replaced.',
+ 'echo [WARNING] Port 43881 is in use. Choosing Y will stop its listener even if it is NOT ClusterOpt.',
+ 'echo This can interrupt another local service. No process identity check is performed.',
  'set "CONFIRM="',
- 'set /p "CONFIRM=Type REPLACE 43881 to stop the verified old agent: "',
- 'if /I not "%CONFIRM%"=="REPLACE 43881" goto cancel_replace',
- 'powershell.exe -NoProfile -NonInteractive -Command "$c=Get-NetTCPConnection -LocalAddress 127.0.0.1 -LocalPort 43881 -State Listen -ErrorAction SilentlyContinue; if(!$c){exit 0}; $p=Get-CimInstance Win32_Process -Filter (\'ProcessId=\'+$c[0].OwningProcess); if(!$p -or $p.Name -ne \'node.exe\' -or $p.CommandLine -notlike \'*ClusterOpt-Agent*server.mjs*\'){exit 13}; Stop-Process -Id $p.ProcessId -ErrorAction Stop; Start-Sleep -Milliseconds 500; if(Get-NetTCPConnection -LocalAddress 127.0.0.1 -LocalPort 43881 -State Listen -ErrorAction SilentlyContinue){exit 14}"',
+ 'set /p "CONFIRM=Force use port 43881? [Y/N]: "',
+ 'if /I not "%CONFIRM%"=="Y" goto cancel_replace',
+ 'powershell.exe -NoProfile -NonInteractive -Command "$c=@(Get-NetTCPConnection -LocalPort 43881 -State Listen -ErrorAction SilentlyContinue); if(!$c){exit 0}; $ids=@($c | Select-Object -ExpandProperty OwningProcess -Unique); foreach($pidToStop in $ids){try{Stop-Process -Id $pidToStop -Force -ErrorAction Stop}catch{exit 13}}; Start-Sleep -Milliseconds 500; if(Get-NetTCPConnection -LocalPort 43881 -State Listen -ErrorAction SilentlyContinue){exit 14}"',
  'if errorlevel 1 goto unsafe_replace',
  'goto launch_agent',
  ':unsafe_replace',
- 'echo [ERROR] Unable to verify or release the port. No other process was terminated.',
+ 'echo [ERROR] Port 43881 could not be released. No elevated permissions were requested.',
  'pause',
  'exit /b 1',
  ':cancel_replace',
