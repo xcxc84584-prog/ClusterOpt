@@ -1,0 +1,2 @@
+# 51.2 — ArcD
+USER beforeinput → NewlineEditIntent.Request.deriveEditIntent → UI input → HighlightRenderer.Request.retainDuringEdit(intent) → HighlightLineIndex.Request.validateKnownEdit → patchLineStarts / patchTokenRanges → HighlightRenderer.Response.paint；失效走 remapRanges + buildLineStarts fallback。非法輸入 RangeError；不取得 FLAG、不改動文件。屬性 HIGHLIGHT_EDIT_RANGE、HIGHLIGHT_LINE_DELTA。取消／重試沿用既有 highlightGeneration；VTE 非干預。
