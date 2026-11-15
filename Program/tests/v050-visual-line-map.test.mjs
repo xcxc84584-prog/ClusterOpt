@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {VisualLineMap,wrapSegments} from '../src/editor-render/visual-line-map.js';
+import {VisualLineMap,wrapSegments,calculateWrappedViewport} from '../src/editor-render/visual-line-map.js';
 import {createVTE} from '../src/vte/vte.js';
 test('50.5: empty lines, exact boundary and tabs',()=>{
  assert.deepEqual(wrapSegments('',4),[{start:0,end:0,columns:0}]);
@@ -40,4 +40,12 @@ test('50.5: randomized line splice agrees with reference; VTE isolated',()=>{
   }
  }
  assert.equal(vte.Status().data.files.length,0);
+});
+
+test('50.5: wrapped viewport uses visual rows and bounded logical coverage',()=>{
+ const map=new VisualLineMap({maxColumns:3});
+ map.spliceLines(0,0,['abcdefghij','x','yz']);
+ const view=calculateWrappedViewport(map,{scrollTop:44,viewportHeight:44,lineHeight:22,overscan:0});
+ assert.deepEqual(view,{visualStart:2,visualEnd:4,logicalStart:0,logicalEnd:1});
+ assert.throws(()=>calculateWrappedViewport(map,{scrollTop:-1,viewportHeight:44,lineHeight:22}),RangeError);
 });
