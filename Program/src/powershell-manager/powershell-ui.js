@@ -8,6 +8,10 @@ const CHECK='powershell.exe -NoProfile -Command "$PSVersionTable.PSVersion.ToStr
 export function mountPowerShellUI({host,button,language,manager=new PowerShellManager()}){
  if(!host||!button||!language)throw new Error('PSM_UI_MISSING_DEPENDENCY');
  let open=false;
+ const sessions=[];
+ let selected=null;
+ let sequence=0;
+ const tabs=host.querySelector('#tabs');
  const pane=document.createElement('section');
  pane.id='powershellManagerPane';pane.className='psm-pane';pane.hidden=true;
  pane.setAttribute('aria-label','PowerShell');
@@ -25,19 +29,61 @@ export function mountPowerShellUI({host,button,language,manager=new PowerShellMa
    q('[data-psm-action="close"]').title=msg.close;
    button.title=msg.title;button.setAttribute('aria-label',msg.title);
  }
- function show(){open=true;pane.hidden=false;host.classList.add('psm-mode');button.setAttribute('aria-pressed','true');translate();}
- function hide(){open=false;pane.hidden=true;host.classList.remove('psm-mode');button.setAttribute('aria-pressed','false');q('.psm-menu').hidden=true;}
- button.addEventListener('click',()=>open?hide():show());
+ function renderTabs(){
+   // Document tabs are owned by main.js; only append our own session cards.
+   for(const session of sessions){
+     const tab=document.createElement('div');
+     tab.className='tab psm-tab'+(open&&selected===session.id?' active':'');
+     tab.dataset.psmTab=String(session.id);
+     const name=document.createElement('span');name.className='name';name.textContent='⌁ '+t().title+' '+session.id;
+     const close=document.createElement('span');close.className='close';close.textContent='×';
+     close.setAttribute('role','button');close.setAttribute('aria-label',t().close);
+     close.onclick=e=>{e.stopPropagation();closeSession(session.id);};
+     tab.append(name,close);
+     tab.onclick=()=>selectSession(session.id);
+     tabs.append(tab);
+   }
+ }
+ function selectSession(id){
+   if(!sessions.some(x=>x.id===id))return;
+   selected=id;open=true;pane.hidden=false;
+   host.classList.add('psm-mode');button.setAttribute('aria-pressed','true');
+   // A session has its own setup status/feedback, independent from other tabs.
+   q('[data-psm="feedback"]').textContent=sessions.find(x=>x.id===id).feedback||'';
+   translate();syncTabs();
+ }
+ function createSession(){
+   const session={id:++sequence,feedback:''};sessions.push(session);
+   selectSession(session.id);return session.id;
+ }
+ function hide(){open=false;pane.hidden=true;host.classList.remove('psm-mode');button.setAttribute('aria-pressed','false');q('.psm-menu').hidden=true;syncTabs();}
+ function closeSession(id){
+   const i=sessions.findIndex(x=>x.id===id);if(i<0)return;
+   sessions.splice(i,1);
+   if(selected===id){
+     selected=null;
+     if(sessions.length)selectSession(sessions[Math.min(i,sessions.length-1)].id);
+     else hide();
+   }else syncTabs();
+ }
+ function syncTabs(){
+   tabs.querySelectorAll('.psm-tab').forEach(tab=>tab.remove());
+   renderTabs();
+   tabs.querySelectorAll('.tab:not(.psm-tab)').forEach(tab=>tab.classList.toggle('active',!open&&tab.classList.contains('active')));
+ }
+ function show(){if(selected!==null)selectSession(selected);else createSession();}
+ button.addEventListener('click',createSession);
  pane.addEventListener('click',async event=>{
    const action=event.target.closest('[data-psm-action]')?.dataset.psmAction;
    if(!action)return;
-   if(action==='close')hide();
+   if(action==='close')closeSession(selected);
    if(action==='tool'){q('.psm-menu').hidden=!q('.psm-menu').hidden;q('[data-psm-action="tool"]').setAttribute('aria-expanded',String(!q('.psm-menu').hidden));}
-   if(action==='permissions'){q('[data-psm="feedback"]').textContent=t().rule+' — '+t().notice;q('.psm-menu').hidden=true;}
-   if(action==='revoke'){const result=await manager.revokeLocalAccess();q('[data-psm="feedback"]').textContent=result.ok?'Revoked':t().unavailable;q('.psm-menu').hidden=true;}
-   if(action==='check'){const state=await manager.checkConnection();q('[data-psm="feedback"]').textContent=state.configured?'Connected':t().unavailable;}
+   if(action==='permissions'){setFeedback(t().rule+' — '+t().notice);q('.psm-menu').hidden=true;}
+   if(action==='revoke'){const result=await manager.revokeLocalAccess();setFeedback(result.ok?'Revoked':t().unavailable);q('.psm-menu').hidden=true;}
+   if(action==='check'){const state=await manager.checkConnection();setFeedback(state.configured?'Connected':t().unavailable);}
  });
- const unsubscribe=language.subscribe(translate);
+ function setFeedback(value){q('[data-psm="feedback"]').textContent=value;const session=sessions.find(x=>x.id===selected);if(session)session.feedback=value;}
+ const unsubscribe=language.subscribe(()=>{translate();syncTabs();});
  translate();
- return {show,hide,get isOpen(){return open;},dispose(){unsubscribe();hide();pane.remove();}};
+ return {show,hide,createSession,selectSession,closeSession,syncTabs,get isOpen(){return open;},get sessions(){return sessions.map(x=>({...x}));},dispose(){unsubscribe();hide();tabs.querySelectorAll('.psm-tab').forEach(x=>x.remove());pane.remove();}};
 }

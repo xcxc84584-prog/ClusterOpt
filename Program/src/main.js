@@ -184,7 +184,7 @@ const GlobalPropertyRegistry = createGlobalPropertyRegistryClass();
 const SyncStatus = createSyncStatusClass();
 const LANGUAGE=new LanguageProperty();
 const UI_PALETTE = new InterfacePalette();
-mountPowerShellUI({host:document.querySelector('#clusterEditorColumn'),button:document.querySelector('#explorerPowerShell'),language:LANGUAGE});
+const psmUI=mountPowerShellUI({host:document.querySelector('#clusterEditorColumn'),button:document.querySelector('#explorerPowerShell'),language:LANGUAGE});
 const FILE_TYPE_BLOCKLIST = new BlockedFileTypes();
 const TEXT_HIGHLIGHTER = new TextHighlighter();
 const highlightRenderer = new HighlightRenderer(document.querySelector('#editor'),document.querySelector('#highlightOverlay'));
@@ -520,6 +520,7 @@ tab.append(name,close);
 tab.onclick=()=>switchDoc(id);
 $('#tabs').append(tab);
 }
+psmUI.syncTabs();
 const changedDocument=!!d&&editor.dataset.doc!==active;
 if(d){
 if(changedDocument){
@@ -548,6 +549,7 @@ if(changedDocument)scheduleHighlight({documentTransition:true});
 renderSyncStatus();
 }
 function switchDoc(id){
+  psmUI.hide();
   if (active && virtualSessions.has(active)) {
     const session = virtualSessions.get(active);
     session.setPosition(session.center, {
@@ -568,7 +570,7 @@ function switchDoc(id){
   editor.focus({preventScroll:true});
   scheduleRecovery();
 }
-function create(name=t('unnamed'),content='',handle=null){const res=docs.create(name,content,handle);
+function create(name=t('unnamed'),content='',handle=null){psmUI.hide();const res=docs.create(name,content,handle);
 active=res.data.id;
 if(handle)monitor.watch(active,content);
 refresh();
@@ -1661,7 +1663,7 @@ renderTabGuides();
 function renderLanguage() {
   document.documentElement.lang=LANGUAGE.value;
   explorer.setLocale(LANGUAGE.value, t);
-  document.title='Cluster Opt v0.0.59';
+  document.title='Cluster Opt v0.0.60';
   $('#menuBtn').textContent=t('file')+'⌄';
   for (const key of ['new','open','save','saveas','close','closeall']) {
     const button=$('#menu [data-action="'+key+'"]');
