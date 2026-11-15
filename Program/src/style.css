@@ -1456,3 +1456,12 @@ body > .explorer-context .explorer-context-label { overflow-wrap:anywhere; }
  .psm-pane.psm-compact-setup .psm-setup-step:nth-child(3){grid-column:1}
  .psm-pane.psm-compact-setup .psm-body:not([hidden]){width:calc(100% - 20px)!important}
 }
+
+/* v0.0.60 r8 interactive PowerShell console */
+.psm-pane .psm-terminal-input{display:flex;align-items:center;gap:10px;min-width:0;padding:12px 0;border-top:1px solid var(--psm-line,#555);margin:0}
+.psm-pane .psm-terminal-input label{flex:0 0 auto;font:700 14px Consolas,'Cascadia Mono',monospace;color:var(--psm-ink,#fff)}
+.psm-pane .psm-terminal-input input{flex:1 1 auto;min-width:0;min-height:38px;padding:8px 12px;background:var(--psm-bg,#17191e);color:var(--psm-ink,#fff);border:1px solid var(--psm-line,#555);border-radius:6px;font:13px Consolas,'Cascadia Mono',monospace}
+.psm-pane .psm-terminal-input input:focus{outline:2px solid var(--ui-accent,#9fb4ff);outline-offset:1px}
+.psm-pane .psm-terminal-input button{flex:0 0 auto;min-width:80px;min-height:38px;padding:8px 12px;color:var(--psm-ink,#fff);background:var(--psm-card,#292c35);border:1px solid var(--psm-line,#555);border-radius:6px}
+.psm-pane .psm-terminal-output{min-height:100px;overflow:auto;flex:1 1 auto}
+@media(max-width:600px){.psm-pane .psm-terminal-input{flex-wrap:wrap}.psm-pane .psm-terminal-input input{flex:1 1 calc(100% - 55px)}}
