@@ -290,7 +290,7 @@ function scheduleLineHighlight(){
     const to=endLine+1<starts.length?starts[endLine+1]-1:value.length;
     const source=value.slice(from,to);
     const bg=getComputedStyle(document.documentElement).getPropertyValue('--ui-editor');
-    const background=(bg.match(/\\d+/g)||['0','0','0']).slice(0,3).map(Number);
+    const background=(bg.match(/\d+/g)||['0','0','0']).slice(0,3).map(Number);
     highlightTasks.run({revision:generation,
       execute:({signal})=>TEXT_HIGHLIGHTER.highlightRegion({
         documentId:id,targetSliceId:String(sliceId),revision:generation,
