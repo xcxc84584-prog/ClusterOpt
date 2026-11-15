@@ -10,7 +10,7 @@ import {DEFAULT_HIGHLIGHT_SHORTCUT,normalizeHighlightShortcut,matchesHighlightSh
 import {transcodeToUtf8} from './fmc/chinese-transcoder.js';
 import {TextHighlighter,detectLanguage} from './text-highlighter/text-highlighter.js?v=opt039-dual-endpoint';
 import {HighlightRenderer} from './text-highlighter/highlight-renderer.js?v=opt048-render';
-import {Explorer} from './explorer.js?v=opt058-file-tool-i18n';
+import {Explorer} from './explorer.js?v=opt059-shortcut-i18n';
 import {createVTE} from './vte/vte.js';
 import {handleDfomKeydown, handleDfomBeforeInput, buildTabGuideFragment} from './dfom.js';
 import {readStoragePriority, writeStoragePriority, fileSignature} from './storage-priority.js';
@@ -1659,7 +1659,7 @@ renderTabGuides();
 function renderLanguage() {
   document.documentElement.lang=LANGUAGE.value;
   explorer.setLocale(LANGUAGE.value, t);
-  document.title='Cluster Opt v0.0.58';
+  document.title='Cluster Opt v0.0.59';
   $('#menuBtn').textContent=t('file')+'⌄';
   for (const key of ['new','open','save','saveas','close','closeall']) {
     const button=$('#menu [data-action="'+key+'"]');
@@ -1670,6 +1670,21 @@ function renderLanguage() {
   $('#paletteBtn').textContent=t('palette')+' ›';
   $('#highlighterBtn').textContent='◇ '+t('highlighter');
   $('#highlighterTitle').textContent=t('highlighter');
+  $('#highlighterShortcutLabel').textContent=t('shortcutTitle');
+  $('#highlighterShortcutDescription').textContent=t('shortcutDescription');
+  $('#highlighterShortcutScope').textContent=t('shortcutScope');
+  $('#highlighterShortcutCombination').textContent=t('shortcutCombination');
+  $('#highlighterShortcutReset').textContent=t('shortcutReset');
+  $('#highlighterShortcutReset').title=t('shortcutResetTitle');
+  $('#highlighterShortcutHelp').textContent=t('shortcutHelp');
+  $('#highlighterShortcutSave').textContent=t('shortcutSave');
+  $('#highlighterShortcutInput').placeholder=t('shortcutPlaceholder');
+  if($('#highlighterShortcutStatus').dataset.state==='saved')showHighlightShortcut();
+  else if($('#highlighterShortcutStatus').dataset.state==='recording')
+    $('#highlighterShortcutStatus').textContent=t('shortcutRecording');
+  else if($('#highlighterShortcutStatus').dataset.state==='ready')
+    $('#highlighterShortcutStatus').textContent=t('shortcutReady');
+
   $('#highlighterEnabled').parentElement.lastChild.textContent=' '+t('highlighterEnabled');
   $('#highlighterHint').textContent=t('highlighterHint');
   $('#highlighterSlices').textContent=t('highlighterSlices');
@@ -1807,15 +1822,15 @@ function formatHighlightShortcut(shortcut){
 function showHighlightShortcut(){
   shortcutDraft=null;
   shortcutInput.value=formatHighlightShortcut(highlighterShortcut);
-  shortcutInput.placeholder='點擊後按下快捷鍵';
+  shortcutInput.placeholder=t('shortcutPlaceholder');
   shortcutSave.disabled=true;
-  shortcutStatus.textContent='目前使用：'+formatHighlightShortcut(highlighterShortcut);
+  shortcutStatus.textContent=t('shortcutCurrent',formatHighlightShortcut(highlighterShortcut));
   shortcutStatus.dataset.state='saved';
 }
 showHighlightShortcut();
 shortcutInput.addEventListener('focus',()=>{
-  shortcutInput.placeholder='請按 Ctrl + (Shift) + 字母／數字';
-  shortcutStatus.textContent='正在錄製快捷鍵；按 Esc 取消。';
+  shortcutInput.placeholder=t('shortcutFocusPlaceholder');
+  shortcutStatus.textContent=t('shortcutRecording');
   shortcutStatus.dataset.state='recording';
 });
 shortcutInput.addEventListener('keydown',event=>{
@@ -1830,17 +1845,17 @@ shortcutInput.addEventListener('keydown',event=>{
     shift:event.shiftKey,key
   });
   if(!event.ctrlKey&&!event.metaKey){
-    shortcutStatus.textContent='必須同時按住 Ctrl。';
+    shortcutStatus.textContent=t('shortcutRequireCtrl');
     shortcutStatus.dataset.state='error';return;
   }
   if(event.altKey||!candidate){
-    shortcutStatus.textContent='快捷鍵不可用或與既有操作衝突，請換一組。';
+    shortcutStatus.textContent=t('shortcutInvalid');
     shortcutStatus.dataset.state='error';return;
   }
   shortcutDraft=candidate;
   shortcutInput.value=formatHighlightShortcut(candidate);
   shortcutSave.disabled=false;
-  shortcutStatus.textContent='已錄製；點擊「儲存快捷鍵」套用。';
+  shortcutStatus.textContent=t('shortcutReady');
   shortcutStatus.dataset.state='ready';
 });
 shortcutInput.addEventListener('paste',event=>event.preventDefault());
@@ -1848,7 +1863,7 @@ shortcutInput.addEventListener('drop',event=>event.preventDefault());
 shortcutSave.addEventListener('click',()=>{
   if(!shortcutDraft)return;
   if(!persistHighlightShortcut(localStorage,shortcutDraft)){
-    shortcutStatus.textContent='設定儲存失敗，快捷鍵未變更。';
+    shortcutStatus.textContent=t('shortcutSaveFailed');
     shortcutStatus.dataset.state='error';return;
   }
   highlighterShortcut=shortcutDraft;showHighlightShortcut();
@@ -1857,7 +1872,7 @@ $('#highlighterShortcutReset').addEventListener('click',()=>{
   if(persistHighlightShortcut(localStorage,DEFAULT_HIGHLIGHT_SHORTCUT)){
     highlighterShortcut=DEFAULT_HIGHLIGHT_SHORTCUT;showHighlightShortcut();
   }else{
-    shortcutStatus.textContent='無法儲存預設設定。';
+    shortcutStatus.textContent=t('shortcutResetFailed');
     shortcutStatus.dataset.state='error';
   }
 });
