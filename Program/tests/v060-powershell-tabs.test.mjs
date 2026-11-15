@@ -10,7 +10,7 @@ test('60.12 document tabs and PowerShell tabs share the same tab bar',()=>{
  const main=read('../src/main.js');
  assert.match(main,/psmUI\.syncTabs\(\)/);
  assert.match(main,/function switchDoc\(id\)\{\s*psmUI\.hide\(\)/);
- assert.match(main,/document\.title='Cluster Opt v0\.0\.67'/);
+ assert.match(main,/document\.title='Cluster Opt v0\.0\.68'/);
 });
 test('60.13 terminal tab bar remains visible in PowerShell mode',()=>{
  const css=read('../src/style.css');
