@@ -17,10 +17,13 @@ test('54 Explorer refresh preserves selected and expanded entries when external 
  assert.match(explorer,/if\(!this\.#rename&&!this\.#draft&&!this\.#hold\)this\.render\(\)/);
  assert.doesNotMatch(explorer,/Explorer directory read: '\+error\);node\.children=\[\]/);
 });
-test('54 Explorer menu shows labeled actions and back navigation',()=>{
+test('56 Explorer inline toolbar exposes accessible icon actions and back navigation',()=>{
  assert.match(explorer,/button\.append\(symbol\)/);
  assert.match(explorer,/explorer-action-symbol/);
  assert.match(explorer,/key==='more'\|\|key==='back'/);
- assert.match(css,/\.explorer-action-label/);
+ assert.match(explorer,/button\.setAttribute\('aria-label',label\)/);
+ assert.match(explorer,/menu\.setAttribute\('role','toolbar'\)/);
+ assert.match(explorer,/row\.append\(this\.#inlineActions\(node\)\)/);
+ assert.match(css,/#explorerTree \.explorer-inline-actions/);
  assert.match(css,/\.explorer-inline-action\.is-danger/);
 });
