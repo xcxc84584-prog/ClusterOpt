@@ -18,3 +18,5 @@ Local-first browser IDE (GitHub Pages). Current release: **v0.0.50** (through st
 50.5: soft-wrap visual-line map model and tests only. Browser wrap stays OFF to preserve highlighting, line numbers and caret geometry.
 
 51.1: isolated Node benchmark for line-index and token-range remap; excludes Shiki, DOM, browser latency.
+
+51.2: known beforeinput patch updates highlight line starts and token ranges; unknown edits fall back. Current array tail-shift and DOM repaint remain linear.
