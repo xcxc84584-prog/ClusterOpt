@@ -27,13 +27,13 @@ test('repository governance: OCDA and canonical inventory stay aligned',()=>{
   const properties=read('../../PROPERTY_LIST.md');
   for(const name of ['EDIT_REVISION','MICRO_SLICE_PREFIX','PARENT_SLICE_ID'])
     assert.ok(properties.includes(name),'missing '+name);
-  assert.match(read('../../物件清單.md'),/42 個物件/);
+  assert.match(read('../../物件清單.md'),/43 個物件/);
 });
 
 test('repository governance: release redirect and VTE noninterference',()=>{
   const root=read('../../index.html'),program=read('../index.html');
-  assert.match(root,/Program\/\?v=0\.0\.50/);
-  assert.match(program,/Cluster Opt 0\.0\.50/);
+  assert.match(root,/Program\/\?v=0\.0\.51/);
+  assert.match(program,/Cluster Opt 0\.0\.51/);
   const vte=createVTE();
   createClusterDependencies().list();
   assert.equal(vte.Status().data.files.length,0);
