@@ -37,12 +37,12 @@ export class HighlightRenderer {
     this.editor=textarea;this.overlay=overlay;
     this.lastScheme=null;this.lastText='';
     this.starts=[0];this.windowStart=-1;this.windowEnd=-1;
-    this.lineNodes=new Map();
+    this.lineNodes=new Map();this.viewportOnly=false;
   }
   clear(){
     this.lastScheme=null;this.lastText='';this.starts=[0];
     this.windowStart=-1;this.windowEnd=-1;this.lineNodes.clear();
-    this.overlay.replaceChildren();this.editor.classList.remove('highlight-active');
+    this.overlay.replaceChildren();this.overlay.style.transform='';this.editor.classList.remove('highlight-active');
   }
   #lineHeight(){
     return Number.parseFloat(getComputedStyle(this.editor).lineHeight)||22;
@@ -76,7 +76,7 @@ export class HighlightRenderer {
   #draw(force=false){
     if(!this.lastScheme)return;
     const height=this.#lineHeight();
-    const margin=12;
+    const margin=this.viewportOnly?2:12;
     const first=Math.max(0,Math.floor(this.editor.scrollTop/height)-margin);
     const last=Math.min(this.starts.length,Math.ceil(
       (this.editor.scrollTop+this.editor.clientHeight)/height)+margin);
@@ -97,6 +97,7 @@ export class HighlightRenderer {
     bottom.style.height=((this.starts.length-last)*height)+'px';
     fragment.append(bottom);
     this.overlay.replaceChildren(fragment);this.lineNodes=nodes;
+    this.overlay.firstElementChild?.style.setProperty('pointer-events','none');
   }
   render(scheme){
     if(scheme.status!=='OK'){this.clear();return;}
@@ -158,9 +159,17 @@ export class HighlightRenderer {
     if(node)this.#paint(node,index);
     return true;
   }
+  setViewportOnly(value){this.viewportOnly=Boolean(value);this.windowStart=-1;this.#draw(true);this.sync();}
+  visibleRange(){
+    const height=this.#lineHeight();
+    const first=Math.max(0,Math.floor(this.editor.scrollTop/height)-2);
+    const last=Math.min(this.starts.length,Math.ceil((this.editor.scrollTop+this.editor.clientHeight)/height)+2);
+    return {first,last};
+  }
   sync(){
     this.#draw();
-    this.overlay.scrollTop=this.editor.scrollTop;
-    this.overlay.scrollLeft=this.editor.scrollLeft;
+    // The overlay is overflow:hidden, so assigning scrollTop does not move it.
+    // Move its content by the textarea's actual pixel scroll offset instead.
+    this.overlay.style.transform=`translate(${-this.editor.scrollLeft}px, ${-this.editor.scrollTop}px)`;
   }
 }
