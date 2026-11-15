@@ -71,7 +71,7 @@ export class DependencyRegistry {
   edges() { return this.dep().data.relations; }
 }
 
-/** Single source of truth for the current v0.0.48 static OCDA declarations. */
+/** Single source of truth for the current v0.0.49 static OCDA declarations. */
 export function createClusterDependencies() {
   const registry = new DependencyRegistry();
   const objects = [
@@ -98,6 +98,7 @@ export function createClusterDependencies() {
     ['PieceTree', 'fmc/piece-tree.js', 'Balanced editable text buffer', ['TEXT_LENGTH','LINE_COUNT','EDIT_REVISION']],
     ['MicroSliceDocument', 'fmc/micro-slice-document.js', 'Bounded logical child slices of a physical slice', ['PARENT_SLICE_ID','MICRO_SLICE_ID','MICRO_SLICE_RANGE','MICRO_SLICE_MAX_LENGTH','EDIT_REVISION']],
     ['MicroSliceIndex', 'fmc/micro-slice-index.js', 'Fenwick prefix offsets for micro-slices', ['MICRO_SLICE_LENGTHS','MICRO_SLICE_PREFIX','MICRO_SLICE_RANGE']],
+    ['EditPath', 'fmc/edit-path.js', 'Resident-slice incremental textarea reconciliation', ['PARENT_SLICE_ID','EDIT_REVISION','TEXT_LENGTH','LINE_COUNT']],
     ['ExternalChangeMonitor', 'main.js', 'External file change observation', ['DOCUMENT_STATUS']],
     ['FILE_MENU', 'main.js', 'File menu UI', ['LANGUAGE']],
     ['Explorer', 'explorer.js', 'Workspace tree, context menu and file actions', ['LANGUAGE']],
@@ -153,6 +154,8 @@ export function createClusterDependencies() {
     ['ExternalChangeMonitor', 'SyncStatus', 'REQUEST'],
     ['MicroSliceDocument', 'PieceTree', 'IMPORT'],
     ['MicroSliceDocument', 'MicroSliceIndex', 'IMPORT'],
+    ['EditPath', 'MicroSliceDocument', 'IMPORT'],
+    ['UI', 'EditPath', 'REQUEST'],
     ['FileManagementCore', 'FlagUnit', 'IMPORT'],
     ['FileManagementCore', 'MVCCUnit', 'IMPORT'],
     ['SliceLoader', 'FileManagementCore', 'REQUEST'],
