@@ -1,4 +1,4 @@
-# ClusterOpt Object List — v0.0.51.4
+# ClusterOpt Object List — v0.0.55
 
 Source of truth: `Program/src/dependency-registry.js` (createClusterDependencies). Registry entries: **42**. Runtime UI objects and implementation modules are not automatically additional OCDA registry objects.
 
@@ -56,3 +56,7 @@ Source of truth: `Program/src/dependency-registry.js` (createClusterDependencies
 Updated for 50.1: isolated LineBenchmark added (P50/P95/P99); 49.5: 48 objects retained. VirtualFileSession now exposes version-checked micro-range patches under parent WTF/MVCC; bound AgentFlagGateway and UserFlagGateway expose patch(). No independent micro-slice leases. For directional relations, inspect `createClusterDependencies().edges()`.
 
 > 50.3：MicroSliceIndex 改用 implicit treap；MicroSliceDocument 仍使用陣列管理邊界 ID，完整 list 與陣列 splice 仍可能 O(N)。
+
+## v0.0.55 Explorer UI
+
+Explorer (`explorer.js`) remains the workspace tree object. Its context actions are single-column glyph-only buttons. The existing `InterfacePalette` and `GlobalPropertyRegistry` objects own the derived `EXPLORER_ACTIVE_COLOR` property; no additional OCDA object is introduced.
