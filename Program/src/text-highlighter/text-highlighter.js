@@ -1,4 +1,5 @@
 import {resolveTextColors} from './text-contrast.js';
+import {RevisionTokenCache} from './revision-token-cache.js';
 // ClusterOpt v0.0.30 — isolated, read-only Shiki tokenization.
 // CDN-loaded grammars are optional; the editor remains fully usable offline.
 const LANGUAGE_BY_EXTENSION = {
@@ -44,7 +45,7 @@ export class TextPalette {
 export class TextHighlighter {
   #shiki=null;
   #loading=null;
-  #tokenCache=new Map();
+  #tokenCache=new RevisionTokenCache();
   #palette=new TextPalette();
   enabled=true;
   get palette(){return this.#palette;}
@@ -59,7 +60,7 @@ export class TextHighlighter {
     return this.#loading;
   }
   invalidate(documentId){
-    for(const key of this.#tokenCache.keys())if(key.startsWith(documentId+':'))this.#tokenCache.delete(key);
+    this.#tokenCache.invalidate(documentId);
   }
   // Bypass highlighter: never reads adjacent slices and never retokenizes the slice.
   // A lexical line context is used only when available; multiline grammar state
@@ -120,9 +121,9 @@ export class TextHighlighter {
     previousSlice='',targetSlice='',nextSlice='',background=[0,0,0],signal}){
     const identity={documentId,targetSliceId,revision,language};
     if(!this.enabled||language==='text')return {...identity,status:'FALLBACK',ranges:[]};
-    const cacheKey=[documentId,targetSliceId,revision,language,
-      previousSlice.length,targetSlice.length,nextSlice.length].join(':');
-    let ranges=this.#tokenCache.get(cacheKey);
+    const cacheMeta={documentId:String(documentId),sliceId:String(targetSliceId),
+      revision,language,source:previousSlice+'\u0000'+targetSlice+'\u0000'+nextSlice};
+    let ranges=this.#tokenCache.get(cacheMeta);
     if(!ranges){
       try{
         const engine=await this.#engine();
@@ -148,8 +149,8 @@ export class TextHighlighter {
           }
           if(line<result.tokens.length-1)cursor++;
         }
-        this.#tokenCache.set(cacheKey,ranges);
-        if(this.#tokenCache.size>32)this.#tokenCache.delete(this.#tokenCache.keys().next().value);
+        if(signal?.aborted)return {...identity,status:'STALE',ranges:[]};
+        this.#tokenCache.put(cacheMeta,ranges);
       }catch(error){return {...identity,status:'FALLBACK',ranges:[],error:String(error)};}
     }
     if(signal?.aborted)return {...identity,status:'STALE',ranges:[]};
