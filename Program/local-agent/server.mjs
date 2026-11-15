@@ -143,8 +143,9 @@ if(process.argv[1]&&fileURLToPath(import.meta.url)===process.argv[1]){
  try{const {attachNativeTerminal}=await import('./native-terminal.mjs');await attachNativeTerminal(agent.server,{token:agent.token,allowedOrigins:ALLOWED_ORIGINS});console.log('Native ConPTY terminal: enabled');}
  catch(error){console.error('Native terminal unavailable:',error.message);}
  console.log('PowerShell sessions: enabled after browser pairing');
- agent.server.listen(DEFAULT_PORT,'127.0.0.1',()=>{
-  console.log('ClusterOpt Local Agent listening on 127.0.0.1:'+DEFAULT_PORT);
+ const port=Number(process.env.CLUSTEROPT_PORT)||DEFAULT_PORT;
+ agent.server.listen(port,'127.0.0.1',()=>{
+  console.log('ClusterOpt Local Agent listening on 127.0.0.1:'+port);
   console.log('Pairing token (do not share): '+agent.token);
   console.log('Allowed origin: https://xcxc84584-prog.github.io');
  });
