@@ -1,4 +1,4 @@
-// v0.0.60 PR-02 — Browser UI only. Never runs OS commands.
+// v0.0.61 PR-02 — Browser UI only. Never runs OS commands.
 import {PowerShellManager} from './powershell-manager.js';
 import {PowerShellClient} from './powershell-client.js?v=opt060-psm-r10';
 import {createSetupCmd,SETUP_FILENAME} from './cmd-setup.js?v=opt060-psm-r10';
@@ -23,6 +23,8 @@ export function mountPowerShellUI({host,button,language,manager=new PowerShellMa
  window.addEventListener('scroll',onScroll,true);
  window.addEventListener('resize',closeToolMenu);
  const sessions=[];
+ const remote=manager.agent;
+ let pollTimer=null;
  let connected=false;
  let terminalBusy=false;
  let selected=null;
@@ -31,15 +33,17 @@ export function mountPowerShellUI({host,button,language,manager=new PowerShellMa
  const pane=document.createElement('section');
  pane.id='powershellManagerPane';pane.className='psm-pane';pane.hidden=true;
  pane.setAttribute('aria-label','PowerShell');
- pane.innerHTML=`<div class="psm-top"><strong data-psm="title"></strong><div class="psm-actions"><span data-psm="status"></span><button type="button" data-psm-action="tool" aria-expanded="false" aria-label="PowerShell tools">⚙</button><button type="button" data-psm-action="close" aria-label="Close">×</button></div></div><div class="psm-menu" hidden><button type="button" data-psm-action="connection-settings"></button><button type="button" data-psm-action="clear"></button><button type="button" data-psm-action="permissions"></button><button type="button" data-psm-action="revoke"></button></div><div class="psm-body"><div class="psm-intro"><span class="psm-glyph" aria-hidden="true">⌁</span><div><span class="psm-eyebrow">LOCAL CONNECTION · v0.0.60</span><h2 data-psm="setup"></h2><p data-psm="desc"></p></div></div><details class="psm-advanced"><summary data-psm="command"></summary><label for="psmCheckCommand" data-psm="hint"></label><input id="psmCheckCommand" readonly></details><div class="psm-footer"><button type="button" data-psm-action="check" class="psm-primary"></button><p role="status" aria-live="polite" data-psm="feedback"></p></div></div>`;
+ pane.innerHTML=`<div class="psm-top"><strong data-psm="title"></strong><div class="psm-actions"><span data-psm="status"></span><button type="button" data-psm-action="tool" aria-expanded="false" aria-label="PowerShell tools">⚙</button><button type="button" data-psm-action="close" aria-label="Close">×</button></div></div><div class="psm-menu" hidden><button type="button" data-psm-action="connection-settings"></button><button type="button" data-psm-action="clear"></button></div><div class="psm-body"><div class="psm-intro"><span class="psm-glyph" aria-hidden="true">⌁</span><div><span class="psm-eyebrow">LOCAL CONNECTION · v0.0.61</span><h2 data-psm="setup"></h2><p data-psm="desc"></p></div></div><details class="psm-advanced"><summary data-psm="command"></summary><label for="psmCheckCommand" data-psm="hint"></label><input id="psmCheckCommand" readonly></details><div class="psm-footer"><button type="button" data-psm-action="check" class="psm-primary"></button><p role="status" aria-live="polite" data-psm="feedback"></p></div></div>`;
  host.append(pane);
  const terminal=document.createElement('section');
  terminal.className='psm-terminal psm-terminal-classic';terminal.hidden=true;
- terminal.innerHTML='<div class="psm-terminal-head"><strong data-psm-terminal="heading"></strong><span class="psm-terminal-connection" data-psm-terminal="mode"></span><div class="psm-terminal-toolbar"><button type="button" data-psm-action="new-session"></button><button type="button" data-psm-action="close-session"></button><button type="button" data-psm-action="settings"></button></div></div><div class="psm-terminal-output" role="log" aria-live="polite" aria-label="PowerShell output"></div><form class="psm-terminal-input"><label for="psmCommandInput" data-psm-terminal="prompt">PS C:\\&gt;</label><input id="psmCommandInput" type="text" autocomplete="off" spellcheck="false" aria-label="PowerShell command" placeholder="Get-Location"><button type="submit" data-psm-action="run">Run</button></form><div class="psm-terminal-actions" hidden><button type="button" data-psm-action="version"></button><button type="button" data-psm-action="location"></button><button type="button" data-psm-action="clear"></button></div>';
+ terminal.innerHTML='<div class="psm-terminal-head"><strong data-psm-terminal="heading"></strong><span class="psm-terminal-connection" data-psm-terminal="mode"></span><div class="psm-terminal-toolbar"><button type="button" data-psm-action="new-session"></button><button type="button" data-psm-action="close-session"></button><button type="button" data-psm-action="settings"></button></div></div><div class="psm-terminal-output" role="log" aria-live="polite" aria-label="PowerShell output"></div><form class="psm-terminal-input"><label for="psmCommandInput" data-psm-terminal="prompt">PS C:\\&gt;</label><textarea id="psmCommandInput" rows="1" autocomplete="off" spellcheck="false" aria-label="PowerShell command" placeholder="Get-Location"></textarea><button type="submit" data-psm-action="run">Run</button></form><div class="psm-terminal-actions" hidden><button type="button" data-psm-action="version"></button><button type="button" data-psm-action="location"></button><button type="button" data-psm-action="clear"></button></div>';
  pane.append(terminal);
  function renderMode(){const setupView=pane.querySelector('.psm-body');setupView.hidden=connected;terminal.hidden=!connected;pane.classList.toggle('psm-connected',connected);}
- function appendOutput(message){const session=sessions.find(x=>x.id===selected);if(session)session.output.push(message);const line=document.createElement('pre');line.textContent=message;terminal.querySelector('.psm-terminal-output').append(line);terminal.querySelector('.psm-terminal-output').scrollTop=terminal.querySelector('.psm-terminal-output').scrollHeight;}
- function setConnected(value){connected=Boolean(value);renderMode();translate();if(connected&&open)requestAnimationFrame(()=>terminal.querySelector('#psmCommandInput')?.focus());}
+ function appendOutput(message,id=selected){const session=sessions.find(x=>x.id===id);if(session)session.output.push(message);if(id!==selected)return;const line=document.createElement('pre');line.textContent=message;terminal.querySelector('.psm-terminal-output').append(line);terminal.querySelector('.psm-terminal-output').scrollTop=terminal.querySelector('.psm-terminal-output').scrollHeight;}
+ function setConnected(value){connected=Boolean(value);renderMode();translate();if(connected){for(const session of sessions)ensureRemote(session);if(!pollTimer)pollTimer=setInterval(pollSessions,250);}else{if(pollTimer)clearInterval(pollTimer);pollTimer=null;}if(connected&&open)requestAnimationFrame(()=>terminal.querySelector('#psmCommandInput')?.focus());}
+ async function ensureRemote(session){if(!connected||session.remoteId||session.starting)return;session.starting=true;try{const result=await remote.startSession();session.remoteId=result.id;}catch(e){appendOutput('Session error: '+e.message,session.id);}finally{session.starting=false;}}
+ async function pollSessions(){for(const session of sessions){if(!session.remoteId||session.polling)continue;session.polling=true;try{const result=await remote.pollSession(session.remoteId);if(result.output)appendOutput(result.output,session.id);if(result.closed){session.remoteId=null;appendOutput('[Session closed]',session.id);}}catch(e){appendOutput('Connection: '+e.message,session.id);session.remoteId=null;}finally{session.polling=false;}}}
 
  const setup=document.createElement('div');setup.className='psm-quick-setup';
  setup.innerHTML='<div class="psm-setup-step"><span class="psm-step-number">01</span><div><strong data-psm-extra="downloadTitle"></strong><p data-psm-extra="downloadHint"></p><button type="button" data-psm-action="download" class="psm-primary"></button></div></div><div class="psm-setup-step"><span class="psm-step-number">02</span><div><strong data-psm-extra="pairTitle"></strong><p data-psm-extra="pairHint"></p><div class="psm-pair-row"><input id="psmPairToken" type="password" autocomplete="off" spellcheck="false" placeholder="64-character token"><button type="button" data-psm-action="pair"></button></div></div></div><div class="psm-setup-step"><span class="psm-step-number">03</span><div><strong data-psm-extra="verifyTitle"></strong><p data-psm-extra="verifyHint"></p></div></div>';
@@ -53,7 +57,7 @@ export function mountPowerShellUI({host,button,language,manager=new PowerShellMa
    for(const key of ['title','status','setup','desc','command','hint','check','permissions','revoke']){
      const node=q('[data-psm="'+key+'"]');if(node)node.textContent=msg[key];
    }
-   for(const key of ['check','permissions','revoke']){
+   for(const key of ['check']){
      const control=q('[data-psm-action="'+key+'"]');if(control){control.textContent=msg[key];control.setAttribute('aria-label',msg[key]);}
    }
    q('[data-psm-action="connection-settings"]').textContent=language.value==='en'?'Connection settings':'連線設定';
@@ -103,12 +107,13 @@ export function mountPowerShellUI({host,button,language,manager=new PowerShellMa
    renderMode();translate();syncTabs();if(connected)requestAnimationFrame(()=>commandInput?.focus());
  }
  function createSession(){
-   const session={id:++sequence,feedback:'',history:[],historyIndex:0,output:[]};sessions.push(session);
+   const session={id:++sequence,feedback:'',history:[],historyIndex:0,output:[],remoteId:null,starting:false,polling:false};sessions.push(session);if(connected)ensureRemote(session);
    selectSession(session.id);return session.id;
  }
  function hide(){closeToolMenu();open=false;pane.hidden=true;host.classList.remove('psm-mode');button.setAttribute('aria-pressed','false');closeToolMenu();syncTabs();}
  function closeSession(id){
    const i=sessions.findIndex(x=>x.id===id);if(i<0)return;
+   const old=sessions[i];if(old.remoteId)remote.closeSession(old.remoteId).catch(()=>{});
    sessions.splice(i,1);
    if(selected===id){
      selected=null;
@@ -127,25 +132,25 @@ export function mountPowerShellUI({host,button,language,manager=new PowerShellMa
  const commandInput=terminal.querySelector('#psmCommandInput');
  commandInput.addEventListener('keydown',event=>{
   const session=sessions.find(x=>x.id===selected);if(!session)return;
-  if(event.key==='ArrowUp'){event.preventDefault();session.historyIndex=Math.max(0,session.historyIndex-1);commandInput.value=session.history[session.historyIndex]||'';}
-  if(event.key==='ArrowDown'){event.preventDefault();session.historyIndex=Math.min(session.history.length,session.historyIndex+1);commandInput.value=session.history[session.historyIndex]||'';}
+  if(event.ctrlKey&&event.key.toLowerCase()==='c'&&commandInput.value.length===0){
+    event.preventDefault();if(session.remoteId){remote.interruptSession(session.remoteId).catch(()=>{});session.remoteId=null;appendOutput('^C');ensureRemote(session);}return;
+  }
+  if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();commandForm.requestSubmit();return;}
+  if(event.key==='ArrowUp'&&!commandInput.value.includes('\n')){event.preventDefault();session.historyIndex=Math.max(0,session.historyIndex-1);commandInput.value=session.history[session.historyIndex]||'';}
+  if(event.key==='ArrowDown'&&!commandInput.value.includes('\n')){event.preventDefault();session.historyIndex=Math.min(session.history.length,session.historyIndex+1);commandInput.value=session.history[session.historyIndex]||'';}
  });
  commandForm.addEventListener('submit',async event=>{
-  event.preventDefault();if(!connected||terminalBusy)return;
-  const command=commandInput.value.trim();if(!command)return;
-  if(command.length>2048){appendOutput('Command exceeds 2048 characters.');return;}
+  event.preventDefault();if(!connected)return;
+  const command=commandInput.value;if(!command.trim())return;
   const session=sessions.find(x=>x.id===selected);if(!session)return;
-  const allowed=window.confirm((language.value==='en'?'Execute this PowerShell command on your computer?':'確定要在本機執行這條 PowerShell 命令嗎？')+'\\n\\n'+command);
-  if(!allowed)return;
-  session.history.push(command);session.historyIndex=session.history.length;
-  commandInput.value='';terminalBusy=true;commandInput.disabled=true;
-  appendOutput('PS C:\\> '+command);
-  try{const result=await manager.executeCommand({action:'interactive',command,confirm:true});
-   appendOutput(result.ok?String(result.output||('(exit '+result.exitCode+')')):(result.code||'Command failed'));
-   if(result.ok&&/^\s*(?:cd|set-location)\s+/i.test(command))appendOutput(language.value==='en'?'Note: each command runs in a new process; directory changes do not persist.':'注意：每條命令使用獨立行程，目錄變更不會保留。');
-  }catch(error){appendOutput((language.value==='en'?'Execution error: ':'執行錯誤：')+(error?.message||'UNKNOWN'));}
-  finally{terminalBusy=false;commandInput.disabled=false;commandInput.focus();}
+  if(command.length>16384){appendOutput('Command exceeds 16384 characters.');return;}
+  session.history.push(command);session.historyIndex=session.history.length;commandInput.value='';
+  appendOutput('PS> '+command,session.id);
+  try{await ensureRemote(session);if(!session.remoteId)throw Error('SESSION_NOT_AVAILABLE');await remote.runSession(session.remoteId,command);}
+  catch(e){appendOutput('Execution error: '+e.message,session.id);}
+  commandInput.focus();
  });
+ commandInput.addEventListener('paste',event=>{const pasted=event.clipboardData?.getData('text/plain')||'';if(pasted.includes('\n')){event.preventDefault();const start=commandInput.selectionStart,end=commandInput.selectionEnd;commandInput.setRangeText(pasted,start,end,'end');commandForm.requestSubmit();}});
  pane.addEventListener('click',async event=>{
    const action=event.target.closest('[data-psm-action]')?.dataset.psmAction;
    if(!action)return;
@@ -166,7 +171,7 @@ export function mountPowerShellUI({host,button,language,manager=new PowerShellMa
      if(!ok){pairButton.disabled=false;setFeedback(language.value==='en'?'Token must be exactly 64 hexadecimal characters.':'Token 必須是 64 個十六進位字元。');return;}
      try{
        const state=await manager.checkConnection();
-       if(state.configured){setConnected(true);appendOutput(language.value==='en'?'Local Agent authenticated. Confirm each command before execution.':'本地代理驗證成功，命令執行前需逐條確認。');setFeedback('');}
+       if(state.configured){setConnected(true);appendOutput(language.value==='en'?'Local Agent authenticated. Interactive PowerShell ready.':'本地代理驗證成功，可以直接輸入命令。');setFeedback('');}
        else setFeedback((language.value==='en'?'Pairing failed: ':'配對失敗：')+(state.error||'NETWORK_UNAVAILABLE')+(language.value==='en'?'. Check agent, token and browser local-network access.':'。請確認代理視窗、Token 與瀏覽器本地網路權限。'));
      }catch{setFeedback(language.value==='en'?'Cannot reach local agent on 127.0.0.1:43881.':'無法連線至 127.0.0.1:43881。');}
      finally{pairButton.disabled=false;}
@@ -183,12 +188,12 @@ export function mountPowerShellUI({host,button,language,manager=new PowerShellMa
      finally{terminalBusy=false;}
    }
 
-   if(action==='permissions'){setFeedback(t().rule+' — '+t().notice);closeToolMenu();}
-   if(action==='revoke'){try{const result=await manager.revokeLocalAccess();setConnected(false);setFeedback(result.ok?'Revoked':t().unavailable);}catch{setFeedback(t().unavailable);}closeToolMenu();}
+
+
    if(action==='check'){const state=await manager.checkConnection();if(state.configured){setConnected(true);appendOutput(language.value==='en'?'Connected to local agent.':'已連線至本地代理。');}else setFeedback((language.value==='en'?'Connection failed: ':'連線失敗：')+(state.error||'NETWORK_UNAVAILABLE'));}
  });
  function setFeedback(value){q('[data-psm="feedback"]').textContent=value;const session=sessions.find(x=>x.id===selected);if(session)session.feedback=value;}
  const unsubscribe=language.subscribe(()=>{translate();syncTabs();});
  translate();
- return {show,hide,createSession,selectSession,closeSession,syncTabs,get isOpen(){return open;},get sessions(){return sessions.map(x=>({...x}));},dispose(){unsubscribe();document.removeEventListener('pointerdown',onOutsideClick,true);document.removeEventListener('keydown',onEscape,true);document.removeEventListener('scroll',onScroll,true);window.removeEventListener('scroll',onScroll,true);window.removeEventListener('resize',closeToolMenu);hide();tabs.querySelectorAll('.psm-tab').forEach(x=>x.remove());pane.remove();}};
+ return {show,hide,createSession,selectSession,closeSession,syncTabs,get isOpen(){return open;},get sessions(){return sessions.map(x=>({...x}));},dispose(){if(pollTimer)clearInterval(pollTimer);for(const session of sessions)if(session.remoteId)remote.closeSession(session.remoteId).catch(()=>{});unsubscribe();document.removeEventListener('pointerdown',onOutsideClick,true);document.removeEventListener('keydown',onEscape,true);document.removeEventListener('scroll',onScroll,true);window.removeEventListener('scroll',onScroll,true);window.removeEventListener('resize',closeToolMenu);hide();tabs.querySelectorAll('.psm-tab').forEach(x=>x.remove());pane.remove();}};
 }
