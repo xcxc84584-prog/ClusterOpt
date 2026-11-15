@@ -4,9 +4,9 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>
-      Cluster Opt 0.0.57
+      Cluster Opt 0.0.58
     </title>
-    <link rel="stylesheet" href="./src/style.css?v=opt057-file-tool">
+    <link rel="stylesheet" href="./src/style.css?v=opt058-file-tool-i18n">
   </head>
   <body>
     <div id="app">
@@ -19,7 +19,7 @@
             Cluster
           </strong>
           <small>
-            v0.0.57
+            v0.0.58
           </small>
         </div>
         <div class="header-utility"><button id="explorerToggle" type="button" aria-controls="explorerPanel" aria-expanded="false" title="檔案總管">☰ Explorer</button></div><div class="menu-wrap">
@@ -220,17 +220,17 @@
       <div class="palette-modal-footer"><span>CLUSTER / TEXT</span><button id="highlighterDone" type="button">完成</button></div>
     </dialog>
     <input type="file" id="fileInput" multiple hidden>
-    <script type="module" src="./src/main.js?v=opt057-file-tool">
+    <script type="module" src="./src/main.js?v=opt058-file-tool-i18n">
     </script>
   <dialog id="blockedTypesDialog" class="file-tool-dialog" aria-labelledby="blockedTypesTitle">
     <div class="file-tool-dialog-head"><div><span class="file-tool-eyebrow">CLUSTER / FILE TOOL</span><h2 id="blockedTypesTitle">屏蔽檔案類型</h2><p id="blockedTypesDescription">隱藏 Explorer 中的指定副檔名，不會刪除原始檔案。</p></div><button type="button" id="blockedTypesClose" aria-label="關閉">×</button></div>
     <div class="file-tool-dialog-body">
       <form id="blockedTypesForm" class="file-tool-add-form"><label for="blockedTypesInput">新增副檔名</label><div class="file-tool-input-row"><input id="blockedTypesInput" placeholder=".mp4" maxlength="21" autocomplete="off" required><button type="submit">＋ 新增</button></div></form>
-      <div class="file-tool-list-head"><span>已屏蔽類型 <strong id="blockedTypesCount">0</strong></span><button type="button" id="blockedTypesReset">還原預設</button></div>
+      <div class="file-tool-list-head"><span><span id="blockedTypesListLabel">已屏蔽類型</span> <strong id="blockedTypesCount">0</strong></span><button type="button" id="blockedTypesReset">還原預設</button></div>
       <div id="blockedTypesList" class="file-tool-list" role="list"></div>
       <p id="blockedTypesError" class="file-tool-error" role="status" aria-live="polite"></p>
     </div>
-    <div class="file-tool-dialog-footer"><span>變更自動儲存並立即套用 Explorer</span><button type="button" id="blockedTypesDone">完成</button></div>
+    <div class="file-tool-dialog-footer"><span id="blockedTypesFooter">變更自動儲存並立即套用 Explorer</span><button type="button" id="blockedTypesDone">完成</button></div>
   </dialog>
   <dialog id="ftiDialog" aria-labelledby="ftiDialogTitle" aria-describedby="ftiReason">
   <div class="fti-dialog-head"><span class="fti-symbol">◇</span><strong id="ftiDialogTitle">文件解析失敗</strong></div>
