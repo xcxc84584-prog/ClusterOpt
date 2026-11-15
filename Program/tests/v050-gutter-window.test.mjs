@@ -27,5 +27,5 @@ test('50.4: main.js uses virtual labels and CSS positioning',()=>{
  assert.match(read('../src/main.js'),/gutter-labels/);
  assert.doesNotMatch(read('../src/main.js'),/Array\.from\(\{length:count\}/);
  assert.match(read('../src/style.css'),/\.gutter-labels/);
- assert.match(read('../index.html'),/main\.js\?v=opt064-port-r2/);
+ assert.match(read('../index.html'),/main\.js\?v=opt065-native-r1/);
 });
