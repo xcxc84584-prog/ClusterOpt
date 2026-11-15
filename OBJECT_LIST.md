@@ -1,4 +1,4 @@
-# ClusterOpt Object List — v0.0.50.2
+# ClusterOpt Object List — v0.0.50.3
 
 Source of truth: `Program/src/dependency-registry.js` (createClusterDependencies). Registry entries: **40**. Runtime UI objects and implementation modules are not automatically additional OCDA registry objects.
 
@@ -26,7 +26,7 @@ Source of truth: `Program/src/dependency-registry.js` (createClusterDependencies
 | LineTree | `fmc/line-tree.js` | Line offset indexing |
 | PieceTree | `fmc/piece-tree.js` | Balanced editable text buffer |
 | MicroSliceDocument | `fmc/micro-slice-document.js` | Bounded logical child slices of a physical slice |
-| MicroSliceIndex | `fmc/micro-slice-index.js` | Fenwick prefix offsets for micro-slices |
+| MicroSliceIndex | `fmc/micro-slice-index.js` | implicit treap prefix offsets for micro-slices |
 | NewlineEditIntent | `fmc/newline-edit-intent.js` | Pure beforeinput range and LF delta |
 | LineBenchmark | `performance/line-benchmark.js` | Isolated newline latency baseline |
 | EditPath | `fmc/edit-path.js` | Resident-slice incremental textarea reconciliation |
@@ -46,3 +46,5 @@ Source of truth: `Program/src/dependency-registry.js` (createClusterDependencies
 | ChineseTranscoder | `fmc/chinese-transcoder.js` | Text encoding conversion |
 
 Updated for 50.1: isolated LineBenchmark added (P50/P95/P99); 49.5: 40 objects retained. VirtualFileSession now exposes version-checked micro-range patches under parent WTF/MVCC; bound AgentFlagGateway and UserFlagGateway expose patch(). No independent micro-slice leases. For directional relations, inspect `createClusterDependencies().edges()`.
+
+> 50.3：MicroSliceIndex 改用 implicit treap；MicroSliceDocument 仍使用陣列管理邊界 ID，完整 list 與陣列 splice 仍可能 O(N)。
