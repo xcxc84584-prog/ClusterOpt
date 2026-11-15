@@ -18,7 +18,7 @@ test('52 undo highlight: native historyUndo/historyRedo triggers full resident t
  const input=main.slice(start,end);
  assert.match(input,/historyUndo/);
  assert.match(input,/historyRedo/);
- assert.match(input,/if\(historyEdit\)scheduleHighlight\(\);else scheduleLineHighlight\(\)/);
+ assert.match(input,/if\(historyEdit\|\|\(pasted&&editor\.value\.length<=256\*1024\)\)scheduleHighlight\(\)/);
  assert.match(input,/reconcileResidentEdit\(id,index,content,inputIntent\)/);
 });
 test('52 undo highlight: VTE non-interference',()=>{
