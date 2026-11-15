@@ -879,7 +879,9 @@ editor.addEventListener('keydown',e=>{
     updateLines();
     updatePos();
     highlightRenderer.retainDuringEdit();
-    scheduleLineHighlight();
+    // OLR undo/redo changes the entire resident value; a 100-line region
+    // cannot reliably restore syntax colors for all affected lines.
+    scheduleHighlight();
     scheduleTabGuides();
     scheduleRecovery();
     return;
