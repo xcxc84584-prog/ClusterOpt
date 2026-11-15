@@ -16,7 +16,7 @@ test('File Tool can add, rename, delete and persist exclusions',()=>{
  policy.add('.foo');assert.equal(new BlockedFileTypes(store).has('a.foo'),true);
  assert.throws(()=>normalizeExtension('../x'));
 });
-test('File Tool UI uses palette tokens and Explorer filters excluded entries',()=>{
+test('File Tool UI uses palette tokens and Explorer filters excluded entries',async()=>{
  const fs=await import('node:fs');
  const main=fs.readFileSync(new URL('../src/main.js',import.meta.url),'utf8');
  const explorer=fs.readFileSync(new URL('../src/explorer.js',import.meta.url),'utf8');
