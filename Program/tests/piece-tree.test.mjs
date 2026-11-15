@@ -22,15 +22,16 @@ test('49.1: deterministic random edit sequence matches plain strings',()=>{
  let seed=9127;
  const rand=n=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed%n;};
  const tree=new PieceTree('one\ntwo\nthree'),chars=['a','b','\n','中','🙂','\t'];
- let expected='one\ntwo\nthree';
+ let expected='one\ntwo\nthree',edits=0;
  for(let i=0;i<600;i++){
   const start=rand(expected.length+1),end=start+rand(expected.length-start+1);
   const replacement=Array.from({length:rand(6)},()=>chars[rand(chars.length)]).join('');
   tree.replace(start,end,replacement);
+  if(start!==end||replacement.length)edits++;
   expected=expected.slice(0,start)+replacement+expected.slice(end);
   check(tree,expected);
  }
- assert.equal(tree.revision,600);
+ assert.equal(tree.revision,edits);
 });
 test('49.1: invalid offsets do not change content or revision',()=>{
  const tree=new PieceTree('abc');
