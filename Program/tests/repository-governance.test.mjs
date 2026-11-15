@@ -32,8 +32,8 @@ test('repository governance: OCDA and canonical inventory stay aligned',()=>{
 
 test('repository governance: release redirect and VTE noninterference',()=>{
   const root=read('../../index.html'),program=read('../index.html');
-  assert.match(root,/Program\/\?v=0\.0\.59/);
-  assert.match(program,/Cluster Opt 0\.0\.59/);
+  assert.match(root,/Program\/\?v=0\.0\.60/);
+  assert.match(program,/Cluster Opt 0\.0\.60/);
   const vte=createVTE();
   createClusterDependencies().list();
   assert.equal(vte.Status().data.files.length,0);
