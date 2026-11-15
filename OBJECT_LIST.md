@@ -30,6 +30,7 @@ Source of truth: `Program/src/dependency-registry.js` (createClusterDependencies
 | VisualLineMap | `editor-render/visual-line-map.js` | Soft-wrap logical/visual model (not browser-active) |
 | GutterWindow | `editor-render/gutter-window.js` | Bounded line number viewport |
 | NewlineEditIntent | `fmc/newline-edit-intent.js` | Pure beforeinput range and LF delta |
+| TextHighlighterShortcut | `text-highlighter/highlight-shortcut.js` | Validated editor-scoped toggle shortcut |
 | HighlightTaskScheduler | `text-highlighter/highlight-task-scheduler.js` | Abortable syntax task coordinator |
 | RevisionTokenCache | `text-highlighter/revision-token-cache.js` | Exact-source revision LRU |
 | LexicalCheckpoints | `text-highlighter/lexical-checkpoints.js` | Conservative lexical restart |
@@ -52,6 +53,6 @@ Source of truth: `Program/src/dependency-registry.js` (createClusterDependencies
 | StoragePriority | `storage-priority.js` | Storage priority configuration |
 | ChineseTranscoder | `fmc/chinese-transcoder.js` | Text encoding conversion |
 
-Updated for 50.1: isolated LineBenchmark added (P50/P95/P99); 49.5: 47 objects retained. VirtualFileSession now exposes version-checked micro-range patches under parent WTF/MVCC; bound AgentFlagGateway and UserFlagGateway expose patch(). No independent micro-slice leases. For directional relations, inspect `createClusterDependencies().edges()`.
+Updated for 50.1: isolated LineBenchmark added (P50/P95/P99); 49.5: 48 objects retained. VirtualFileSession now exposes version-checked micro-range patches under parent WTF/MVCC; bound AgentFlagGateway and UserFlagGateway expose patch(). No independent micro-slice leases. For directional relations, inspect `createClusterDependencies().edges()`.
 
 > 50.3：MicroSliceIndex 改用 implicit treap；MicroSliceDocument 仍使用陣列管理邊界 ID，完整 list 與陣列 splice 仍可能 O(N)。
