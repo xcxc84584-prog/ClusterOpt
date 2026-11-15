@@ -1440,6 +1440,8 @@ function renderLanguage() {
   const highlighterText=document.querySelectorAll('.highlighter-content p');
   highlighterText[0].textContent=t('highlighterHint');
   highlighterText[1].textContent=t('highlighterSlices');
+  $('#highlighterPerformanceLabel').textContent=t('highlighterPerformance');
+  $('#highlighterPerformanceHint').textContent=t('highlighterPerformanceHint');
   $('#highlighterDone').textContent=t('done');
   $('#highlighterClose').setAttribute('aria-label',t('closeDialog'));
   $('#encodingTitle').textContent=t('encodingTitle');
