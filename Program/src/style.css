@@ -1488,3 +1488,14 @@ body > .explorer-context .explorer-context-label { overflow-wrap:anywhere; }
 .psm-pane.psm-connected .psm-terminal-output:empty{min-height:0!important}
 .psm-pane.psm-connected .psm-menu{z-index:9999}
 @media(max-width:650px){.psm-pane.psm-connected .psm-terminal-head{flex-wrap:wrap}.psm-pane.psm-connected .psm-terminal-toolbar{width:100%;justify-content:flex-end}.psm-pane.psm-connected .psm-terminal-output{max-height:calc(100% - 145px)}}
+
+/* v0.0.61 persistent terminal: multiline input, normal copy/paste and accessible focus. */
+.psm-pane.psm-connected .psm-terminal-input textarea{
+ flex:1 1 auto;min-width:0;min-height:26px;max-height:160px;
+ resize:vertical;padding:2px 0!important;margin:0;
+ border:0!important;outline:0!important;border-radius:0!important;
+ background:#000!important;color:#fff!important;-webkit-text-fill-color:#fff!important;
+ font:13px/1.5 Consolas,'Cascadia Mono',monospace!important;
+}
+.psm-pane.psm-connected .psm-terminal-input textarea::placeholder{color:transparent!important}
+.psm-pane.psm-connected .psm-terminal-input textarea:focus{outline:0!important;box-shadow:none!important}
