@@ -1,0 +1,27 @@
+name: Browser simulation
+on:
+  push:
+    branches: [test/browser-simulation]
+  workflow_dispatch:
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Playwright
+        run: npm install --no-save @playwright/test && npx playwright install --with-deps chromium
+      - name: Simulate browser interaction
+        run: npx playwright test -c playwright.config.mjs
+      - name: Upload browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-simulation-results
+          path: |
+            test-results/
+            playwright-report/
+          if-no-files-found: ignore
