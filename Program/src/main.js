@@ -483,9 +483,10 @@ function updateEditorLock() {
   // already materialized slice interrupts its active save safely.
   const unavailable = !!active && virtualSessions.has(active) &&
     (editor.dataset.doc !== active || !editor.dataset.sliceReady);
-  editor.readOnly = unavailable;
-  editor.setAttribute('aria-readonly', String(unavailable));
-  editor.title = unavailable ? 'Waiting for the first editable slice' : '';
+  const media = binaryDocuments.get(active)?.type?.kind==='MEDIA';
+  editor.readOnly = unavailable || media;
+  editor.setAttribute('aria-readonly', String(unavailable || media));
+  editor.title = media ? 'Media preview is read-only' : unavailable ? 'Waiting for the first editable slice' : '';
 }
 function refresh(){const d=active?docs.get(active).data:null;
 explorer.syncDocuments(docs.ids().map(id => {
@@ -519,9 +520,12 @@ if(changedDocument){
   editor.value = binaryDocuments.has(active) ? binaryDocuments.get(active).content : virtualSessions.has(active) ? '' : d.content;
   editor.dataset.doc=active;
   editor.dataset.sliceReady = virtualSessions.has(active) ? '' : 'true';
+  editor.readOnly = binaryDocuments.get(active)?.type?.kind==='MEDIA';
 }
 $('#filename').textContent=d.name+(d.dirty?' *':'');
-if (virtualSessions.has(active)) {
+if (binaryDocuments.get(active)?.type?.kind==='MEDIA') {
+  $('#gutter').textContent='';
+} else if (virtualSessions.has(active)) {
   const session = virtualSessions.get(active);
   if (changedDocument || rebuildingDocuments.has(active)) $('#gutter').textContent = '…';
 } else {
@@ -961,6 +965,7 @@ if (savingDocuments.has(id) || backgroundIndexing.has(id) || rebuildingDocuments
 capturePosition(id);
 if (binaryDocuments.has(id)) {
   const data = binaryDocuments.get(id);
+   if(data.type?.kind==='MEDIA'){status('Media is read-only; original bytes preserved');return;}
   try {
     const bytes = new Uint8Array(data.content.length);
     for (let i = 0; i < bytes.length; i++) {
