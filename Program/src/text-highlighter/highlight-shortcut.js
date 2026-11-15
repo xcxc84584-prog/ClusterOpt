@@ -1,5 +1,6 @@
 // ClusterOpt v0.0.52: editor-scoped, user-configurable syntax toggle.
 export const DEFAULT_HIGHLIGHT_SHORTCUT=Object.freeze({shift:true,key:'H'});
+const SHIFT_RESERVED=new Set(['V','Z','T','N','W','R','P','I','J','C']);
 const RESERVED=new Set(['A','C','V','X','Z','Y','S','N','O','P','F','R','T','W','L','D','J','K','U','HISTORY']);
 export function normalizeHighlightShortcut(value){
   if(!value||typeof value!=='object'||typeof value.shift!=='boolean'||
@@ -7,7 +8,7 @@ export function normalizeHighlightShortcut(value){
     return null;
   const key=value.key.toUpperCase();
   // Plain Ctrl+letter combinations commonly belong to browser/editor actions.
-  if(!value.shift&&RESERVED.has(key))return null;
+  if((!value.shift&&RESERVED.has(key))||(value.shift&&SHIFT_RESERVED.has(key)))return null;
   return Object.freeze({shift:value.shift,key});
 }
 export function matchesHighlightShortcut(event,shortcut){
