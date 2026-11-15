@@ -28,3 +28,5 @@ Local-first browser IDE (GitHub Pages). Current release: **v0.0.50** (through st
 51.5: HighlightRenderer reuses its overlay root and existing visible line nodes; dirty lines repaint on known edit. Full slice render still rebuilds tokens; browser DOM timing pending.
 
 51.6: latest-wins syntax task scheduler with AbortSignal, revision-checked commit and cancellation; does NOT move Shiki to a Web Worker, so tokenization may still block UI.
+
+v0.0.52: File → Tool → 文本著色器可設定 Ctrl+(Shift)+A–Z/0–9；Ctrl+C/V/X/Z/Y 不觸發物理 Block 重載，普通文件 Ctrl+Z/Y 避免全量 refresh；未知編輯仍保留安全回退。
