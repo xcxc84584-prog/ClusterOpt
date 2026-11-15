@@ -60,6 +60,7 @@ export function mountPowerShellUI({host,button,language,manager=new PowerShellMa
      if(nativeSocket){nativeSocket.close();nativeSocket=null;}
      nativeTerm?.dispose();nativeWrap.replaceChildren();
      nativeTerm=new window.Terminal({cursorBlink:true,convertEol:false,fontFamily:'Consolas, monospace',fontSize:13,theme:{background:'#0b1018',foreground:'#e5eaf1'},scrollback:10000});
+     nativeWrap.hidden=false;
      nativeTerm.open(nativeWrap);
      const ws=remote.openNativeTerminal();nativeSocket=ws;
      ws.addEventListener('message',event=>{
@@ -73,7 +74,6 @@ export function mountPowerShellUI({host,button,language,manager=new PowerShellMa
      nativeTerm.onData(data=>{if(ws.readyState===WebSocket.OPEN)ws.send(JSON.stringify({type:'input',data}));});
      const resize=()=>{if(!nativeTerm||ws.readyState!==WebSocket.OPEN)return;const cols=Math.max(20,Math.floor(nativeWrap.clientWidth/8)),rows=Math.max(8,Math.floor(nativeWrap.clientHeight/17));nativeTerm.resize(cols,rows);ws.send(JSON.stringify({type:'resize',cols,rows}));};
      ws.addEventListener('open',resize);window.addEventListener('resize',resize);
-     nativeWrap.hidden=false;
      terminal.querySelector('.psm-terminal-output').hidden=true;
      terminal.querySelector('.psm-terminal-input').hidden=true;
      nativeTerm.focus();
