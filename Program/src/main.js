@@ -161,10 +161,13 @@ const UI_PALETTE = new InterfacePalette();
 const TEXT_HIGHLIGHTER = new TextHighlighter();
 const highlightRenderer = new HighlightRenderer(document.querySelector('#editor'),document.querySelector('#highlightOverlay'));
 let highlightGeneration = 0;
+let highlightViewportOnly=false;
+let highlightViewportKey='';
 let highlightTimer = null;
 let highlightAbort = null;
 let lineHighlightTimer=null;
 let lineHighlightGeneration=0;
+function buildHighlightLineStarts(value){const starts=[0];for(let i=0;i<value.length;i++)if(value.charCodeAt(i)===10)starts.push(i+1);return starts;}
 function scheduleHighlight(){
   clearTimeout(lineHighlightTimer);
   lineHighlightGeneration++;
@@ -184,6 +187,25 @@ function scheduleHighlight(){
     const target=editor.value;
     const signal=highlightAbort.signal;
     try{
+      if(highlightViewportOnly){
+        const starts=buildHighlightLineStarts(target);
+        const lineHeight=Number.parseFloat(getComputedStyle(editor).lineHeight)||22;
+        const startLine=Math.max(0,Math.floor(editor.scrollTop/lineHeight)-2);
+        const endLine=Math.min(starts.length-1,Math.ceil((editor.scrollTop+editor.clientHeight)/lineHeight)+2);
+        const from=starts[startLine],to=endLine+1<starts.length?starts[endLine+1]-1:target.length;
+        const source=target.slice(from,to);
+        const bg=getComputedStyle(document.documentElement).getPropertyValue('--ui-editor');
+        const background=(bg.match(/\d+/g)||['0','0','0']).slice(0,3).map(Number);
+        const scheme=await TEXT_HIGHLIGHTER.highlightRegion({documentId:id,targetSliceId:String(targetIndex),revision:generation,language:detectLanguage(item.name),source,background,signal});
+        if(signal.aborted||generation!==highlightGeneration||active!==id||editor.value!==target)return;
+        highlightRenderer.clear();
+        if(scheme.status==='OK'){
+          highlightRenderer.bootstrap(target);
+          highlightRenderer.renderRegion({...scheme,startLine,endLine},target);
+          highlightViewportKey=`${id}:${targetIndex}:${startLine}:${endLine}`;
+        }
+        return;
+      }
       // Neighbor indices are relative to TARGET slice, not the viewport.
       const readNeighbor=async index=>{
         if(!session||index<0||index>=session.sliceCount)return '';
@@ -218,6 +240,7 @@ function scheduleLineHighlight(){
   ++highlightGeneration;
   const generation=++lineHighlightGeneration;
   if(!TEXT_HIGHLIGHTER.enabled)return;
+  if(highlightViewportOnly){scheduleHighlight();return;}
   const id=active,item=id?docs.get(id)?.data:null;
   if(!item||binaryDocuments.has(id))return;
   const value=editor.value,caret=editor.selectionStart;
