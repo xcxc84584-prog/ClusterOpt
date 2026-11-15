@@ -6,6 +6,7 @@ import {PerformanceMonitor} from './performance/performance-monitor.js?v=opt046-
 import {matchingWindow} from './text-highlighter/matching-window.js?v=opt038-matcher';
 import {findLexicalRestart} from './text-highlighter/lexical-checkpoints.js';
 import {HighlightTaskScheduler} from './text-highlighter/highlight-task-scheduler.js';
+import {DEFAULT_HIGHLIGHT_SHORTCUT,normalizeHighlightShortcut,matchesHighlightShortcut,shouldHandleEditorShortcut,restoreHighlightShortcut,persistHighlightShortcut} from './text-highlighter/highlight-shortcut.js';
 import {transcodeToUtf8} from './fmc/chinese-transcoder.js';
 import {TextHighlighter,detectLanguage} from './text-highlighter/text-highlighter.js?v=opt039-dual-endpoint';
 import {HighlightRenderer} from './text-highlighter/highlight-renderer.js?v=opt048-render';
@@ -190,6 +191,7 @@ let highlightTimer = null;
 let highlightAbort = null;
 let lineHighlightTimer=null;
 let lineHighlightGeneration=0;
+let highlighterShortcut=DEFAULT_HIGHLIGHT_SHORTCUT;
 const highlightTasks=new HighlightTaskScheduler({onError:error=>
   omu.emit('TextHighlighter','HighlightTask',500,String(error),true)});
 function buildHighlightLineStarts(value){const starts=[0];for(let i=0;i<value.length;i++)if(value.charCodeAt(i)===10)starts.push(i+1);return starts;}
@@ -876,7 +878,9 @@ editor.addEventListener('keydown',e=>{
     restorePosition(active);
     updateLines();
     updatePos();
-    refresh();
+    highlightRenderer.retainDuringEdit();
+    scheduleLineHighlight();
+    scheduleTabGuides();
     scheduleRecovery();
     return;
   }
@@ -1508,7 +1512,7 @@ renderTabGuides();
 function renderLanguage() {
   document.documentElement.lang=LANGUAGE.value;
   explorer.setLocale(LANGUAGE.value, t);
-  document.title='Cluster Opt v0.0.51';
+  document.title='Cluster Opt v0.0.52';
   $('#menuBtn').textContent=t('file')+'⌄';
   for (const key of ['new','open','save','saveas','close','closeall']) {
     const button=$('#menu [data-action="'+key+'"]');
@@ -1629,7 +1633,59 @@ $('#highlighterEnabled').addEventListener('change',event=>{
  try{localStorage.setItem('cluster.textHighlighter.enabled',String(TEXT_HIGHLIGHTER.enabled));}catch(_){}
  scheduleHighlight();
 });
+function setHighlighterEnabled(enabled){
+  TEXT_HIGHLIGHTER.enabled=!!enabled;
+  $('#highlighterEnabled').checked=TEXT_HIGHLIGHTER.enabled;
+  try{localStorage.setItem('cluster.textHighlighter.enabled',String(TEXT_HIGHLIGHTER.enabled));}catch(_){}
+  if(!TEXT_HIGHLIGHTER.enabled){
+    clearTimeout(highlightTimer);clearTimeout(lineHighlightTimer);
+    ++highlightGeneration;++lineHighlightGeneration;
+    highlightAbort?.abort();highlightTasks.cancel();
+    highlightRenderer.clear();
+    const state=$('#highlighterState');if(state)state.textContent='OFF';
+  }else{
+    scheduleHighlight();
+  }
+}
 try{TEXT_HIGHLIGHTER.enabled=localStorage.getItem('cluster.textHighlighter.enabled')!=='false';}catch(_){}
+try{highlighterShortcut=restoreHighlightShortcut(localStorage);}catch(_){}
+const shortcutKey=$('#highlighterShortcutKey');
+for(const key of 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'){
+  const option=document.createElement('option');option.value=key;option.textContent=key;
+  shortcutKey.append(option);
+}
+function showHighlightShortcut(){
+  $('#highlighterShortcutShift').checked=highlighterShortcut.shift;
+  shortcutKey.value=highlighterShortcut.key;
+  $('#highlighterShortcutStatus').textContent='Ctrl + '+
+    (highlighterShortcut.shift?'Shift + ':'')+highlighterShortcut.key;
+}
+showHighlightShortcut();
+$('#highlighterShortcutSave').addEventListener('click',()=>{
+  const candidate=normalizeHighlightShortcut({
+    shift:$('#highlighterShortcutShift').checked,key:shortcutKey.value
+  });
+  if(!candidate){
+    $('#highlighterShortcutStatus').textContent='快捷鍵衝突或格式無效；請改用 Ctrl + Shift + 字母／數字。';
+    return;
+  }
+  if(!persistHighlightShortcut(localStorage,candidate)){
+    $('#highlighterShortcutStatus').textContent='設定儲存失敗，快捷鍵未變更。';
+    return;
+  }
+  highlighterShortcut=candidate;showHighlightShortcut();
+});
+$('#highlighterShortcutReset').addEventListener('click',()=>{
+  if(persistHighlightShortcut(localStorage,DEFAULT_HIGHLIGHT_SHORTCUT)){
+    highlighterShortcut=DEFAULT_HIGHLIGHT_SHORTCUT;showHighlightShortcut();
+  }else $('#highlighterShortcutStatus').textContent='無法儲存預設設定。';
+});
+document.addEventListener('keydown',event=>{
+  if(!shouldHandleEditorShortcut(event,editor,highlighterDialog)||
+    !matchesHighlightShortcut(event,highlighterShortcut))return;
+  event.preventDefault();event.stopPropagation();
+  setHighlighterEnabled(!TEXT_HIGHLIGHTER.enabled);
+},true);
 UI_PALETTE.subscribe(()=>scheduleHighlight());
 
 $('#paletteBtn').addEventListener('click', event => {

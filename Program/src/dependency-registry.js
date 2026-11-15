@@ -71,7 +71,7 @@ export class DependencyRegistry {
   edges() { return this.dep().data.relations; }
 }
 
-/** Single source of truth for the current v0.0.50 static OCDA declarations. */
+/** Single source of truth for the current v0.0.52 static OCDA declarations. */
 export function createClusterDependencies() {
   const registry = new DependencyRegistry();
   const objects = [
@@ -99,6 +99,7 @@ export function createClusterDependencies() {
     ['MicroSliceDocument', 'fmc/micro-slice-document.js', 'Bounded logical child slices of a physical slice', ['PARENT_SLICE_ID','MICRO_SLICE_ID','MICRO_SLICE_RANGE','MICRO_SLICE_MAX_LENGTH','EDIT_REVISION']],
     ['MicroSliceIndex', 'fmc/micro-slice-index.js', 'Implicit treap prefix offsets and structural splice for micro-slices', ['MICRO_SLICE_LENGTHS','MICRO_SLICE_PREFIX','MICRO_SLICE_RANGE','MICRO_SLICE_SPLICE']],
     ['EditPath', 'fmc/edit-path.js', 'Resident-slice incremental textarea reconciliation', ['PARENT_SLICE_ID','EDIT_REVISION','TEXT_LENGTH','LINE_COUNT']],
+    ['TextHighlighterShortcut', 'text-highlighter/highlight-shortcut.js', 'Validated configurable editor shortcut', ['HIGHLIGHT_SHORTCUT_KEY','HIGHLIGHT_SHORTCUT_SHIFT']],
     ['HighlightTaskScheduler', 'text-highlighter/highlight-task-scheduler.js', 'Latest-wins abortable syntax tasks', ['HIGHLIGHT_TASK_GENERATION','HIGHLIGHT_TASK_ABORT']],
     ['RevisionTokenCache', 'text-highlighter/revision-token-cache.js', 'Exact-source revision-aware lexical token LRU', ['TOKEN_CACHE_REVISION','TOKEN_CACHE_BUDGET']],
     ['LexicalCheckpoints', 'text-highlighter/lexical-checkpoints.js', 'Conservative bounded lexical restart', ['LEXICAL_RESTART_LINE','LEXICAL_CONTEXT_LIMIT']],
