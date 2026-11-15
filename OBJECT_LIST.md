@@ -1,6 +1,6 @@
-# ClusterOpt Object List — v0.0.49.5
+# ClusterOpt Object List — v0.0.50.1
 
-Source of truth: `Program/src/dependency-registry.js` (createClusterDependencies). Registry entries: **38**. Runtime UI objects and implementation modules are not automatically additional OCDA registry objects.
+Source of truth: `Program/src/dependency-registry.js` (createClusterDependencies). Registry entries: **39**. Runtime UI objects and implementation modules are not automatically additional OCDA registry objects.
 
 | Object | Source module | Role |
 |---|---|---|
@@ -27,6 +27,7 @@ Source of truth: `Program/src/dependency-registry.js` (createClusterDependencies
 | PieceTree | `fmc/piece-tree.js` | Balanced editable text buffer |
 | MicroSliceDocument | `fmc/micro-slice-document.js` | Bounded logical child slices of a physical slice |
 | MicroSliceIndex | `fmc/micro-slice-index.js` | Fenwick prefix offsets for micro-slices |
+| LineBenchmark | `performance/line-benchmark.js` | Isolated newline latency baseline |
 | EditPath | `fmc/edit-path.js` | Resident-slice incremental textarea reconciliation |
 | ExternalChangeMonitor | `main.js` | External file change observation |
 | FILE_MENU | `main.js` | File menu UI |
@@ -43,4 +44,4 @@ Source of truth: `Program/src/dependency-registry.js` (createClusterDependencies
 | StoragePriority | `storage-priority.js` | Storage priority configuration |
 | ChineseTranscoder | `fmc/chinese-transcoder.js` | Text encoding conversion |
 
-Updated for 49.5: 38 objects retained. VirtualFileSession now exposes version-checked micro-range patches under parent WTF/MVCC; bound AgentFlagGateway and UserFlagGateway expose patch(). No independent micro-slice leases. For directional relations, inspect `createClusterDependencies().edges()`.
+Updated for 50.1: isolated LineBenchmark added (P50/P95/P99); 49.5: 39 objects retained. VirtualFileSession now exposes version-checked micro-range patches under parent WTF/MVCC; bound AgentFlagGateway and UserFlagGateway expose patch(). No independent micro-slice leases. For directional relations, inspect `createClusterDependencies().edges()`.
