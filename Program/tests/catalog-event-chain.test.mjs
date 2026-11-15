@@ -6,7 +6,7 @@ import {createVTE} from '../src/vte/vte.js';
 test('CAT-01/02: catalog distinguishes registered objects and implementation-only modules', () => {
   const registry = createClusterDependencies();
   const names = registry.list().map(object => object.name);
-  assert.equal(names.length, 31);
+  assert.equal(names.length, 33); // v0.0.47 adds ViewportCalculator and RenderCoordinator
   for (const name of ['UI', 'Documents', 'OMU', 'VirtualFileSession', 'FILE_MENU']) {
     assert.ok(names.includes(name), name);
   }
