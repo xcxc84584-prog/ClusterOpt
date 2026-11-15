@@ -195,5 +195,6 @@ export function mountPowerShellUI({host,button,language,manager=new PowerShellMa
  function setFeedback(value){q('[data-psm="feedback"]').textContent=value;const session=sessions.find(x=>x.id===selected);if(session)session.feedback=value;}
  const unsubscribe=language.subscribe(()=>{translate();syncTabs();});
  translate();
+ if(remote.paired)manager.checkConnection().then(state=>{if(state.configured)setConnected(true);else remote.clear();}).catch(()=>{});
  return {show,hide,createSession,selectSession,closeSession,syncTabs,get isOpen(){return open;},get sessions(){return sessions.map(x=>({...x}));},dispose(){if(pollTimer)clearInterval(pollTimer);for(const session of sessions)if(session.remoteId)remote.closeSession(session.remoteId).catch(()=>{});unsubscribe();document.removeEventListener('pointerdown',onOutsideClick,true);document.removeEventListener('keydown',onEscape,true);document.removeEventListener('scroll',onScroll,true);window.removeEventListener('scroll',onScroll,true);window.removeEventListener('resize',closeToolMenu);hide();tabs.querySelectorAll('.psm-tab').forEach(x=>x.remove());pane.remove();}};
 }
