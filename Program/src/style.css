@@ -1182,3 +1182,10 @@ body > .explorer-context .explorer-context-label { overflow-wrap:anywhere; }
   min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
   font-size:10px; line-height:13px;
 }
+
+/* v0.0.54 PR-03 — one glyph per Explorer action, no visible captions. */
+#explorerTree .explorer-inline-action {
+  justify-content:center; align-items:center; height:25px; padding:1px;
+}
+#explorerTree .explorer-action-symbol { font-size:15px; line-height:19px; }
+#explorerTree .explorer-action-label { display:none; }
