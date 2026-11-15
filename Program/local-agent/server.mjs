@@ -2,6 +2,7 @@
 import {createServer} from 'node:http';
 import {randomBytes,timingSafeEqual} from 'node:crypto';
 import {spawn} from 'node:child_process';
+import {fileURLToPath} from 'node:url';
 
 export const DEFAULT_PORT=43881;
 export const ALLOWED_ORIGINS=new Set(['https://xcxc84584-prog.github.io']);
@@ -53,7 +54,7 @@ export function runReadOnly(action){
   child.on('close',code=>{clearTimeout(timer);if(finished)return;finished=true;code===0&&output.length+error.length<=16384?resolve({output:output.trim()}):reject(new Error('EXECUTION_FAILED'));});
  });
 }
-if(process.argv[1]&&import.meta.url===new URL('file://'+process.argv[1].replace(/\\/g,'/')).href){
+if(process.argv[1]&&fileURLToPath(import.meta.url)===process.argv[1]){
  const agent=createLocalAgent();
  agent.server.listen(DEFAULT_PORT,'127.0.0.1',()=>{
   console.log('ClusterOpt Local Agent listening on 127.0.0.1:'+DEFAULT_PORT);
