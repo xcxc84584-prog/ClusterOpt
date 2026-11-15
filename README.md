@@ -62,3 +62,12 @@ v0.0.52: File → Tool → 文本著色器可設定 Ctrl+(Shift)+A–Z/0–9；C
 ## v0.0.54 PR-03 — Explorer glyph-only and highlight transition guard
 
 - Explorer context buttons show one glyph only, accessible via tooltip/ARIA/hint. Document switch and virtual load route to viewport highlighting, and >256KiB resident slices skip synchronous Shiki on transition (plain text fallback). Known issue: no syntax colors on large transition until subsequent edit/scroll; Worker and LF index optimization remain open. Browser validation pending.
+
+
+## v0.0.55 — Explorer / Palette / Navigation
+
+- Explorer context actions use a strict vertical single-column icon-only list, with accessible labels and keyboard navigation.
+- The selected row consumes the global derived `EXPLORER_ACTIVE_COLOR` property. The InterfacePalette object calculates background, hover, foreground and edge from the live RGB palette, and publishes CSS variables. Palette changes update the registry property.
+- Root GitHub Pages entry redirects to `Program/?v=0.0.55`, preserving the incoming query and hash. The Program title, visible version and stylesheet cache key are updated.
+- OCDA object, property and global-property inventories have been updated.
+- CI investigation: corrected a malformed media MIME regular expression; full historical failed-job logs are still required to verify all failures.
