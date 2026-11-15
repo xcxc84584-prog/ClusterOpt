@@ -686,9 +686,9 @@ editor.addEventListener('beforeinput',event=>{
   lineStructureChanged=event.inputType==='insertLineBreak'||
     event.inputType==='insertParagraph'||
     (pendingEditIntent!==null&&pendingEditIntent.deltaLines!==0)||
-    removed.includes('\\n')||
-    (event.inputType==='deleteContentBackward'&&from===to&&backward==='\\n')||
-    (event.inputType==='deleteContentForward'&&from===to&&forward==='\\n');
+    removed.includes('\n')||
+    (event.inputType==='deleteContentBackward'&&from===to&&backward==='\n')||
+    (event.inputType==='deleteContentForward'&&from===to&&forward==='\n');
 
 },true);
 editor.addEventListener('input',()=>{
