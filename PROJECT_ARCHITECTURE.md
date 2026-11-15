@@ -1,4 +1,4 @@
-# ClusterOpt — Repository Architecture (v0.0.50.1)
+# ClusterOpt — Repository Architecture (v0.0.50.2)
 
 The repository root is the project root; no extra `Project/` directory is required.
 
@@ -29,7 +29,7 @@ ClusterOpt/
 └── index.html                   # GitHub Pages redirect to Program/?v=0.0.49
 ```
 
-50.1 adds isolated Node newline benchmarks; no browser latency claims.\n\n## Runtime ownership and edit pipeline
+50.1 adds isolated Node newline benchmarks. 50.2 adds known beforeinput range and LF delta reconciliation with fallback; no browser latency claims.\n\n## Runtime ownership and edit pipeline
 
 ```text
 UI (main.js)
@@ -47,7 +47,7 @@ UI (main.js)
 
 ## Source-of-truth policy
 
-- OCDA registry declarations: `Program/src/dependency-registry.js` (39 registered objects).
+- OCDA registry declarations: `Program/src/dependency-registry.js` (40 registered objects).
 - Canonical human-readable inventory: `物件清單.md`, `屬性清單.md`, `全域屬性清單.md`.
 - English index: `OBJECT_LIST.md`, `PROPERTY_LIST.md`; keep aligned with registry.
 - New PRs require `PRDrequest.md`, `ArcD.md`, `Plan.md`, `Relation Test.md`, VTE event chain and explicit CI evidence.
