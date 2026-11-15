@@ -14,3 +14,5 @@ Local-first browser IDE (GitHub Pages). Current release: **v0.0.50** (through st
 50.3: micro-slice index structural splice uses implicit treap; document boundary array still linear on edits.
 
 50.4: viewport-only gutter labels; keeps textarea authoritative and native scroll geometry.
+
+50.5: soft-wrap visual-line map model and tests only. Browser wrap stays OFF to preserve highlighting, line numbers and caret geometry.
