@@ -19,7 +19,7 @@ test('63.2: browser terminal supports ANSI streaming and interactive input',()=>
 });
 test('63.3: setup CMD installs the native dependencies',()=>{
  const setup=read('../src/powershell-manager/cmd-setup.js');
- assert.match(setup,/native-terminal.mjs/);
- assert.match(setup,/npm.cmd install/);
- assert.match(setup,/Start-Process/);
+ assert.match(setup,/install-v064.ps1/);
+ assert.match(setup,/ExecutionPolicy Bypass/);
+ assert.match(setup,/Setup complete/);
 });
