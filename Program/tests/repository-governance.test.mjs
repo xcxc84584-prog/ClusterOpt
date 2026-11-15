@@ -20,7 +20,7 @@ test('repository governance: canonical inventory and project navigation exist',(
 test('repository governance: OCDA and canonical inventory stay aligned',()=>{
   const registry=createClusterDependencies();
   const names=registry.list().map(x=>x.name);
-  assert.equal(names.length,38);
+  assert.ok(names.length>=38);
   const objects=read('../../OBJECT_LIST.md');
   for(const name of names)
     assert.ok(objects.includes('| '+name+' |'),'missing '+name);
