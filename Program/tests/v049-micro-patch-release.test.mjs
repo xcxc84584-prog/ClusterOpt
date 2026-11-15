@@ -17,8 +17,8 @@ test('49.5: OCDA patch contract, GitHub inventories and release are aligned', ()
     assert.ok(read('../../PROPERTY_LIST.md').includes(name));
   assert.match(read('../../物件清單.md'), /49\.5/);
   assert.match(read('../../屬性清單.md'), /49\.5/);
-  assert.match(read('../../index.html'), /Program\/\?v=0\.0\.55/);
-  assert.match(read('../index.html'), /Cluster Opt 0\.0\.55/);
+  assert.match(read('../../index.html'), /Program\/\?v=0\.0\.56/);
+  assert.match(read('../index.html'), /Cluster Opt 0\.0\.56/);
   const vte = createVTE();
   registry.list();
   assert.equal(vte.Status().data.files.length, 0);
