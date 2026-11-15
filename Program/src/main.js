@@ -1,4 +1,3 @@
-import {RenderCoordinator} from './editor-render/render-coordinator.js?v=opt047-render';
 import {PerformanceMonitor} from './performance/performance-monitor.js?v=opt046-pmu';
 import {matchingWindow} from './text-highlighter/matching-window.js?v=opt038-matcher';
 import {transcodeToUtf8} from './fmc/chinese-transcoder.js';
