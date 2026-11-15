@@ -44,42 +44,71 @@ export function mountPowerShellUI({host,button,language,manager=new PowerShellMa
  nativeWrap.className='psm-native-wrap';nativeWrap.hidden=true;
  nativeWrap.style.cssText='flex:1;min-height:220px;background:#0b1018;padding:8px;overflow:hidden';
  terminal.append(nativeWrap);
- let nativeSocket=null,nativeTerm=null,nativeFit=null,nativeLoading=null;
+ let nativeLoading=null;
  async function loadNativeTerminal(){
    if(window.Terminal)return;
-   if(nativeLoading)return nativeLoading;
-   nativeLoading=(async()=>{
+   if(!nativeLoading)nativeLoading=(async()=>{
      const css=document.createElement('link');css.rel='stylesheet';css.href='https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css';document.head.append(css);
      await new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js';script.onload=resolve;script.onerror=()=>reject(Error('XTERM_LOAD_FAILED'));document.head.append(script);});
-   })();return nativeLoading;
+   })().catch(error=>{nativeLoading=null;throw error;});
+   return nativeLoading;
  }
- async function startNativeTerminal(){
+ function disposeNative(session){
+   session.generation++;
+   session.socket?.close();session.socket=null;
+   session.terminal?.dispose();session.terminal=null;
+   session.container?.remove();session.container=null;
+ }
+ function showNative(session){
+   for(const other of sessions)if(other.container)other.container.hidden=other!==session;
+   if(session.container){nativeWrap.hidden=false;session.terminal?.focus();}
+ }
+ async function startNativeTerminal(session){
+   if(!session||!connected||session.socket||session.startingNative)return;
+   session.startingNative=true;
+   const generation=++session.generation;
    try{
      await loadNativeTerminal();
-     if(nativeSocket){nativeSocket.close();nativeSocket=null;}
-     nativeTerm?.dispose();nativeWrap.replaceChildren();
-     nativeTerm=new window.Terminal({cursorBlink:true,convertEol:false,fontFamily:'Consolas, monospace',fontSize:13,theme:{background:'#0b1018',foreground:'#e5eaf1'},scrollback:10000});
+     if(generation!==session.generation||!sessions.includes(session)||!connected)return;
+     const container=document.createElement('div');
+     container.className='psm-native-session';
+     container.style.cssText='height:100%;width:100%;overflow:hidden';
+     nativeWrap.append(container);session.container=container;
+     const term=new window.Terminal({cursorBlink:true,convertEol:false,fontFamily:'Consolas, monospace',fontSize:13,theme:{background:'#0b1018',foreground:'#e5eaf1'},scrollback:10000});
+     session.terminal=term;
      nativeWrap.hidden=false;
-               nativeTerm.open(nativeWrap);
-     const ws=remote.openNativeTerminal();nativeSocket=ws;
+     showNative(sessions.find(x=>x.id===selected)||session);
+     term.open(container);
+     const ws=remote.openNativeTerminal();session.socket=ws;
      ws.addEventListener('message',event=>{
+       if(generation!==session.generation)return;
        let message;try{message=JSON.parse(event.data);}catch{return;}
-       if(message.type==='data')nativeTerm?.write(message.data);
-       if(message.type==='ready')nativeTerm?.write('\\r\\n[ConPTY connected]\\r\\n');
-       if(message.type==='error')nativeTerm?.write('\\r\\n'+message.message+'\\r\\n');
-       if(message.type==='exit')nativeTerm?.write('\\r\\n[Shell exited: '+message.exitCode+']\\r\\n');
+       if(message.type==='data')term.write(message.data);
+       if(message.type==='ready')term.write('\\r\\n[ConPTY connected]\\r\\n');
+       if(message.type==='error')term.write('\\r\\n'+message.message+'\\r\\n');
+       if(message.type==='exit')term.write('\\r\\n[Shell exited: '+message.exitCode+']\\r\\n');
      });
-     ws.addEventListener('close',()=>nativeTerm?.write('\\r\\n[Native terminal disconnected]\\r\\n'));
-     nativeTerm.onData(data=>{if(ws.readyState===WebSocket.OPEN)ws.send(JSON.stringify({type:'input',data}));});
-     const resize=()=>{if(!nativeTerm||ws.readyState!==WebSocket.OPEN)return;const cols=Math.max(20,Math.floor(nativeWrap.clientWidth/8)),rows=Math.max(8,Math.floor(nativeWrap.clientHeight/17));nativeTerm.resize(cols,rows);ws.send(JSON.stringify({type:'resize',cols,rows}));};
-     ws.addEventListener('open',resize);window.addEventListener('resize',resize);
-               nativeTerm.focus();
-   }catch(e){nativeWrap.hidden=false;nativeWrap.textContent='Native terminal unavailable: '+e.message+' — check Local Agent installation and reconnect.';}
+     ws.addEventListener('close',()=>{if(generation===session.generation){session.socket=null;term.write('\\r\\n[Native terminal disconnected]\\r\\n');}});
+     term.onData(data=>{if(ws.readyState===WebSocket.OPEN)ws.send(JSON.stringify({type:'input',data}));});
+     const resize=()=>{
+       if(generation!==session.generation||ws.readyState!==WebSocket.OPEN||session.id!==selected)return;
+       const cols=Math.max(20,Math.floor(container.clientWidth/8)),rows=Math.max(8,Math.floor(container.clientHeight/17));
+       term.resize(cols,rows);ws.send(JSON.stringify({type:'resize',cols,rows}));
+     };
+     ws.addEventListener('open',resize);
+     session.resize=resize;
+     if(session.id===selected)term.focus();
+   }catch(e){
+     if(generation===session.generation){
+       const message=document.createElement('pre');message.textContent='Native terminal unavailable: '+e.message;
+       session.container?.append(message);
+     }
+   }finally{session.startingNative=false;}
  }
 
  function renderMode(){const setupView=pane.querySelector('.psm-body');setupView.hidden=connected;terminal.hidden=!connected;pane.classList.toggle('psm-connected',connected);}
- function appendOutput(message,id=selected){const session=sessions.find(x=>x.id===id);if(session)session.output.push(message);if(id===selected&&nativeTerm)nativeTerm.writeln(String(message));}
- function setConnected(value){connected=Boolean(value);renderMode();translate();if(!connected){nativeSocket?.close();nativeSocket=null;nativeTerm?.dispose();nativeTerm=null;nativeWrap.replaceChildren();}else if(open)requestAnimationFrame(()=>startNativeTerminal());}
+ function appendOutput(message,id=selected){const session=sessions.find(x=>x.id===id);if(session){session.output.push(message);session.terminal?.writeln(String(message));}}
+ function setConnected(value){connected=Boolean(value);renderMode();translate();if(!connected){for(const session of sessions)disposeNative(session);}else if(open){for(const session of sessions)startNativeTerminal(session);}}
 
  const setup=document.createElement('div');setup.className='psm-quick-setup';
  setup.innerHTML='<div class="psm-setup-step"><span class="psm-step-number">01</span><div><strong data-psm-extra="downloadTitle"></strong><p data-psm-extra="downloadHint"></p><button type="button" data-psm-action="download" class="psm-primary"></button></div></div><div class="psm-setup-step"><span class="psm-step-number">02</span><div><strong data-psm-extra="pairTitle"></strong><p data-psm-extra="pairHint"></p><div class="psm-pair-row"><input id="psmAgentPort" type="number" min="1024" max="65535" value="43881" aria-label="Local Agent port" title="Local Agent port" style="width:100px"><input id="psmPairToken" type="password" autocomplete="off" spellcheck="false" placeholder="64-character token"><button type="button" data-psm-action="pair"></button></div></div></div><div class="psm-setup-step"><span class="psm-step-number">03</span><div><strong data-psm-extra="verifyTitle"></strong><p data-psm-extra="verifyHint"></p></div></div>';
@@ -137,16 +166,16 @@ export function mountPowerShellUI({host,button,language,manager=new PowerShellMa
    host.classList.add('psm-mode');button.setAttribute('aria-pressed','true');
    // A session has its own setup status/feedback, independent from other tabs.
    q('[data-psm="feedback"]').textContent=sessions.find(x=>x.id===id).feedback||'';
-   renderMode();translate();syncTabs();if(connected)requestAnimationFrame(()=>{if(nativeSocket?.readyState===WebSocket.OPEN)nativeTerm?.focus();else startNativeTerminal();});
+   renderMode();translate();syncTabs();const active=sessions.find(x=>x.id===id);showNative(active);if(connected)requestAnimationFrame(()=>{if(active.socket){active.terminal?.focus();active.resize?.();}else startNativeTerminal(active);});
  }
  function createSession(){
-   const session={id:++sequence,feedback:'',history:[],historyIndex:0,output:[],remoteId:null,starting:false,polling:false};sessions.push(session);
+   const session={id:++sequence,feedback:'',output:[],socket:null,terminal:null,container:null,generation:0,startingNative:false,resize:null};sessions.push(session);
    selectSession(session.id);return session.id;
  }
  function hide(){closeToolMenu();open=false;pane.hidden=true;host.classList.remove('psm-mode');button.setAttribute('aria-pressed','false');closeToolMenu();syncTabs();}
  function closeSession(id){
    const i=sessions.findIndex(x=>x.id===id);if(i<0)return;
-   const old=sessions[i];if(nativeSocket){nativeSocket.close();nativeSocket=null;}nativeTerm?.dispose();nativeTerm=null;if(old.remoteId)remote.closeSession(old.remoteId).catch(()=>{});
+   const old=sessions[i];disposeNative(old);
    sessions.splice(i,1);
    if(selected===id){
      selected=null;
@@ -164,7 +193,7 @@ export function mountPowerShellUI({host,button,language,manager=new PowerShellMa
  pane.addEventListener('click',async event=>{
    const action=event.target.closest('[data-psm-action]')?.dataset.psmAction;
    if(!action)return;
-   if(action==='new-session'){if(nativeSocket){nativeSocket.close();nativeSocket=null;}nativeTerm?.dispose();nativeTerm=null;createSession();return;}
+   if(action==='new-session'){createSession();return;}
    if(action==='close-session'){closeSession(selected);return;}
    if(action==='download'){
      const cmd=createSetupCmd();
@@ -189,12 +218,12 @@ export function mountPowerShellUI({host,button,language,manager=new PowerShellMa
    if(action==='close')closeSession(selected);
    if(action==='settings'||action==='tool'){const menu=toolMenu();const shouldOpen=menu.hidden;closeToolMenu();if(shouldOpen){menu.hidden=false;toolButton().setAttribute('aria-expanded','true');positionToolMenu();}return;}
    if(action==='connection-settings'){setConnected(false);for(const session of sessions){if(session.remoteId)remote.closeSession(session.remoteId).catch(()=>{});session.remoteId=null;}closeToolMenu();return;}
-   if(action==='clear'){nativeTerm?.clear();closeToolMenu();}
+   if(action==='clear'){sessions.find(x=>x.id===selected)?.terminal?.clear();closeToolMenu();}
    if(action==='check'){const state=await manager.checkConnection();if(state.configured){setConnected(true);appendOutput(language.value==='en'?'Connected to local agent.':'已連線至本地代理。');}else setFeedback((language.value==='en'?'Connection failed: ':'連線失敗：')+(state.error||'NETWORK_UNAVAILABLE'));}
  });
  function setFeedback(value){q('[data-psm="feedback"]').textContent=value;const session=sessions.find(x=>x.id===selected);if(session)session.feedback=value;}
  const unsubscribe=language.subscribe(()=>{translate();syncTabs();});
  translate();
  if(remote.paired)manager.checkConnection().then(state=>{if(state.configured)setConnected(true);else remote.clear();}).catch(()=>{});
- return {show,hide,createSession,selectSession,closeSession,syncTabs,get isOpen(){return open;},get sessions(){return sessions.map(x=>({...x}));},dispose(){if(pollTimer)clearInterval(pollTimer);for(const session of sessions)if(session.remoteId)remote.closeSession(session.remoteId).catch(()=>{});unsubscribe();document.removeEventListener('pointerdown',onOutsideClick,true);document.removeEventListener('keydown',onEscape,true);document.removeEventListener('scroll',onScroll,true);window.removeEventListener('scroll',onScroll,true);window.removeEventListener('resize',closeToolMenu);hide();tabs.querySelectorAll('.psm-tab').forEach(x=>x.remove());pane.remove();}};
+ return {show,hide,createSession,selectSession,closeSession,syncTabs,get isOpen(){return open;},get sessions(){return sessions.map(x=>({...x}));},dispose(){for(const session of sessions)disposeNative(session);unsubscribe();document.removeEventListener('pointerdown',onOutsideClick,true);document.removeEventListener('keydown',onEscape,true);document.removeEventListener('scroll',onScroll,true);window.removeEventListener('scroll',onScroll,true);window.removeEventListener('resize',closeToolMenu);hide();tabs.querySelectorAll('.psm-tab').forEach(x=>x.remove());pane.remove();}};
 }
