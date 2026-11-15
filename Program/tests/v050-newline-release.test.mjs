@@ -13,7 +13,7 @@ test('50.2: release, OCDA, GitHub inventory and VTE remain aligned',()=>{
   assert.match(read('../../OBJECT_LIST.md'),/\| NewlineEditIntent \|/);
   assert.match(read('../../PROPERTY_LIST.md'),/LINE_EDIT_DELTA/);
   assert.match(read('../../index.html'),/Program\/\?v=0\.0\.60/);
-  assert.match(read('../index.html'),/main\.js\?v=opt060-psm-r8/);
+  assert.match(read('../index.html'),/main\.js\?v=opt060-psm-r9/);
   assert.match(read('../src/main.js'),/deriveEditIntent\(/);
   const vte=createVTE();
   registry.list();
