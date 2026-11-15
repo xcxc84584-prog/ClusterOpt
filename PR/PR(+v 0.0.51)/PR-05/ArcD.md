@@ -1,0 +1,2 @@
+# 51.5 ArcD
+UI → HighlightRenderer.Request.retainDuringEdit → HighlightLineIndex → dirty visible lines → HighlightRenderer.Response DOM patch；錯誤回退既有 repaint。屬性 HIGHLIGHT_DIRTY_RANGE、HIGHLIGHT_DOM_REUSE；無 FLAG/MVCC 寫入。
