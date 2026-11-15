@@ -1242,7 +1242,7 @@ body > .explorer-context .explorer-context-label { overflow-wrap:anywhere; }
 
 /* v0.0.60 PR-02: isolated PowerShell setup view, palette-aware */
 #clusterEditorColumn{position:relative}
-#clusterEditorColumn.psm-mode #workspace,#clusterEditorColumn.psm-mode #tabs{visibility:hidden;pointer-events:none}
+#clusterEditorColumn.psm-mode #workspace{visibility:hidden;pointer-events:none}
 .psm-pane[hidden]{display:none!important}
 .psm-pane{position:absolute;inset:0;z-index:8;display:flex;flex-direction:column;background:var(--ui-surface,#17191e);color:var(--ui-text-on-surface,#e9edf5);border:1px solid var(--ui-border,#404550);font-family:inherit}
 .psm-top{display:flex;align-items:center;justify-content:space-between;min-height:46px;padding:8px 15px;border-bottom:1px solid var(--ui-border,#444)}
@@ -1261,3 +1261,8 @@ body > .explorer-context .explorer-context-label { overflow-wrap:anywhere; }
 /* v0.0.60: PowerShell is a header utility, independent of Explorer panel. */
 .header-utility{display:flex;align-items:center;gap:7px;min-width:0}
 .header-utility #explorerPowerShell{flex:0 0 auto;min-width:34px;padding:9px 10px}
+
+/* Keep shared document and PowerShell tab bar visible above the setup pane. */
+#clusterEditorColumn.psm-mode #tabs{position:relative;z-index:9;visibility:visible;pointer-events:auto}
+#clusterEditorColumn.psm-mode .psm-pane{top:48px}
+#clusterEditorColumn.psm-mode #tabs .tab:not(.psm-tab).active{background:#191a20;color:#a5a8b5}
