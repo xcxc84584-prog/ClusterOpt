@@ -6,7 +6,7 @@ test('49.1: v0.0.49 display and redirect are consistent',()=>{
  const program=read('../index.html'),root=read('../../index.html'),main=read('../src/main.js');
  assert.match(program,/Cluster Opt 0\.0\.56/);
  assert.match(program,/v0\.0\.56/);
- assert.match(program,/main\.js\?v=opt055-[a-z0-9-]+/);
+ assert.match(program,/main\.js\?v=opt056-[a-z0-9-]+/);
  assert.match(root,/Program\/\?v=0\.0\.56/);
  assert.match(root,/searchParams\.set\("v", "0\.0\.56"\)/);
  assert.match(main,/document\.title='Cluster Opt v0\.0\.56'/);
