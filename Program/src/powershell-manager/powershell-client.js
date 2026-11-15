@@ -1,4 +1,4 @@
-// v0.0.62: token retained for this browser tab only; never in URL or localStorage.
+// v0.0.62: token retained for this browser tab only; never in URL or persistent browser storage.
 const TOKEN_KEY='clusteropt.ps.pairing.v062';
 const ENDPOINT='http://127.0.0.1:43881';
 export class PowerShellClient {
