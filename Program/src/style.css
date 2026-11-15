@@ -1158,3 +1158,27 @@ body > .explorer-context .explorer-context-label { overflow-wrap:anywhere; }
 .explorer-action-label { font-size:10px; line-height:12px; white-space:nowrap; }
 .explorer-inline-action.is-danger { border-color:color-mix(in srgb,#d65c5c 45%,var(--ui-border)); }
 .explorer-inline-action.is-danger:hover { background:color-mix(in srgb,#d65c5c 17%,var(--ui-control)); }
+
+/* v0.0.54 PR-02 — fit every action inside narrow/deeply nested Explorer rows. */
+#explorerTree .explorer-entry:has(.explorer-inline-actions) {
+  box-sizing:border-box; min-width:0; min-height:32px;
+  padding-inline-start:4px !important; padding-inline-end:4px;
+}
+#explorerTree .explorer-entry:has(.explorer-inline-actions) > .explorer-arrow,
+#explorerTree .explorer-entry:has(.explorer-inline-actions) > .explorer-file-icon {
+  display:none;
+}
+#explorerTree .explorer-inline-actions {
+  box-sizing:border-box; display:grid; grid-template-columns:repeat(4,minmax(0,1fr));
+  flex:1 1 0; width:100%; min-width:0; max-width:100%; gap:3px;
+  padding:1px 0; overflow:visible;
+}
+#explorerTree .explorer-inline-action {
+  box-sizing:border-box; flex:none; width:100%; min-width:0; height:29px;
+  padding:2px 1px; gap:2px; flex-direction:row; border-radius:5px;
+}
+#explorerTree .explorer-action-symbol { flex:none; font-size:12px; line-height:14px; }
+#explorerTree .explorer-action-label {
+  min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  font-size:10px; line-height:13px;
+}
