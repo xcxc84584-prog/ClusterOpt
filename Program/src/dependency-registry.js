@@ -99,6 +99,7 @@ export function createClusterDependencies() {
     ['MicroSliceDocument', 'fmc/micro-slice-document.js', 'Bounded logical child slices of a physical slice', ['PARENT_SLICE_ID','MICRO_SLICE_ID','MICRO_SLICE_RANGE','MICRO_SLICE_MAX_LENGTH','EDIT_REVISION']],
     ['MicroSliceIndex', 'fmc/micro-slice-index.js', 'Implicit treap prefix offsets and structural splice for micro-slices', ['MICRO_SLICE_LENGTHS','MICRO_SLICE_PREFIX','MICRO_SLICE_RANGE','MICRO_SLICE_SPLICE']],
     ['EditPath', 'fmc/edit-path.js', 'Resident-slice incremental textarea reconciliation', ['PARENT_SLICE_ID','EDIT_REVISION','TEXT_LENGTH','LINE_COUNT']],
+    ['LexicalCheckpoints', 'text-highlighter/lexical-checkpoints.js', 'Conservative bounded lexical restart', ['LEXICAL_RESTART_LINE','LEXICAL_CONTEXT_LIMIT']],
     ['HighlightLineIndex', 'text-highlighter/incremental-line-index.js', 'Known-range LF index and token offset patch', ['HIGHLIGHT_EDIT_RANGE','HIGHLIGHT_LINE_DELTA']],
     ['HighlightBenchmark', 'performance/highlight-benchmark.js', 'Isolated line-index and token-remap baseline', ['HIGHLIGHT_INDEX_P95','HIGHLIGHT_REMAP_P95']],
     ['LineBenchmark', 'performance/line-benchmark.js', 'Isolated newline latency baseline', ['LINE_BENCHMARK_P50','LINE_BENCHMARK_P95','LINE_BENCHMARK_P99']],
