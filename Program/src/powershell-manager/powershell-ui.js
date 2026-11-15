@@ -42,7 +42,7 @@ export function mountPowerShellUI({host,button,language,manager=new PowerShellMa
  function renderMode(){const setupView=pane.querySelector('.psm-body');setupView.hidden=connected;terminal.hidden=!connected;pane.classList.toggle('psm-connected',connected);}
  function appendOutput(message,id=selected){const session=sessions.find(x=>x.id===id);if(session)session.output.push(message);if(id!==selected)return;const line=document.createElement('pre');line.textContent=message;terminal.querySelector('.psm-terminal-output').append(line);terminal.querySelector('.psm-terminal-output').scrollTop=terminal.querySelector('.psm-terminal-output').scrollHeight;}
  function setConnected(value){connected=Boolean(value);renderMode();translate();if(connected){for(const session of sessions)ensureRemote(session);if(!pollTimer)pollTimer=setInterval(pollSessions,250);}else{if(pollTimer)clearInterval(pollTimer);pollTimer=null;}if(connected&&open)requestAnimationFrame(()=>terminal.querySelector('#psmCommandInput')?.focus());}
- async function ensureRemote(session){if(!connected||session.remoteId||session.starting)return;session.starting=true;try{const result=await remote.startSession();session.remoteId=result.id;}catch(e){appendOutput('Session error: '+e.message,session.id);}finally{session.starting=false;}}
+ async function ensureRemote(session){if(!connected||session.remoteId)return;if(session.starting)return session.starting;session.starting=remote.startSession().then(result=>{session.remoteId=result.id;}).catch(e=>{appendOutput('Session error: '+e.message,session.id);}).finally(()=>{session.starting=null;});return session.starting;}
  async function pollSessions(){for(const session of sessions){if(!session.remoteId||session.polling)continue;session.polling=true;try{const result=await remote.pollSession(session.remoteId);if(result.output)appendOutput(result.output,session.id);if(result.closed){session.remoteId=null;appendOutput('[Session closed]',session.id);}}catch(e){appendOutput('Connection: '+e.message,session.id);session.remoteId=null;}finally{session.polling=false;}}}
 
  const setup=document.createElement('div');setup.className='psm-quick-setup';
@@ -178,7 +178,7 @@ export function mountPowerShellUI({host,button,language,manager=new PowerShellMa
    }
    if(action==='close')closeSession(selected);
    if(action==='settings'||action==='tool'){const menu=toolMenu();const shouldOpen=menu.hidden;closeToolMenu();if(shouldOpen){menu.hidden=false;toolButton().setAttribute('aria-expanded','true');positionToolMenu();}return;}
-   if(action==='connection-settings'){setConnected(false);closeToolMenu();return;}
+   if(action==='connection-settings'){setConnected(false);for(const session of sessions){if(session.remoteId)remote.closeSession(session.remoteId).catch(()=>{});session.remoteId=null;}closeToolMenu();return;}
    if(action==='clear'){terminal.querySelector('.psm-terminal-output').replaceChildren();const session=sessions.find(x=>x.id===selected);if(session)session.output=[];closeToolMenu();}
    if((action==='version'||action==='location')&&!terminalBusy){
      terminalBusy=true;
