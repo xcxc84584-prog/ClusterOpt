@@ -75,3 +75,5 @@ GitHub Actions Node tests verify static contracts and isolated VTE tests; actual
 51.3: bounded conservative lexical restart (C-family); NOT Shiki grammar-stack persistence. Unknown context uses existing matching-window fallback.
 
 51.4: bounded revision-aware exact-source LRU for uncolored tokens; theme changes recolor without retokenizing cached entries. Grammar checkpoint remains conservative.
+
+51.5: HighlightRenderer reuses its overlay root and existing visible line nodes; dirty lines repaint on known edit. Full slice render still rebuilds tokens; browser DOM timing pending.

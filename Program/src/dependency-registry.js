@@ -116,7 +116,7 @@ export function createClusterDependencies() {
     ['TextMetrics', 'editor-render/text-metrics.js', 'Read-only editor geometry snapshot', ['FONT_METRICS','TEXT_PADDING','TAB_SIZE']],
     ['DFOM', 'dfom.js', 'Editor indentation and tab guide rendering', []],
     ['TextHighlighter', 'text-highlighter/text-highlighter.js', 'Syntax tokenization', ['TEXT_HIGHLIGHTER']],
-    ['HighlightRenderer', 'text-highlighter/highlight-renderer.js', 'Editor highlight overlay', ['TEXT_HIGHLIGHTER']],
+    ['HighlightRenderer', 'text-highlighter/highlight-renderer.js', 'Retained viewport DOM and dirty-line overlay', ['TEXT_HIGHLIGHTER','HIGHLIGHT_DIRTY_RANGE','HIGHLIGHT_DOM_REUSE']],
     ['MatchingWindow', 'text-highlighter/matching-window.js', 'Incremental highlight matching', []],
     ['TextContrast', 'text-highlighter/text-contrast.js', 'Syntax color contrast', ['UI_PALETTE']],
     ['StoragePriority', 'storage-priority.js', 'Storage priority configuration', ['STORAGE_PRIORITY']],

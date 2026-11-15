@@ -1,0 +1,2 @@
+# 51.5 Plan
+2026-11-15 參考 CodeMirror Viewport https://codemirror.net/docs/ref/#view.EditorView.visibleRanges 與 MDN Node.insertBefore https://developer.mozilla.org/en-US/docs/Web/API/Node/insertBefore 。採 DOM 原位重排，避免每次替換 overlay root。風險：line index 變更後需重繪後續可見行，瀏覽器測量尚未執行。
