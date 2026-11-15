@@ -47,7 +47,7 @@ UI (main.js)
 
 ## Source-of-truth policy
 
-- OCDA registry declarations: `Program/src/dependency-registry.js` (46 registered objects).
+- OCDA registry declarations: `Program/src/dependency-registry.js` (47 registered objects).
 - Canonical human-readable inventory: `物件清單.md`, `屬性清單.md`, `全域屬性清單.md`.
 - English index: `OBJECT_LIST.md`, `PROPERTY_LIST.md`; keep aligned with registry.
 - New PRs require `PRDrequest.md`, `ArcD.md`, `Plan.md`, `Relation Test.md`, VTE event chain and explicit CI evidence.
@@ -77,3 +77,5 @@ GitHub Actions Node tests verify static contracts and isolated VTE tests; actual
 51.4: bounded revision-aware exact-source LRU for uncolored tokens; theme changes recolor without retokenizing cached entries. Grammar checkpoint remains conservative.
 
 51.5: HighlightRenderer reuses its overlay root and existing visible line nodes; dirty lines repaint on known edit. Full slice render still rebuilds tokens; browser DOM timing pending.
+
+51.6: latest-wins syntax task scheduler with AbortSignal, revision-checked commit and cancellation; does NOT move Shiki to a Web Worker, so tokenization may still block UI.
