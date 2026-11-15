@@ -12,3 +12,5 @@ Local-first browser IDE (GitHub Pages). Current release: **v0.0.50** (through st
 **Implementation status:** 49.1 Piece Tree, 49.2 micro-slices, 49.3 micro-slice index and 49.4 resident edit reconciliation are merged. 50.1 benchmarks and 50.2 incremental newline intent path; 49.5 parent-slice FLAG/MVCC-guarded micro-patch API is implemented; independent micro-slice leases are not. CI PASS does not imply browser or GB-file benchmarks.
 
 50.3: micro-slice index structural splice uses implicit treap; document boundary array still linear on edits.
+
+50.4: viewport-only gutter labels; keeps textarea authoritative and native scroll geometry.
