@@ -1465,3 +1465,26 @@ body > .explorer-context .explorer-context-label { overflow-wrap:anywhere; }
 .psm-pane .psm-terminal-input button{flex:0 0 auto;min-width:80px;min-height:38px;padding:8px 12px;color:var(--psm-ink,#fff);background:var(--psm-card,#292c35);border:1px solid var(--psm-line,#555);border-radius:6px}
 .psm-pane .psm-terminal-output{min-height:100px;overflow:auto;flex:1 1 auto}
 @media(max-width:600px){.psm-pane .psm-terminal-input{flex-wrap:wrap}.psm-pane .psm-terminal-input input{flex:1 1 calc(100% - 55px)}}
+
+/* v0.0.60 r9 — classic full-window PowerShell; setup wizard is unchanged. */
+.psm-pane.psm-connected{background:#000!important;display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.psm-pane.psm-connected>.psm-top{display:none!important}
+.psm-pane.psm-connected .psm-terminal-classic:not([hidden]){display:flex!important;flex:1 1 auto;min-height:0;min-width:0;padding:0!important;gap:0!important;background:#000!important;color:#f5f7fb!important;overflow:hidden}
+.psm-pane.psm-connected .psm-terminal-head{display:flex!important;flex:0 0 auto;align-items:center;gap:8px;padding:7px 10px!important;min-height:45px;border-bottom:1px solid #303238!important;background:#101113!important;color:#f5f7fb!important}
+.psm-pane.psm-connected .psm-terminal-head strong{font:700 12px/1.3 'Segoe UI',sans-serif!important}
+.psm-pane.psm-connected .psm-terminal-connection{margin-right:auto!important;font:12px/1.3 'Segoe UI',sans-serif!important;color:#91bfff!important}
+.psm-pane.psm-connected .psm-terminal-toolbar{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.psm-pane.psm-connected .psm-terminal-toolbar button{min-height:30px!important;min-width:0!important;padding:5px 10px!important;border-radius:5px!important;border:1px solid #45484f!important;background:#161719!important;color:#f5f7fb!important;-webkit-text-fill-color:#f5f7fb!important;font:600 12px/1.25 'Segoe UI','Microsoft JhengHei',sans-serif!important;white-space:nowrap}
+.psm-pane.psm-connected .psm-terminal-toolbar button:hover{background:#292c32!important}
+.psm-pane.psm-connected .psm-terminal-output{order:1;flex:0 1 auto!important;min-height:0!important;max-height:calc(100% - 95px);overflow:auto!important;padding:8px 8px 0!important;background:#000!important;color:#f5f7fb!important;scrollbar-color:#4c5566 #000}
+.psm-pane.psm-connected .psm-terminal-output pre{font:13px/1.55 Consolas,'Cascadia Mono',monospace!important;color:#f5f7fb!important;margin:0!important;white-space:pre-wrap}
+.psm-pane.psm-connected .psm-terminal-input{order:2;flex:0 0 auto;display:flex!important;align-items:baseline;gap:7px!important;margin:0!important;padding:0 8px 8px!important;border:0!important;background:#000!important;min-height:28px}
+.psm-pane.psm-connected .psm-terminal-input label{font:13px/1.5 Consolas,'Cascadia Mono',monospace!important;color:#f5f7fb!important;white-space:nowrap}
+.psm-pane.psm-connected .psm-terminal-input input{flex:1 1 auto;min-width:0;height:24px;min-height:24px!important;padding:0!important;border:0!important;outline:none!important;border-radius:0!important;background:transparent!important;color:#fff!important;-webkit-text-fill-color:#fff!important;box-shadow:none!important;font:13px/1.5 Consolas,'Cascadia Mono',monospace!important}
+.psm-pane.psm-connected .psm-terminal-input input::placeholder{color:transparent!important}
+.psm-pane.psm-connected .psm-terminal-input button,.psm-pane.psm-connected .psm-terminal-actions{display:none!important}
+.psm-pane.psm-connected .psm-terminal-input:focus-within{outline:none}
+.psm-pane.psm-connected .psm-terminal-classic{justify-content:flex-start}
+.psm-pane.psm-connected .psm-terminal-output:empty{min-height:0!important}
+.psm-pane.psm-connected .psm-menu{z-index:9999}
+@media(max-width:650px){.psm-pane.psm-connected .psm-terminal-head{flex-wrap:wrap}.psm-pane.psm-connected .psm-terminal-toolbar{width:100%;justify-content:flex-end}.psm-pane.psm-connected .psm-terminal-output{max-height:calc(100% - 145px)}}
