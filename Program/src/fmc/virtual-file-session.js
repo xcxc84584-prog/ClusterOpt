@@ -2,6 +2,7 @@ import {AgentFlagGateway} from './flag-agent-api.js';
 import {UserFlagGateway} from './flag-user-api.js';
 import {FileManagementCore} from './file-management-core.js';
 import {SliceLoader} from './slice-loader.js';
+import {MicroSliceDocument} from './micro-slice-document.js';
 
 /**
  * File-backed editor session. Only the current byte slice and neighbors
@@ -244,6 +245,73 @@ export class VirtualFileSession {
         this.protectRecovery(index, true);
       }
       return result;
+    } finally {
+      this.#core.releaseWTF(sliceId, leaseId, fencingToken, ownerId);
+    }
+  }
+
+  /**
+   * 49.5: optimistic UTF-16 micro-range patch, committed under the parent
+   * physical slice WTF and MVCC version. Micro-slice IDs are descriptive;
+   * they are not separate leases or persisted MVCC records.
+   *
+   * expectedVersionId is mandatory to prevent stale AGENT/USER overwrites.
+   */
+  async editPatch(index, patch, ownerId = 'USER') {
+    if (!Number.isInteger(index) || index < 0 || index >= this.#count ||
+        !patch || typeof patch !== 'object' ||
+        !Number.isSafeInteger(patch.start) ||
+        !Number.isSafeInteger(patch.end) ||
+        !Number.isSafeInteger(patch.expectedVersionId) ||
+        patch.expectedVersionId < 0 ||
+        typeof patch.text !== 'string') {
+      return {ok: false, code: 400, ehu: 'MICRO_PATCH_INVALID'};
+    }
+    const sliceId = this.#documentId + ':' + index;
+    const loaded = await this.requestSlice(index);
+    if (!loaded.ok) return loaded;
+    const lease = ownerId === 'USER'
+      ? this.#core.userWrite(sliceId, ownerId)
+      : this.#core.acquireWTF(sliceId, ownerId);
+    if (!lease.ok) return lease;
+    const {leaseId, fencingToken} = lease.data;
+    try {
+      const read = this.#core.read(sliceId);
+      if (!read.ok) return read;
+      if (read.data.versionId !== patch.expectedVersionId) {
+        return {ok: false, code: 409, ehu: 'MICRO_PATCH_VERSION_CONFLICT'};
+      }
+      if (patch.start < 0 || patch.end < patch.start ||
+          patch.end > read.data.content.length) {
+        return {ok: false, code: 416, ehu: 'MICRO_PATCH_RANGE_INVALID'};
+      }
+      const micro = new MicroSliceDocument(sliceId, read.data.content);
+      const affected = micro.locate(patch.start);
+      micro.replace(patch.start, patch.end, patch.text);
+      const content = micro.toString();
+      const result = ownerId === 'USER'
+        ? this.#core.commit(sliceId, leaseId, fencingToken,
+          patch.expectedVersionId, content)
+        : this.#core.agentCommit(sliceId, ownerId, leaseId, fencingToken,
+          patch.expectedVersionId, content);
+      if (!result.ok) return result;
+      if (this.lineStarts) {
+        const countLF = text => (text.match(/\n/g) || []).length;
+        const delta = countLF(content) - countLF(read.data.content);
+        if (delta) {
+          for (let i = index + 1; i < this.lineStarts.length; i++)
+            this.lineStarts[i] += delta;
+          this.totalLines += delta;
+        }
+      }
+      this.#dirty.set(index, {content, versionId: result.data.versionId});
+      this.protectRecovery(index, true);
+      return {ok: true, code: 200, data: {
+        versionId: result.data.versionId,
+        parentSliceId: sliceId,
+        microSliceId: affected?.id ?? null,
+        microSliceCount: micro.microSliceCount
+      }};
     } finally {
       this.#core.releaseWTF(sliceId, leaseId, fencingToken, ownerId);
     }
