@@ -26,7 +26,8 @@ test('61: interactive mode retains pairing and origin authorization',async()=>{
 test('61: CMD launches local agent without legacy permission prompt',()=>{
  const cmd=createSetupCmd();
  assert.equal(SETUP_FILENAME,'ClusterOpt-PLA-Setup-v0.0.64-r1.cmd');
- assert.ok(cmd.includes('Start-Process'));
+ assert.ok(cmd.includes('install-v064.ps1'));
+ assert.ok(!cmd.includes('Allow PowerShell commands? [Y/N]'));
  assert.ok(!cmd.includes('Allow PowerShell commands? [Y/N]'));
  assert.ok(!cmd.includes('CLUSTEROPT_PS_PERMISSION=READ_ONLY'));
  assert.ok(!cmd.includes('CLUSTEROPT_PS_PERMISSION=FULL'));
