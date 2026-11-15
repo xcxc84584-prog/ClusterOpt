@@ -7,7 +7,7 @@ const COPY={
  en:{title:'PowerShell',setup:'Set up Local Agent',desc:'PowerShell Local Agent is not connected. Commands cannot be executed here.',check:'Check connection',tool:'PowerShell tools',permissions:'Permission management',revoke:'Revoke local access',unavailable:'Local Agent is not available. Commands are disabled.',command:'Environment check (CMD)',hint:'Optional environment diagnostics for Windows CMD. Enter the token only in the pairing field.',close:'Close',status:'Not configured',rule:'Default permission: Requestable',notice:'Permission management requires a trusted Local Agent. This is an informational preview.'}
 };
 const CHECK='powershell.exe -NoProfile -Command "$PSVersionTable.PSVersion.ToString(); [Environment]::OSVersion.VersionString"';
-export function mountPowerShellUI({host,button,language,manager=new PowerShellManager({agent:new PowerShellClient()})}){
+export function mountPowerShellUI({host,button,language,manager=new PowerShellManager({agent:new PowerShellClient()}),palette=null}){
  if(!host||!button||!language)throw new Error('PSM_UI_MISSING_DEPENDENCY');
  let open=false;
  const toolMenu=()=>pane.querySelector('.psm-menu');
@@ -42,8 +42,34 @@ export function mountPowerShellUI({host,button,language,manager=new PowerShellMa
  // Native ConPTY is the only terminal. No textarea or HTTP-command fallback.
  const nativeWrap=document.createElement('div');
  nativeWrap.className='psm-native-wrap';nativeWrap.hidden=true;
- nativeWrap.style.cssText='flex:1;min-height:220px;background:#0b1018;padding:8px;overflow:hidden';
+ nativeWrap.style.cssText='flex:1;min-height:220px;background:var(--ui-editor,#000);color:var(--ui-text,#fff);padding:8px;overflow:hidden';
  terminal.append(nativeWrap);
+ function terminalTheme(){
+   const css=getComputedStyle(document.documentElement);
+   const color=(name,fallback)=>css.getPropertyValue('--ui-'+name).trim()||fallback;
+   const light=palette?.mode==='light';
+   const background=color('editor',light?'#ffffff':'#000000');
+   const foreground=color('text',light?'#19202a':'#f1f2f5');
+   return {
+     background,foreground,cursor:foreground,selectionBackground:light?'#8baad780':'#6b8fb080',
+     black:light?'#242a34':'#101318',red:light?'#a42132':'#ff6976',
+     green:light?'#17652d':'#6bd58d',yellow:light?'#795200':'#eacb75',
+     blue:light?'#2458aa':'#7eafff',magenta:light?'#842e9c':'#dca4f5',
+     cyan:light?'#126675':'#79dce5',white:light?'#687181':'#d8e0e9',
+     brightBlack:light?'#5b6573':'#778394',brightRed:light?'#bd2d42':'#ff8b96',
+     brightGreen:light?'#247b3b':'#8bf5a5',brightYellow:light?'#946500':'#ffe195',
+     brightBlue:light?'#2e6bcc':'#a4c6ff',brightMagenta:light?'#a23dbc':'#f0bcff',
+     brightCyan:light?'#168296':'#a2f5ff',brightWhite:light?'#202733':'#ffffff'
+   };
+ }
+ function syncTerminalPalette(){
+   const theme=terminalTheme();
+   nativeWrap.style.background=theme.background;
+   nativeWrap.style.color=theme.foreground;
+   for(const session of sessions)if(session.terminal)session.terminal.options.theme=theme;
+ }
+ const unsubscribePalette=palette?.subscribe?.(syncTerminalPalette)||(()=>{});
+ syncTerminalPalette();
  let nativeLoading=null;
  async function loadNativeTerminal(){
    if(window.Terminal)return;
@@ -74,7 +100,7 @@ export function mountPowerShellUI({host,button,language,manager=new PowerShellMa
      container.className='psm-native-session';
      container.style.cssText='height:100%;width:100%;overflow:hidden';
      nativeWrap.append(container);session.container=container;
-     const term=new window.Terminal({cursorBlink:true,convertEol:false,fontFamily:'Consolas, monospace',fontSize:13,theme:{background:'#0b1018',foreground:'#e5eaf1'},scrollback:10000});
+     const term=new window.Terminal({cursorBlink:true,convertEol:false,fontFamily:'Consolas, monospace',fontSize:13,theme:terminalTheme(),scrollback:10000});
      session.terminal=term;
      nativeWrap.hidden=false;
      showNative(sessions.find(x=>x.id===selected)||session);
@@ -225,5 +251,5 @@ export function mountPowerShellUI({host,button,language,manager=new PowerShellMa
  const unsubscribe=language.subscribe(()=>{translate();syncTabs();});
  translate();
  if(remote.paired)manager.checkConnection().then(state=>{if(state.configured)setConnected(true);else remote.clear();}).catch(()=>{});
- return {show,hide,createSession,selectSession,closeSession,syncTabs,get isOpen(){return open;},get sessions(){return sessions.map(x=>({...x}));},dispose(){for(const session of sessions)disposeNative(session);unsubscribe();document.removeEventListener('pointerdown',onOutsideClick,true);document.removeEventListener('keydown',onEscape,true);document.removeEventListener('scroll',onScroll,true);window.removeEventListener('scroll',onScroll,true);window.removeEventListener('resize',closeToolMenu);hide();tabs.querySelectorAll('.psm-tab').forEach(x=>x.remove());pane.remove();}};
+ return {show,hide,createSession,selectSession,closeSession,syncTabs,get isOpen(){return open;},get sessions(){return sessions.map(x=>({...x}));},dispose(){for(const session of sessions)disposeNative(session);unsubscribe();unsubscribePalette();document.removeEventListener('pointerdown',onOutsideClick,true);document.removeEventListener('keydown',onEscape,true);document.removeEventListener('scroll',onScroll,true);window.removeEventListener('scroll',onScroll,true);window.removeEventListener('resize',closeToolMenu);hide();tabs.querySelectorAll('.psm-tab').forEach(x=>x.remove());pane.remove();}};
 }
