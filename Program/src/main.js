@@ -718,6 +718,7 @@ editor.addEventListener('paste',event=>{
   pendingPasteText=event.clipboardData?.getData('text/plain')??null;
 },true);
 editor.addEventListener('beforeinput',event=>{
+  if(event.inputType!=='insertFromPaste')pendingPasteText=null;
   if(active&&virtualSessions.has(active)&&!editor.readOnly&&editor.value.length<=1024*1024){
     const key=active+':'+virtualSessions.get(active).center;
     if(!activeEditPath||activeEditPath.key!==key)
