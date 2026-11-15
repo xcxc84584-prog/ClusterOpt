@@ -1,4 +1,4 @@
-# ClusterOpt Property List — v0.0.50.4
+# ClusterOpt Property List — v0.0.50.5
 
 Source of truth: `Program/src/dependency-registry.js`. Properties are shared names; the table lists objects declaring each property, not a persisted value store.
 
@@ -42,3 +42,7 @@ Source of truth: `Program/src/dependency-registry.js`. Properties are shared nam
 
 | `GUTTER_VIEWPORT_RANGE` | GutterWindow |
 | `GUTTER_OVERSCAN` | GutterWindow |
+
+| `VISUAL_LINE_RANGE` | VisualLineMap |
+| `WRAP_COLUMNS` | VisualLineMap |
+| `WRAP_TAB_SIZE` | VisualLineMap |
