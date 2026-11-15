@@ -10,7 +10,7 @@ import {DEFAULT_HIGHLIGHT_SHORTCUT,normalizeHighlightShortcut,matchesHighlightSh
 import {transcodeToUtf8} from './fmc/chinese-transcoder.js';
 import {TextHighlighter,detectLanguage} from './text-highlighter/text-highlighter.js?v=opt039-dual-endpoint';
 import {HighlightRenderer} from './text-highlighter/highlight-renderer.js?v=opt048-render';
-import {Explorer} from './explorer.js?v=opt059-shortcut-i18n';
+import {Explorer} from './explorer.js?v=opt059-shortcut-i18n&hotfix=2';
 import {createVTE} from './vte/vte.js';
 import {handleDfomKeydown, handleDfomBeforeInput, buildTabGuideFragment} from './dfom.js';
 import {readStoragePriority, writeStoragePriority, fileSignature} from './storage-priority.js';
