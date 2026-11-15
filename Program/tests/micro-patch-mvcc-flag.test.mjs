@@ -24,7 +24,7 @@ test('49.5: parent FLAG/MVCC commits micro-patches and rejects stale versions', 
   assert.equal(stale.ehu, 'MICRO_PATCH_VERSION_CONFLICT');
   assert.equal((await session.read(0)).data.content, 'abXY\nefgh');
   assert.equal(session.getFlagStatus(0).data.mode, 'FREE');
-  assert.equal(session.recoveryEdits[0].versionId, 1);
+  assert.equal(session.recoveryEdits[0].content, 'abXY\\nefgh');
   assert.equal(vte.Status().data.files.length, 0);
 });
 
