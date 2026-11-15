@@ -191,7 +191,7 @@ function scheduleHighlight(){
         const starts=buildHighlightLineStarts(target);
         const lineHeight=Number.parseFloat(getComputedStyle(editor).lineHeight)||22;
         const startLine=Math.max(0,Math.floor(editor.scrollTop/lineHeight)-2);
-        const endLine=Math.min(starts.length-1,Math.ceil((editor.scrollTop+editor.clientHeight)/lineHeight)+2);
+        const endLine=Math.min(starts.length-1,startLine+99,Math.ceil((editor.scrollTop+editor.clientHeight)/lineHeight)+2);
         const from=starts[startLine],to=endLine+1<starts.length?starts[endLine+1]-1:target.length;
         const source=target.slice(from,to);
         const bg=getComputedStyle(document.documentElement).getPropertyValue('--ui-editor');
