@@ -1,0 +1,7 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+const read=p=>readFileSync(new URL(p,import.meta.url),'utf8');
+test('61.1 persistent sessions are authenticated and isolated by session ID',()=>{const agent=read('../local-agent/server.mjs');for(const token of ['equalSecret(',"'/session/start'","'/session/run'","'/session/poll'","'/session/interrupt'","'/session/close'",'createPersistentSession()','sessions.size>=12'])assert.ok(agent.includes(token),token);});
+test('61.2 no per-command confirmation, multi-command queue and clipboard paste',()=>{const ui=read('../src/powershell-manager/powershell-ui.js');const agent=read('../local-agent/server.mjs');assert.ok(!ui.includes('window.confirm('));assert.ok(ui.includes('remote.runSession('));assert.ok(ui.includes("addEventListener('paste'"));assert.ok(ui.includes("event.ctrlKey&&event.key.toLowerCase()==='c'"));assert.ok(agent.includes('pending.push({command,marker})'));});
+test('61.3 release title, redirect and cache use v0.0.61',()=>{const root=read('../../index.html'),page=read('../index.html'),main=read('../src/main.js'),ui=read('../src/powershell-manager/powershell-ui.js'),cmd=read('../src/powershell-manager/cmd-setup.js');assert.ok(root.includes('Program/?v=0.0.61'));assert.ok(root.includes('opt061-psm-r1'));assert.ok(page.includes('Cluster Opt 0.0.61'));assert.ok(main.includes('powershell-ui.js?v=opt061-psm-r1'));assert.ok(ui.includes('cmd-setup.js?v=opt061-psm-r1'));assert.ok(cmd.includes('v0.0.61-r1.cmd'));});
