@@ -34,10 +34,10 @@ export function createLocalAgent({token=randomBytes(32).toString('hex'),origins=
    try{for await(const chunk of req){raw+=chunk;if(raw.length>4096)throw new Error('PAYLOAD_TOO_LARGE');}}
    catch{return json(res,413,{ok:false,code:'PAYLOAD_TOO_LARGE'},origin);}
    let body;try{body=JSON.parse(raw||'{}');}catch{return json(res,400,{ok:false,code:'INVALID_JSON'},origin);}
-   if(req.url==='/status')return json(res,200,{ok:true,connected:true,mode:'INTERACTIVE_CONFIRM'},origin);
+   if(req.url==='/status')return json(res,200,{ok:true,connected:true,mode:'INTERACTIVE'},origin);
    if(req.url==='/revoke'){revoked=true;return json(res,200,{ok:true,revoked:true},origin);}
    if(body.action==='interactive'){
-    if(body.confirm!==true||typeof body.command!=='string'||!body.command.trim()||body.command.length>2048)return json(res,403,{ok:false,code:'COMMAND_APPROVAL_REQUIRED'},origin);
+    if(typeof body.command!=='string'||!body.command.trim()||body.command.length>2048)return json(res,403,{ok:false,code:'COMMAND_APPROVAL_REQUIRED'},origin);
     try{const result=await runInteractive(body.command);return json(res,200,{ok:true,...result},origin);}
     catch{return json(res,503,{ok:false,code:'COMMAND_FAILED'},origin);}
   }
@@ -60,7 +60,7 @@ export function runReadOnly(action){
  });
 }
 
-// Interactive commands run only after a per-command browser confirmation. No elevation.
+// Interactive commands use the authenticated local agent. No per-command dialog or elevation.
 // One-shot process: command state does not persist between executions.
 export function runInteractive(command){
  return new Promise((resolve,reject)=>{
