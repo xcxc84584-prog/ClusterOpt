@@ -409,9 +409,9 @@ export class Explorer {
     toolbar.addEventListener('click',event=>event.stopPropagation());
     toolbar.addEventListener('keydown',event=>{
       const current=buttons.indexOf(document.activeElement);
-      if(event.key==='ArrowRight'||event.key==='ArrowLeft'){
+      if(event.key==='ArrowDown'||event.key==='ArrowUp'){
         event.preventDefault();
-        const step=event.key==='ArrowRight'?1:-1;
+        const step=event.key==='ArrowDown'?1:-1;
         buttons[(current+step+buttons.length)%buttons.length].focus();
       }
       if(event.key==='Home'){event.preventDefault();buttons[0].focus();}
