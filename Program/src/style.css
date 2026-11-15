@@ -1277,3 +1277,54 @@ body > .explorer-context .explorer-context-label { overflow-wrap:anywhere; }
 .psm-pair-row input{flex:1 1 180px;min-width:0;padding:10px;border-radius:8px;border:1px solid currentColor;background:transparent;color:inherit}
 .psm-primary{border-radius:8px;padding:10px 16px;background:var(--ui-accent,#8baaff);color:#101018;font-weight:700}
 .psm-pane{overflow:auto}
+
+/* v0.0.60 setup revision 2 — semantic tokens, responsive wizard, theme-safe controls. */
+.psm-pane{
+ --psm-bg:var(--ui-background);
+ --psm-card:var(--ui-surface);
+ --psm-ink:var(--ui-text-on-surface,var(--ui-text));
+ --psm-muted:var(--ui-muted);
+ --psm-line:var(--ui-border);
+ --psm-button:var(--ui-control);
+ --psm-button-text:var(--ui-text-on-control,var(--ui-text));
+ --psm-hover:var(--ui-hover);
+ background:var(--psm-bg);color:var(--psm-ink);
+ border-color:var(--psm-line);overflow:auto;
+}
+.psm-pane .psm-top{position:sticky;top:0;z-index:2;background:var(--psm-card);color:var(--psm-ink);border-color:var(--psm-line)}
+.psm-pane .psm-top button,.psm-pane .psm-menu button,.psm-pane .psm-body button{
+ background:var(--psm-button);color:var(--psm-button-text);border:1px solid var(--psm-line);border-radius:8px;cursor:pointer;
+}
+.psm-pane button:hover{background:var(--psm-hover)}
+.psm-pane button:focus-visible,.psm-pane input:focus-visible,.psm-pane summary:focus-visible{outline:2px solid var(--psm-ink);outline-offset:3px}
+.psm-pane .psm-body{width:min(780px,calc(100% - 32px));max-width:100%;margin:0 auto;gap:18px;padding:24px 0 40px;align-items:stretch}
+.psm-intro{display:flex;align-items:center;gap:18px;padding:20px;border:1px solid var(--psm-line);border-radius:12px;background:var(--psm-card)}
+.psm-intro .psm-glyph{font-size:36px;line-height:1;opacity:1}
+.psm-eyebrow{display:block;font-size:10px;font-weight:700;letter-spacing:.12em;color:var(--psm-muted);margin-bottom:6px}
+.psm-intro h2{font-size:21px;line-height:1.3;margin:0 0 5px;color:var(--psm-ink)}
+.psm-intro p{color:var(--psm-muted);line-height:1.5}
+.psm-pane .psm-quick-setup{width:100%;gap:12px;margin:0}
+.psm-pane .psm-setup-step{grid-template-columns:42px minmax(0,1fr);gap:12px;background:var(--psm-card);border:1px solid var(--psm-line);border-radius:12px;padding:18px}
+.psm-pane .psm-step-number{display:grid;place-items:center;width:34px;height:34px;border:1px solid var(--psm-line);border-radius:9px;background:var(--psm-button);color:var(--psm-button-text);font-size:13px;font-weight:750}
+.psm-pane .psm-setup-step strong{font-size:15px;color:var(--psm-ink)}
+.psm-pane .psm-setup-step p{color:var(--psm-muted);opacity:1;font-size:13px;margin:6px 0 12px}
+.psm-pane .psm-primary{padding:10px 16px;font-weight:700;min-height:38px;background:var(--psm-button);color:var(--psm-button-text)}
+.psm-pane .psm-pair-row{display:flex;gap:8px;align-items:stretch;flex-wrap:wrap}
+.psm-pane .psm-pair-row input{flex:1 1 220px;min-width:0;width:auto;max-width:100%;border:1px solid var(--psm-line);background:var(--ui-control);color:var(--psm-button-text);font:13px/1.5 Consolas,monospace}
+.psm-pane .psm-advanced{border:1px solid var(--psm-line);border-radius:9px;background:var(--psm-card);padding:12px 15px}
+.psm-pane .psm-advanced summary{cursor:pointer;color:var(--psm-ink);font-size:13px;font-weight:600}
+.psm-pane .psm-advanced label{display:block;color:var(--psm-muted);margin:12px 0 7px;font-weight:400}
+.psm-pane .psm-advanced input{width:100%;background:var(--ui-control);color:var(--psm-button-text);border-color:var(--psm-line);font-size:12px}
+.psm-pane .psm-footer{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.psm-pane .psm-footer [role="status"]{flex:1;min-width:160px;color:var(--psm-ink);font-size:13px}
+.psm-pane .psm-menu{background:var(--psm-card);border-color:var(--psm-line)}
+#clusterEditorColumn.psm-mode #tabs .tab:not(.psm-tab).active{background:var(--ui-panel);color:var(--ui-muted)}
+@media(max-width:600px){
+ .psm-pane .psm-body{width:calc(100% - 20px);padding:12px 0 28px}
+ .psm-intro{padding:14px;gap:10px}
+ .psm-intro h2{font-size:18px}
+ .psm-pane .psm-setup-step{padding:12px;grid-template-columns:32px minmax(0,1fr);gap:8px}
+ .psm-pane .psm-step-number{width:28px;height:28px}
+ .psm-pane .psm-pair-row input,.psm-pane .psm-pair-row button{flex:1 1 100%}
+ .psm-pane .psm-footer button{width:100%}
+}
