@@ -1250,3 +1250,33 @@ body > .explorer-vscode-popup .explorer-inline-action:focus-visible {
 }
 body > .explorer-vscode-popup .explorer-action-label {display:none!important;}
 body > .explorer-vscode-popup .explorer-action-symbol {font-size:15px;line-height:20px;}
+
+/* VS Code-style Explorer context menu: compact actions, labels and separators. */
+body > .explorer-vscode-popup {
+  width:220px; min-width:220px; max-width:min(220px,calc(100vw - 16px));
+  padding:5px 0; gap:0; border-radius:5px;
+  background:var(--ui-surface); box-shadow:0 8px 28px #0008;
+}
+body > .explorer-vscode-popup .explorer-inline-action {
+  flex:0 0 28px; width:100%; height:28px; min-height:28px;
+  padding:0 12px; gap:12px; border:0; border-radius:0;
+  font-size:12px; font-weight:400; text-align:left;
+}
+body > .explorer-vscode-popup .explorer-action-symbol {
+  flex:0 0 18px; width:18px; text-align:center; font-size:14px;
+}
+body > .explorer-vscode-popup .explorer-action-label {
+  display:block!important; flex:1; min-width:0;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  font-size:12px; line-height:20px;
+}
+body > .explorer-vscode-popup .explorer-inline-action:disabled {
+  opacity:.4; cursor:default;
+}
+body > .explorer-vscode-popup .explorer-inline-action:hover:not(:disabled),
+body > .explorer-vscode-popup .explorer-inline-action:focus-visible {
+  background:var(--ui-hover); outline:0;
+}
+body > .explorer-vscode-popup .explorer-menu-divider {
+  height:1px; margin:5px 10px; background:var(--ui-border);
+}
