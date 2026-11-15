@@ -1,0 +1,2 @@
+# Plan
+2026-11-15 reference: VS Code syntax highlighting optimization https://code.visualstudio.com/blogs/2017/02/08/syntax-highlighting-optimizations ; CodeMirror viewport architecture https://codemirror.net/docs/ref/ . Immediate P0 UX mitigation: avoid main-thread large slice parse on navigation. Known tradeoff: >256KiB switched/loaded text initially uncolored; future Worker needed for nonblocking coloring, LF index construction and tab-guide/gutter may still block. Browser performance not measured.
