@@ -16,7 +16,7 @@ export function createSetupCmd(){
  'if not exist "%AGENT_DIR%" mkdir "%AGENT_DIR%"',
  'if errorlevel 1 goto failed',
  'echo [1/2] Downloading pinned agent...',
- 'powershell.exe -NoProfile -NonInteractive -Command "try { Invoke-WebRequest -UseBasicParsing -Uri '+PLA_SOURCE+' -OutFile ($env:USERPROFILE + ''\\ClusterOpt-Agent\\server.mjs'') -ErrorAction Stop } catch { exit 1 }"',
+'powershell.exe -NoProfile -NonInteractive -Command "try { Invoke-WebRequest -UseBasicParsing -Uri '+PLA_SOURCE+' -OutFile ($env:USERPROFILE + \'\\\\ClusterOpt-Agent\\\\server.mjs\') -ErrorAction Stop } catch { exit 1 }"',
  'if errorlevel 1 goto failed',
  'echo [2/2] Starting local agent...',
  'echo.',
