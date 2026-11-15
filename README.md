@@ -26,3 +26,5 @@ Local-first browser IDE (GitHub Pages). Current release: **v0.0.50** (through st
 51.4: bounded revision-aware exact-source LRU for uncolored tokens; theme changes recolor without retokenizing cached entries. Grammar checkpoint remains conservative.
 
 51.5: HighlightRenderer reuses its overlay root and existing visible line nodes; dirty lines repaint on known edit. Full slice render still rebuilds tokens; browser DOM timing pending.
+
+51.6: latest-wins syntax task scheduler with AbortSignal, revision-checked commit and cancellation; does NOT move Shiki to a Web Worker, so tokenization may still block UI.
