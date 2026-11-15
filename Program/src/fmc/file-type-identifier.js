@@ -14,7 +14,7 @@ export class FileTypeIdentifier {
       header[6] === 0x79 && header[7] === 0x70;
     const extension = String(name).toLowerCase().split('.').pop();
     const mediaExtension = ['mp4', 'm4v', 'mov', 'm4a', '3gp', '3g2'].includes(extension);
-    if (isIsoBmff || mediaExtension || /^(video|audio)\\//i.test(blob.type)) {
+    if (isIsoBmff || mediaExtension || /^(video|audio)\//i.test(blob.type)) {
       return {kind: 'MEDIA', format: isIsoBmff ? 'ISO-BMFF' : 'MEDIA',
         mode: 'BINARY', ehu: 'FTI_MEDIA_LOAD'};
     }
