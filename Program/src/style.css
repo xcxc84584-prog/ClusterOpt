@@ -1145,138 +1145,48 @@ body > .explorer-context .explorer-context-label { overflow-wrap:anywhere; }
   .highlighter-shortcut-heading { flex-wrap:wrap; }
 }
 
-/* v0.0.54 — labeled Explorer action strip, preserving graphite styling. */
-#explorerTree .explorer-entry:has(.explorer-inline-actions) { min-height:44px; }
-.explorer-inline-actions { gap:4px; padding:2px 0; }
-.explorer-inline-action {
-  flex:0 0 auto; min-width:52px; height:38px; padding:3px 6px;
-  display:inline-flex; flex-direction:column; align-items:center; justify-content:center;
-  gap:1px; border-radius:7px; border-color:var(--ui-border);
-  background:var(--ui-control); color:var(--ui-text-on-control);
+/* v0.0.56 — VS Code-inspired actions live inside the filename row. */
+#explorerTree .explorer-entry {
+  box-sizing:border-box; min-width:0; overflow:hidden;
 }
-.explorer-action-symbol { font-size:15px; line-height:16px; }
-.explorer-action-label { font-size:10px; line-height:12px; white-space:nowrap; }
-.explorer-inline-action.is-danger { border-color:color-mix(in srgb,#d65c5c 45%,var(--ui-border)); }
-.explorer-inline-action.is-danger:hover { background:color-mix(in srgb,#d65c5c 17%,var(--ui-control)); }
-
-/* v0.0.54 PR-02 — fit every action inside narrow/deeply nested Explorer rows. */
-#explorerTree .explorer-entry:has(.explorer-inline-actions) {
-  box-sizing:border-box; min-width:0; min-height:32px;
-  padding-inline-start:4px !important; padding-inline-end:4px;
+#explorerTree .explorer-entry .explorer-name {
+  min-width:0; flex:1 1 auto; overflow:hidden;
+  text-overflow:ellipsis; white-space:nowrap;
 }
-#explorerTree .explorer-entry:has(.explorer-inline-actions) > .explorer-arrow,
-#explorerTree .explorer-entry:has(.explorer-inline-actions) > .explorer-file-icon {
-  display:none;
+#explorerTree .explorer-entry.has-inline-actions {
+  min-height:28px; height:28px; padding-inline-end:3px;
 }
 #explorerTree .explorer-inline-actions {
-  box-sizing:border-box; display:grid; grid-template-columns:repeat(4,minmax(0,1fr));
-  flex:1 1 0; width:100%; min-width:0; max-width:100%; gap:3px;
-  padding:1px 0; overflow:visible;
+  flex:0 0 auto; display:inline-flex; flex-direction:row;
+  align-items:center; justify-content:flex-end; gap:1px;
+  margin-inline-start:3px; padding:0; width:auto; max-width:100%;
+  background:var(--ui-panel); border-radius:3px;
 }
 #explorerTree .explorer-inline-action {
-  box-sizing:border-box; flex:none; width:100%; min-width:0; height:29px;
-  padding:2px 1px; gap:2px; flex-direction:row; border-radius:5px;
+  box-sizing:border-box; display:inline-flex; flex:0 0 20px;
+  width:20px; min-width:20px; height:21px; min-height:21px;
+  padding:0; margin:0; border:0; border-radius:3px;
+  align-items:center; justify-content:center;
+  background:transparent; color:var(--ui-text-on-panel); cursor:pointer;
 }
-#explorerTree .explorer-action-symbol { flex:none; font-size:12px; line-height:14px; }
-#explorerTree .explorer-action-label {
-  min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
-  font-size:10px; line-height:13px;
+#explorerTree .explorer-action-symbol {
+  font-size:13px; line-height:19px;
 }
-
-/* v0.0.54 PR-03 — one glyph per Explorer action, no visible captions. */
-#explorerTree .explorer-inline-action {
-  justify-content:center; align-items:center; height:25px; padding:1px;
+#explorerTree .explorer-inline-action:hover:not(:disabled),
+#explorerTree .explorer-inline-action:focus-visible {
+  background:var(--ui-hover); outline:1px solid var(--ui-border);
 }
-#explorerTree .explorer-action-symbol { font-size:15px; line-height:19px; }
-#explorerTree .explorer-action-label { display:none; }
-
-/* Explorer PR-04: single-column icon actions, never side-by-side. */
-#explorerTree .explorer-entry:has(.explorer-inline-actions) {
-  height:auto; min-height:32px; align-items:flex-start;
-}
-#explorerTree .explorer-inline-actions {
-  display:grid; grid-template-columns:minmax(0,1fr); grid-auto-flow:row;
-  gap:3px; overflow:visible; width:100%;
-}
-#explorerTree .explorer-inline-action {
-  display:flex; width:100%; height:27px; flex-direction:row;
-  justify-content:center; align-items:center; white-space:nowrap;
-}
-/* The active document must be unmistakable in both graphite and daylight themes. */
+#explorerTree .explorer-inline-action:disabled {opacity:.35;cursor:default}
+#explorerTree .explorer-inline-action.is-danger:hover {background:#813b44;color:#fff}
 #explorerTree .explorer-entry.active {
-  background:var(--explorer-active-bg, #274c70);
-  color:var(--explorer-active-text, #fff);
-  box-shadow:inset 3px 0 0 var(--explorer-active-edge, #80c8ff),
-             inset 0 0 0 1px var(--explorer-active-edge, #80c8ff);
+  background:var(--explorer-active-bg,#274c70);
+  color:var(--explorer-active-text,#fff);
+  box-shadow:inset 3px 0 0 var(--explorer-active-edge,#80c8ff);
   font-weight:700;
 }
 #explorerTree .explorer-entry.active:hover {
-  background:var(--explorer-active-hover, #32628d);
+  background:var(--explorer-active-hover,#32628d);
 }
-
-/* v0.0.55 — enforce one action per row at every Explorer width. */
-#explorerTree .explorer-inline-actions {
-  display:flex; flex-direction:column; flex-wrap:nowrap;
-  align-items:stretch; gap:3px; min-width:0;
-}
-#explorerTree .explorer-inline-actions > .explorer-inline-action {
-  display:flex; flex:0 0 27px; width:100%; min-width:0;
-  height:27px; max-height:27px; justify-content:center;
-}
-#explorerTree .explorer-inline-action .explorer-action-label { display:none !important; }
-
-/* v0.0.55 Explorer: VS Code-inspired detached context menu.
-   Keep the tree row at normal height; never replace the filename with buttons. */
-body > .explorer-vscode-popup {
-  position:fixed; z-index:2500; box-sizing:border-box;
-  display:flex; flex-direction:column; flex-wrap:nowrap;
-  width:164px; min-width:164px; max-width:164px;
-  max-height:calc(100dvh - 16px); overflow-y:auto; overflow-x:hidden;
-  padding:4px; gap:1px;
-  background:var(--ui-surface); color:var(--ui-text-on-surface);
-  border:1px solid var(--ui-border); border-radius:7px;
-  box-shadow:0 8px 24px #0005;
-}
-body > .explorer-vscode-popup .explorer-inline-action {
-  box-sizing:border-box; display:flex; flex:0 0 30px;
-  width:100%; min-width:0; height:30px; padding:3px 10px;
-  justify-content:flex-start; align-items:center;
-  background:transparent; border:0; border-radius:4px;
-  color:var(--ui-text-on-surface);
-}
-body > .explorer-vscode-popup .explorer-inline-action:hover,
-body > .explorer-vscode-popup .explorer-inline-action:focus-visible {
-  background:var(--ui-hover); outline:1px solid var(--ui-border);
-}
-body > .explorer-vscode-popup .explorer-action-label {display:none!important;}
-body > .explorer-vscode-popup .explorer-action-symbol {font-size:15px;line-height:20px;}
-
-/* VS Code-style Explorer context menu: compact actions, labels and separators. */
-body > .explorer-vscode-popup {
-  width:220px; min-width:220px; max-width:min(220px,calc(100vw - 16px));
-  padding:5px 0; gap:0; border-radius:5px;
-  background:var(--ui-surface); box-shadow:0 8px 28px #0008;
-}
-body > .explorer-vscode-popup .explorer-inline-action {
-  flex:0 0 28px; width:100%; height:28px; min-height:28px;
-  padding:0 12px; gap:12px; border:0; border-radius:0;
-  font-size:12px; font-weight:400; text-align:left;
-}
-body > .explorer-vscode-popup .explorer-action-symbol {
-  flex:0 0 18px; width:18px; text-align:center; font-size:14px;
-}
-body > .explorer-vscode-popup .explorer-action-label {
-  display:block!important; flex:1; min-width:0;
-  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
-  font-size:12px; line-height:20px;
-}
-body > .explorer-vscode-popup .explorer-inline-action:disabled {
-  opacity:.4; cursor:default;
-}
-body > .explorer-vscode-popup .explorer-inline-action:hover:not(:disabled),
-body > .explorer-vscode-popup .explorer-inline-action:focus-visible {
-  background:var(--ui-hover); outline:0;
-}
-body > .explorer-vscode-popup .explorer-menu-divider {
-  height:1px; margin:5px 10px; background:var(--ui-border);
+@media(max-width:380px) {
+  #explorerTree .explorer-inline-action {flex-basis:18px;width:18px;min-width:18px}
 }
