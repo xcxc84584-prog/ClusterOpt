@@ -30,14 +30,14 @@ export function deriveEditIntent({
       break;
     case 'deleteContentBackward':
       if (from === to) {
-        if (from === 0 || value[from - 1] !== '\n') return null;
+        if (from === 0) return null;
         from--;
       }
       text = '';
       break;
     case 'deleteContentForward':
       if (from === to) {
-        if (to >= value.length || value[to] !== '\n') return null;
+        if (to >= value.length) return null;
         to++;
       }
       text = '';
