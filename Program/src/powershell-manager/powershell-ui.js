@@ -86,7 +86,7 @@ export function mountPowerShellUI({host,button,language,manager=new PowerShellMa
    if(!action)return;
    if(action==='download'){
      const source='https://raw.githubusercontent.com/xcxc84584-prog/ClusterOpt/2aa46615c72bfc789b50a131260d3ab7203060db/Program/local-agent/server.mjs';
-     const cmd=['@echo off','setlocal','echo ClusterOpt v0.0.60 - Local Agent download','where node >nul 2>nul || (echo Node.js 20+ is required. & pause & exit /b 1)','if not exist "%USERPROFILE%\\\\ClusterOpt-Agent" mkdir "%USERPROFILE%\\\\ClusterOpt-Agent"','powershell.exe -NoProfile -Command "Invoke-WebRequest -UseBasicParsing -Uri '+source+' -OutFile \'%USERPROFILE%\\\\ClusterOpt-Agent\\\\server.mjs\'"','if errorlevel 1 (echo Download failed. & pause & exit /b 1)','echo Review server.mjs before running.','echo Start with: node "%USERPROFILE%\\\\ClusterOpt-Agent\\\\server.mjs"','pause'].join('\\r\\n');
+     const cmd=['@echo off','setlocal','echo ClusterOpt v0.0.60 - Local Agent download','where node >nul 2>nul || (echo Node.js 20+ is required. & pause & exit /b 1)','if not exist "%USERPROFILE%\\\\ClusterOpt-Agent" mkdir "%USERPROFILE%\\\\ClusterOpt-Agent"','powershell.exe -NoProfile -Command "Invoke-WebRequest -UseBasicParsing -Uri '+source+' -OutFile \'%USERPROFILE%\\\\ClusterOpt-Agent\\\\server.mjs\'"','if errorlevel 1 (echo Download failed. & pause & exit /b 1)','echo Review server.mjs before running.','echo Start with: node "%USERPROFILE%\\\\ClusterOpt-Agent\\\\server.mjs"','pause'].join('\r\n');
      const url=URL.createObjectURL(new Blob([cmd],{type:'application/octet-stream'}));
      const a=document.createElement('a');a.href=url;a.download='ClusterOpt-PLA-Setup-v0.0.60.cmd';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
    }
@@ -99,7 +99,7 @@ export function mountPowerShellUI({host,button,language,manager=new PowerShellMa
    if(action==='tool'){q('.psm-menu').hidden=!q('.psm-menu').hidden;q('[data-psm-action="tool"]').setAttribute('aria-expanded',String(!q('.psm-menu').hidden));}
    if(action==='permissions'){setFeedback(t().rule+' — '+t().notice);q('.psm-menu').hidden=true;}
    if(action==='revoke'){try{const result=await manager.revokeLocalAccess();setFeedback(result.ok?'Revoked':t().unavailable);}catch{setFeedback(t().unavailable);}q('.psm-menu').hidden=true;}
-   if(action==='check'){const state=await manager.checkConnection();setFeedback(state.configured?'Connected':t().unavailable);}
+   if(action==='check'){const state=await manager.checkConnection();setFeedback(state.configured?(language.value==='en'?'Connected':'已連線'):t().unavailable);}
  });
  function setFeedback(value){q('[data-psm="feedback"]').textContent=value;const session=sessions.find(x=>x.id===selected);if(session)session.feedback=value;}
  const unsubscribe=language.subscribe(()=>{translate();syncTabs();});
