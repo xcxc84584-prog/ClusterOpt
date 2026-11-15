@@ -1,4 +1,4 @@
-# ClusterOpt — Repository Architecture (v0.0.50.5)
+# ClusterOpt — Repository Architecture (v0.0.51.1)
 
 The repository root is the project root; no extra `Project/` directory is required.
 
@@ -47,7 +47,7 @@ UI (main.js)
 
 ## Source-of-truth policy
 
-- OCDA registry declarations: `Program/src/dependency-registry.js` (42 registered objects).
+- OCDA registry declarations: `Program/src/dependency-registry.js` (43 registered objects).
 - Canonical human-readable inventory: `物件清單.md`, `屬性清單.md`, `全域屬性清單.md`.
 - English index: `OBJECT_LIST.md`, `PROPERTY_LIST.md`; keep aligned with registry.
 - New PRs require `PRDrequest.md`, `ArcD.md`, `Plan.md`, `Relation Test.md`, VTE event chain and explicit CI evidence.
@@ -67,3 +67,5 @@ GitHub Actions Node tests verify static contracts and isolated VTE tests; actual
 50.4: gutter now renders visible line numbers only with spacer and scroll sync; DOM browser validation pending.
 
 50.5: pure resident-slice visual-line map and wrapped viewport mapping. Browser textarea wrap remains OFF pending exact glyph measurement and highlight/gutter/DFOM alignment; no UI toggle.
+
+51.1: isolated Node benchmark for line-index and token-range remap; excludes Shiki, DOM, browser latency.
