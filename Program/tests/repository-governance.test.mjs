@@ -27,7 +27,7 @@ test('repository governance: OCDA and canonical inventory stay aligned',()=>{
   const properties=read('../../PROPERTY_LIST.md');
   for(const name of ['EDIT_REVISION','MICRO_SLICE_PREFIX','PARENT_SLICE_ID'])
     assert.ok(properties.includes(name),'missing '+name);
-  assert.match(read('../../物件清單.md'),/39 個物件/);
+  assert.match(read('../../物件清單.md'),/40 個物件/);
 });
 
 test('repository governance: release redirect and VTE noninterference',()=>{
