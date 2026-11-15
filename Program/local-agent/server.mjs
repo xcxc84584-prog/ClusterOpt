@@ -1,4 +1,4 @@
-// ClusterOpt PLA v0.0.60 — local-only, read-only bootstrap. No arbitrary shell execution.
+// ClusterOpt PLA v0.0.60 — loopback agent with locally authorized command permissions.
 import {createServer} from 'node:http';
 import {randomBytes,timingSafeEqual} from 'node:crypto';
 import {spawn} from 'node:child_process';
@@ -19,8 +19,9 @@ function equalSecret(a,b){
  const x=Buffer.from(a),y=Buffer.from(b);
  return x.length===y.length&&timingSafeEqual(x,y);
 }
-export function createLocalAgent({token=randomBytes(32).toString('hex'),origins=ALLOWED_ORIGINS,runner=runReadOnly}={}){
+export function createLocalAgent({token=randomBytes(32).toString('hex'),origins=ALLOWED_ORIGINS,runner=runReadOnly,permission=process.env.CLUSTEROPT_PS_PERMISSION==='FULL'?'FULL':'READ_ONLY'}={}){
  let revoked=false;
+ const level=permission==='FULL'?'FULL':'READ_ONLY';
  const server=createServer(async(req,res)=>{
    const origin=req.headers.origin;
    if(!origin||!origins.has(origin))return json(res,403,{ok:false,code:'ORIGIN_DENIED'});
@@ -34,9 +35,10 @@ export function createLocalAgent({token=randomBytes(32).toString('hex'),origins=
    try{for await(const chunk of req){raw+=chunk;if(raw.length>4096)throw new Error('PAYLOAD_TOO_LARGE');}}
    catch{return json(res,413,{ok:false,code:'PAYLOAD_TOO_LARGE'},origin);}
    let body;try{body=JSON.parse(raw||'{}');}catch{return json(res,400,{ok:false,code:'INVALID_JSON'},origin);}
-   if(req.url==='/status')return json(res,200,{ok:true,connected:true,mode:'INTERACTIVE'},origin);
+   if(req.url==='/status')return json(res,200,{ok:true,connected:true,mode:'INTERACTIVE',permission:level},origin);
    if(req.url==='/revoke'){revoked=true;return json(res,200,{ok:true,revoked:true},origin);}
    if(body.action==='interactive'){
+    if(level!=='FULL')return json(res,403,{ok:false,code:'PERMISSION_DENIED'},origin);
     if(typeof body.command!=='string'||!body.command.trim()||body.command.length>2048)return json(res,403,{ok:false,code:'COMMAND_APPROVAL_REQUIRED'},origin);
     try{const result=await runInteractive(body.command);return json(res,200,{ok:true,...result},origin);}
     catch{return json(res,503,{ok:false,code:'COMMAND_FAILED'},origin);}
@@ -45,7 +47,7 @@ export function createLocalAgent({token=randomBytes(32).toString('hex'),origins=
    try{const result=await runner(body.action);return json(res,200,{ok:true,...result},origin);}
    catch{return json(res,503,{ok:false,code:'COMMAND_FAILED'},origin);}
  });
- return {server,get revoked(){return revoked;},get token(){return token;}};
+ return {server,get revoked(){return revoked;},get token(){return token;},get permission(){return level;}};
 }
 export function runReadOnly(action){
  return new Promise((resolve,reject)=>{
@@ -78,6 +80,7 @@ export function runInteractive(command){
 }
 if(process.argv[1]&&fileURLToPath(import.meta.url)===process.argv[1]){
  const agent=createLocalAgent();
+ console.log('Command permission: '+agent.permission+' (set locally when launching CMD)');
  agent.server.listen(DEFAULT_PORT,'127.0.0.1',()=>{
   console.log('ClusterOpt Local Agent listening on 127.0.0.1:'+DEFAULT_PORT);
   console.log('Pairing token (do not share): '+agent.token);
