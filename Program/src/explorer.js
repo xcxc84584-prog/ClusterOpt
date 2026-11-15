@@ -32,7 +32,7 @@ export class Explorer {
   #panel;#tree;#search;#openFile;#openDocument;#closeFile;#closeRoot;#newFile;#log;
   #state=readState();#clipboard=null;#actionBar=null;#hint=null;#rename=null;
   #hold=null;#drag=null;#selected=null;#revealGeneration=0;#suppressClick=false;#draft=null;
-  #syncing=false;#syncTimer=null;
+  #syncing=false;#syncTimer=null;#contextPopup=null;
   constructor({panel,openFile,openDocument,closeFile=async()=>false,closeRoot=async()=>true,newFile=()=>{},log=()=>{}}){
     this.#panel=panel;this.#tree=panel.querySelector('#explorerTree');
     this.#search=panel.querySelector('#explorerSearch');
@@ -300,14 +300,15 @@ export class Explorer {
   #closeMenu(){
     if(!this.#actionBar)return;
     this.#actionBar=null;
+    this.#contextPopup?.remove();this.#contextPopup=null;
     this.#updateHint();
     this.render();
   }
   #updateHint(action=''){
     const state=this.#actionBar;
-    this.#search.hidden=!!state;
-    this.#search.disabled=!!state;
-    if(this.#hint)this.#hint.hidden=!state;
+    this.#search.hidden=false;
+    this.#search.disabled=false;
+    if(this.#hint)this.#hint.hidden=true;
     if(!state)return;
     const node=this.#allNodes().find(item=>this.#key(item)===state.nodeKey);
     const target=node?.name||state.name;
@@ -327,6 +328,26 @@ export class Explorer {
     this.#actionBar={nodeKey:this.#key(node),name:node.name,level:'primary'};
     this.#updateHint();
     this.render();
+    this.#showContextPopup();
+  }
+  #showContextPopup(){
+    this.#contextPopup?.remove();this.#contextPopup=null;
+    if(!this.#actionBar)return;
+    const row=[...this.#tree.querySelectorAll('.explorer-entry[data-path]')]
+      .find(item=>item.dataset.path===this.#actionBar.nodeKey);
+    const node=this.#allNodes().find(item=>this.#key(item)===this.#actionBar.nodeKey);
+    if(!row||!node)return;
+    const popup=this.#inlineActions(node);
+    popup.classList.add('explorer-vscode-popup');
+    popup.setAttribute('role','menu');
+    document.body.append(popup);this.#contextPopup=popup;
+    const rect=row.getBoundingClientRect();
+    const panel=this.#panel.getBoundingClientRect();
+    const width=164;
+    const rightSpace=window.innerWidth-panel.right;
+    const left=rightSpace>=width+8?panel.right+4:Math.max(8,panel.left-width-4);
+    popup.style.left=Math.max(8,left)+'px';
+    popup.style.top=Math.max(8,Math.min(rect.top,window.innerHeight-popup.offsetHeight-8))+'px';
   }
   #inlineActions(node){
     const toolbar=document.createElement('span');
@@ -375,7 +396,8 @@ export class Explorer {
           this.#actionBar.level=key==='more'?'secondary':'primary';
           this.#updateHint();
           this.render();
-          this.#tree.querySelector('.explorer-inline-action')?.focus({preventScroll:true});
+          this.#showContextPopup();
+          this.#contextPopup?.querySelector('.explorer-inline-action')?.focus({preventScroll:true});
           return;
         }
         this.#closeMenu();
@@ -616,14 +638,6 @@ export class Explorer {
           void this.#expand(node);
         };
       }
-      if(this.#actionBar?.nodeKey===this.#key(node)){
-        // A toolbar must not be nested inside the ordinary row button.
-        const toolbar=this.#inlineActions(node);
-        const label=row.querySelector('.explorer-name');
-        label.replaceWith(toolbar);
-        row.title='';
-        row.onclick=null;
-      }
       if(this.#rename===this.#key(node)){
         const input=document.createElement('input');input.className='explorer-rename';
         input.value=node.name;row.querySelector('.explorer-name').replaceWith(input);
@@ -667,6 +681,7 @@ export class Explorer {
       }
     }
     this.#tree.replaceChildren(fragment);
+    if(this.#actionBar)this.#showContextPopup();
   }
   #button(name,kind,depth){
     const button=document.createElement('div');button.setAttribute('role','button');
