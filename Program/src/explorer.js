@@ -36,16 +36,40 @@ export class Explorer {
   constructor({panel,openFile,openDocument,closeFile=async()=>false,closeRoot=async()=>true,newFile=()=>{},log=()=>{}}){
     this.#panel=panel;this.#tree=panel.querySelector('#explorerTree');
     this.#search=panel.querySelector('#explorerSearch');
+    // Replace the parser-created input: Chrome may have already autofilled it
+    // before the Explorer constructor runs. Preserve the public DOM id.
+    if(this.#search?.cloneNode && this.#search?.replaceWith){
+      const clean=this.#search.cloneNode(false);
+      clean.value='';
+      clean.defaultValue='';
+      clean.removeAttribute('name');
+      clean.removeAttribute('value');
+      clean.setAttribute('autocomplete','off');
+      clean.setAttribute('readonly','');
+      clean.setAttribute('data-lpignore','true');
+      clean.setAttribute('data-1p-ignore','true');
+      this.#search.replaceWith(clean);
+      this.#search=clean;
+    }
     this.#search.value='';
-    this.#search.setAttribute?.('autocomplete','new-password');
-    this.#search.setAttribute?.('autocorrect','off');
-    this.#search.setAttribute?.('autocapitalize','off');
-    this.#search.setAttribute?.('spellcheck','false');
-    this.#search.setAttribute?.('name','explorer-filter-'+Math.random().toString(36).slice(2));
+    this.#search.setAttribute?.('autocomplete','off');
+    this.#search.removeAttribute?.('name');
+    this.#search.setAttribute?.('readonly','');
     this.#search.setAttribute?.('data-lpignore','true');
     this.#search.setAttribute?.('data-1p-ignore','true');
-    this.#search.setAttribute?.('data-form-type','other');
-    globalThis.window?.addEventListener?.('pageshow',()=>{this.#search.value='';this.render();});
+    // Autofill cannot write to the initially read-only field. Unlock only
+    // after a genuine user gesture so typing and searching work normally.
+    const unlockSearch=event=>{
+      if(event.isTrusted===false)return;
+      this.#search.removeAttribute?.('readonly');
+    };
+    this.#search.addEventListener('pointerdown',unlockSearch);
+    this.#search.addEventListener('keydown',unlockSearch);
+    this.#search.addEventListener('focus',unlockSearch);
+    globalThis.window?.addEventListener?.('pageshow',()=>{
+      this.#search.value='';
+      this.render();
+    });
     this.#openFile=openFile;this.#openDocument=openDocument;this.#closeFile=closeFile;this.#closeRoot=closeRoot;this.#newFile=newFile;this.#log=log;
     this.#search.addEventListener('input',()=>this.render());
     this.#hint=typeof document.createElement==='function'?
