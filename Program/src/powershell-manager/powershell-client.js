@@ -13,6 +13,6 @@ export class PowerShellClient {
   return result;
  }
  async checkConnection(){return this.#post('/status');}
- async executeAuthorized(request){return this.#post('/execute',request.action==='interactive'?{action:'interactive',command:request.command,confirm:request.confirm===true}:{action:request.action});}
+ async executeAuthorized(request){return this.#post('/execute',request.action==='interactive'?{action:'interactive',command:request.command}:{action:request.action});}
  async revokeLocalAccess(){try{return await this.#post('/revoke');}finally{this.clear();}}
 }
