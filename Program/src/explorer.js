@@ -312,7 +312,7 @@ export class Explorer {
       button.dataset.action=key;
       button.title=label;
       button.setAttribute('aria-label',label);
-      button.disabled=(key==='rename'&&!node.parent)||
+      button.disabled=(key==='rename'&&(!node.parent||node.kind==='directory'))||
         (key==='paste'&&!this.#clipboard)||
         (key==='folder'&&!node.parent&&node.kind!=='directory')||
         (key==='file'&&!node.parent&&node.kind!=='directory');
@@ -464,7 +464,7 @@ export class Explorer {
   }
   #clearHold(){if(this.#hold){clearTimeout(this.#hold.timer);this.#hold=null;}}
   #pointerDown(e){
-    if(e.button!==0||e.target.closest('.explorer-disclosure,.explorer-rename'))return;
+    if(e.button!==0||e.target.closest('.explorer-disclosure,.explorer-rename,.explorer-inline-actions'))return;
     const row=e.target.closest('.explorer-entry[data-path]');if(!row)return;
     this.#clearHold();this.#drag=null;
     const node=this.#nodeAt(row);if(!node)return;
