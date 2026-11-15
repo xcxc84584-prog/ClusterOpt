@@ -12,8 +12,8 @@ test('50.2: release, OCDA, GitHub inventory and VTE remain aligned',()=>{
   assert.ok(registry.edges().some(e=>e.from==='UI'&&e.to==='NewlineEditIntent'));
   assert.match(read('../../OBJECT_LIST.md'),/\| NewlineEditIntent \|/);
   assert.match(read('../../PROPERTY_LIST.md'),/LINE_EDIT_DELTA/);
-  assert.match(read('../../index.html'),/Program\/\?v=0\.0\.57/);
-  assert.match(read('../index.html'),/main\.js\?v=opt057-file-tool/);
+  assert.match(read('../../index.html'),/Program\/\?v=0\.0\.58/);
+  assert.match(read('../index.html'),/main\.js\?v=opt058-file-tool-i18n/);
   assert.match(read('../src/main.js'),/deriveEditIntent\(/);
   const vte=createVTE();
   registry.list();
