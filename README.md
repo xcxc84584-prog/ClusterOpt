@@ -22,3 +22,5 @@ Local-first browser IDE (GitHub Pages). Current release: **v0.0.50** (through st
 51.2: known beforeinput patch updates highlight line starts and token ranges; unknown edits fall back. Current array tail-shift and DOM repaint remain linear.
 
 51.3: bounded conservative lexical restart (C-family); NOT Shiki grammar-stack persistence. Unknown context uses existing matching-window fallback.
+
+51.4: bounded revision-aware exact-source LRU for uncolored tokens; theme changes recolor without retokenizing cached entries. Grammar checkpoint remains conservative.
