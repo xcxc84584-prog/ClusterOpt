@@ -12,7 +12,7 @@ test('52 UI: keyboard recorder input replaces dropdown',()=>{
  assert.match(main,/if\(event\.key==='Tab'\)return/);
  assert.match(main,/event\.isComposing/);
  assert.match(main,/persistHighlightShortcut\(localStorage,shortcutDraft\)/);
- assert.match(page,/main\.js\?v=opt060-psm-ui/);
+ assert.match(page,/main\.js\?v=opt060-psm-setup2/);
 });
 test('52 UI: Ctrl required, Shift optional, reserved combinations rejected',()=>{
  assert.deepEqual(DEFAULT_HIGHLIGHT_SHORTCUT,{shift:true,key:'H'});
