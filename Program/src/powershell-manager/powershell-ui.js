@@ -133,7 +133,7 @@ export function mountPowerShellUI({host,button,language,manager=new PowerShellMa
  commandInput.addEventListener('keydown',event=>{
   const session=sessions.find(x=>x.id===selected);if(!session)return;
   if(event.ctrlKey&&event.key.toLowerCase()==='c'&&commandInput.value.length===0){
-    event.preventDefault();if(session.remoteId){remote.interruptSession(session.remoteId).catch(()=>{});session.remoteId=null;appendOutput('^C');ensureRemote(session);}return;
+    event.preventDefault();if(session.remoteId){const oldId=session.remoteId;session.remoteId=null;appendOutput('^C');remote.interruptSession(oldId).catch(()=>{}).finally(()=>ensureRemote(session));}return;
   }
   if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();commandForm.requestSubmit();return;}
   if(event.key==='ArrowUp'&&!commandInput.value.includes('\n')){event.preventDefault();session.historyIndex=Math.max(0,session.historyIndex-1);commandInput.value=session.history[session.historyIndex]||'';}
