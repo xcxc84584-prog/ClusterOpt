@@ -140,6 +140,8 @@ export function runInteractive(command){
 }
 if(process.argv[1]&&fileURLToPath(import.meta.url)===process.argv[1]){
  const agent=createLocalAgent();
+ try{const {attachNativeTerminal}=await import('./native-terminal.mjs');await attachNativeTerminal(agent.server,{token:agent.token,allowedOrigins:ALLOWED_ORIGINS});console.log('Native ConPTY terminal: enabled');}
+ catch(error){console.error('Native terminal unavailable:',error.message);}
  console.log('PowerShell sessions: enabled after browser pairing');
  agent.server.listen(DEFAULT_PORT,'127.0.0.1',()=>{
   console.log('ClusterOpt Local Agent listening on 127.0.0.1:'+DEFAULT_PORT);

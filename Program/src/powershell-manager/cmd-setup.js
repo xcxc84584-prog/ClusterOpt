@@ -1,13 +1,13 @@
-// v0.0.62: setup CMD downloads a pinned agent and starts it; token printed by PLA.
+// v0.0.63: setup CMD downloads a pinned agent and starts it; token printed by PLA.
 export const PLA_SOURCE='https://raw.githubusercontent.com/xcxc84584-prog/ClusterOpt/main/Program/local-agent/server.mjs';
-export const SETUP_FILENAME='ClusterOpt-PLA-Setup-v0.0.62-r2.cmd';
+export const SETUP_FILENAME='ClusterOpt-PLA-Setup-v0.0.63-r1.cmd';
 export function createSetupCmd(){
  const lines=[
  '@echo off',
  'setlocal EnableExtensions DisableDelayedExpansion',
- 'title ClusterOpt Local Agent v0.0.62 r2',
+ 'title ClusterOpt Local Agent v0.0.63 r1',
  'echo ==========================================',
- 'echo ClusterOpt PowerShell Local Agent v0.0.62 r2',
+ 'echo ClusterOpt PowerShell Local Agent v0.0.63 r1',
  'echo ==========================================',
  'where node.exe >nul 2>nul',
  'if errorlevel 1 goto missing_node',
@@ -18,7 +18,15 @@ export function createSetupCmd(){
  'echo [1/2] Downloading pinned agent...',
 'powershell.exe -NoProfile -NonInteractive -Command "try { Invoke-WebRequest -UseBasicParsing -Uri '+PLA_SOURCE+' -OutFile ($env:USERPROFILE + \'\\\\ClusterOpt-Agent\\\\server.mjs\') -ErrorAction Stop } catch { exit 1 }"',
  'if errorlevel 1 goto failed',
- 'echo [2/2] Checking local port 43881...',
+ 'echo [1/3] Downloading native ConPTY bridge and package metadata...',
+ 'powershell.exe -NoProfile -NonInteractive -Command "$base=\'https://raw.githubusercontent.com/xcxc84584-prog/ClusterOpt/main/Program/local-agent/\'; $dir=Join-Path $env:USERPROFILE \'ClusterOpt-Agent\'; foreach($file in @(\'native-terminal.mjs\',\'package.json\')){try{Invoke-WebRequest -UseBasicParsing -Uri ($base+$file) -OutFile (Join-Path $dir $file) -ErrorAction Stop}catch{exit 1}}"',
+ 'if errorlevel 1 goto failed',
+ 'echo [2/3] Installing native terminal dependencies (requires Node.js build tools on Windows)...',
+ 'pushd "%AGENT_DIR%"',
+ 'call npm.cmd install --omit=dev --no-audit --no-fund',
+ 'if errorlevel 1 (popd & goto failed)',
+ 'popd',
+ 'echo [3/3] Checking local port 43881...',
  'powershell.exe -NoProfile -NonInteractive -Command "$c=Get-NetTCPConnection -LocalAddress 127.0.0.1 -LocalPort 43881 -State Listen -ErrorAction SilentlyContinue; if($c){exit 12}else{exit 0}"',
  'if errorlevel 12 goto port_busy',
  'goto launch_agent',
@@ -40,7 +48,7 @@ export function createSetupCmd(){
  'pause',
  'exit /b 1',
  ':launch_agent',
- 'echo [2/2] Starting detached local agent...',
+ 'echo [3/3] Starting detached local agent...',
  'set "AGENT_LOG=%AGENT_DIR%\\agent-stdout.log"',
  'set "AGENT_ERR=%AGENT_DIR%\\agent-stderr.log"',
  'if exist "%AGENT_LOG%" del /q "%AGENT_LOG%"',
