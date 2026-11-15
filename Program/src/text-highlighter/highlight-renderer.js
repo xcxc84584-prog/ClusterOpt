@@ -159,16 +159,31 @@ export class HighlightRenderer {
     this.editor.classList.add('highlight-active');
     this.sync();
   }
+  // Sorted token ranges: locate the replacement interval in O(log N),
+  // then splice without filtering and sorting every token on each edit.
+  #replaceTokenWindow(begin,end,incoming){
+    const previous=this.lastScheme.ranges;
+    let lo=0,hi=previous.length;
+    while(lo<hi){const mid=(lo+hi)>>1;
+      if(previous[mid].end<=begin)lo=mid+1;else hi=mid;}
+    const first=lo;
+    lo=first;hi=previous.length;
+    while(lo<hi){const mid=(lo+hi)>>1;
+      if(previous[mid].start<end)lo=mid+1;else hi=mid;}
+    const last=lo;
+    this.lastScheme={...this.lastScheme,ranges:[
+      ...previous.slice(0,first),...incoming.sort((a,b)=>a.start-b.start),
+      ...previous.slice(last)
+    ]};
+  }
   renderRegion({startLine,endLine,ranges,status},expectedText){
     if(status!=='OK'||!this.lastScheme||expectedText!==this.editor.value)return false;
     if(startLine<0||endLine<startLine||endLine>=this.starts.length||
       endLine-startLine+1>100)return false;
     const begin=this.starts[startLine];
     const end=endLine+1<this.starts.length?this.starts[endLine+1]-1:this.lastText.length;
-    const old=this.lastScheme.ranges.filter(r=>r.end<=begin||r.start>=end);
-    this.lastScheme={...this.lastScheme,ranges:[
-      ...old,...ranges.map(r=>({...r,start:r.start+begin,end:r.end+begin}))
-    ].sort((a,b)=>a.start-b.start)};
+    this.#replaceTokenWindow(begin,end,
+      ranges.map(r=>({...r,start:r.start+begin,end:r.end+begin})));
     for(let i=startLine;i<=endLine;i++){
       const node=this.lineNodes.get(i);
       if(node)this.#paint(node,i);
@@ -181,10 +196,8 @@ export class HighlightRenderer {
     const begin=this.starts[index];
     const finish=index+1<this.starts.length?this.starts[index+1]-1:this.lastText.length;
     if(end>finish)return false;
-    const existing=this.lastScheme.ranges.filter(r=>r.end<=begin||r.start>=finish);
-    this.lastScheme={...this.lastScheme,ranges:[
-      ...existing,...ranges.map(r=>({...r,start:r.start+begin,end:r.end+begin}))
-    ].sort((a,b)=>a.start-b.start)};
+    this.#replaceTokenWindow(begin,finish,
+      ranges.map(r=>({...r,start:r.start+begin,end:r.end+begin})));
     const node=this.lineNodes.get(index);
     if(node)this.#paint(node,index);
     return true;
