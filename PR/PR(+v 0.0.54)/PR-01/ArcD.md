@@ -1,0 +1,2 @@
+# Architecture
+Explorer owns FileSystemDirectoryHandle tree; syncExternal() is non-overlapping visible-only 2500ms poll + focus/visibility refresh, traversing expanded directories, #loadChildren(force) retains node identity/expanded state, compares name/kind and rerenders only changed tree. No File System Access native watch API assumed. Existing external content monitor remains independent. Context action toolbar: labeled icon+caption, primary/secondary/back, keyboard navigation and danger styling. No MVCC/FLAG/OMU or editor state writes.

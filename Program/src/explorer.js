@@ -32,6 +32,7 @@ export class Explorer {
   #panel;#tree;#search;#openFile;#openDocument;#closeFile;#closeRoot;#newFile;#log;
   #state=readState();#clipboard=null;#actionBar=null;#hint=null;#rename=null;
   #hold=null;#drag=null;#selected=null;#revealGeneration=0;#suppressClick=false;#draft=null;
+  #syncing=false;#syncTimer=null;
   constructor({panel,openFile,openDocument,closeFile=async()=>false,closeRoot=async()=>true,newFile=()=>{},log=()=>{}}){
     this.#panel=panel;this.#tree=panel.querySelector('#explorerTree');
     this.#search=panel.querySelector('#explorerSearch');
@@ -75,6 +76,15 @@ export class Explorer {
     });
     document.addEventListener('keydown',e=>{if(e.key==='Escape'){this.#closeMenu();this.#cancelRename();}});
     this.#restoreRoots();
+    // File System Access has no portable directory change event. Poll only
+    // expanded folders while the Explorer is visible; preserve user state.
+    if(typeof window!=='undefined'){
+      this.#syncTimer=window.setInterval(()=>{void this.syncExternal();},2500);
+      window.addEventListener('focus',()=>{void this.syncExternal();});
+    }
+    document.addEventListener('visibilitychange',()=>{
+      if(!document.hidden)void this.syncExternal();
+    });
   }
   get #en(){return this.#locale==='en';}
   #say(zh,en){return this.#en?en:zh;}
@@ -111,7 +121,7 @@ export class Explorer {
     if(!open)this.#closeMenu();
     this.#panel.hidden=!open;
     document.querySelector('#explorerToggle').setAttribute('aria-expanded',String(open));
-    if(open&&this.#active)this.revealDocument(this.#active);
+    if(open){void this.syncExternal();if(this.#active)this.revealDocument(this.#active);}
   }
   setLocale(locale,translate){
     this.#closeMenu();
@@ -193,7 +203,37 @@ export class Explorer {
         else children.push(this.#node(handle,node));
       }
       node.children=this.#order(children,node);
-    }catch(error){this.#log('Explorer directory read: '+error);node.children=[];}
+    }catch(error){
+      // Transient permission/read failures must not erase a cached tree.
+      this.#log('Explorer directory read: '+error);
+    }
+  }
+  async syncExternal(){
+    if(this.#syncing||this.#panel.hidden||document.hidden)return false;
+    this.#syncing=true;
+    let changed=false;
+    const visit=async node=>{
+      if(node.kind!=='directory'||!node.expanded)return;
+      const previous=node.children||[];
+      const signature=previous.map(n=>n.name+'|'+n.kind).sort().join('\\n');
+      try{
+        await this.#loadChildren(node,true);
+      }catch(error){this.#log('Explorer external sync: '+error);return;}
+      const next=node.children||[];
+      if(signature!==next.map(n=>n.name+'|'+n.kind).sort().join('\\n'))changed=true;
+      for(const child of next)if(child.kind==='directory'&&child.expanded)await visit(child);
+    };
+    try{
+      for(const root of this.#roots)await visit(root);
+      if(changed){
+        // Do not close a context menu or reset selection unless its entry vanished.
+        const keys=new Set(this.#allNodes().map(n=>this.#key(n)));
+        if(this.#selected&&!keys.has(this.#selected))this.#selected=null;
+        if(this.#actionBar&&!keys.has(this.#actionBar.nodeKey))this.#actionBar=null;
+        if(!this.#rename&&!this.#draft&&!this.#hold)this.render();
+      }
+      return changed;
+    }finally{this.#syncing=false;}
   }
   #order(children,parent){
     const keys=this.#state.order?.[parent?this.#key(parent):'@roots']||[];
@@ -294,12 +334,13 @@ export class Explorer {
     toolbar.setAttribute('role','toolbar');
     toolbar.setAttribute('aria-label',this.#say('檔案操作','File actions'));
     const primary=[
-      ['folder','▣',this.#say('建立新資料夾','New folder'),()=>this.#createIn(node,'directory')],
-      ['file','◇',this.#say('建立新文件','New file'),()=>this.#createIn(node,'file')],
+      ['folder','▣',this.#say('資料夾','Folder'),()=>this.#createIn(node,'directory')],
+      ['file','◇',this.#say('新文件','New file'),()=>this.#createIn(node,'file')],
       ['close','×',this.#say('關閉','Close'),()=>this.#closeEntry(node)],
-      ['more','⋯',this.#say('操作','More actions'),null]
+      ['more','⋯',this.#say('更多','More'),null]
     ];
     const secondary=[
+      ['back','‹',this.#say('返回','Back'),null],
       ['rename','✎',this.#say('重新命名','Rename'),()=>this.#startRename(node)],
       ['cut','✂',this.#say('剪下','Cut'),()=>{this.#clipboard={node,cut:true};}],
       ['copy','▤',this.#say('複製','Copy'),()=>{this.#clipboard={node,cut:false};}],
@@ -312,7 +353,11 @@ export class Explorer {
       const button=document.createElement('button');
       button.type='button';
       button.className='explorer-inline-action'+(key==='delete'?' is-danger':'');
-      button.textContent=glyph;
+      const symbol=document.createElement('span');symbol.className='explorer-action-symbol';
+      symbol.textContent=glyph;symbol.setAttribute('aria-hidden','true');
+      const caption=document.createElement('span');caption.className='explorer-action-label';
+      caption.textContent=label;
+      button.append(symbol,caption);
       button.dataset.action=key;
       button.title=label;
       button.setAttribute('aria-label',label);
@@ -326,8 +371,8 @@ export class Explorer {
       button.addEventListener('blur',()=>this.#updateHint());
       button.addEventListener('click',event=>{
         event.stopPropagation();
-        if(key==='more'){
-          this.#actionBar.level='secondary';
+        if(key==='more'||key==='back'){
+          this.#actionBar.level=key==='more'?'secondary':'primary';
           this.#updateHint();
           this.render();
           this.#tree.querySelector('.explorer-inline-action')?.focus({preventScroll:true});
