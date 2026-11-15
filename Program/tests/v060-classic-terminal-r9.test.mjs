@@ -18,7 +18,7 @@ test('60.38 terminal uses black full workspace and input has no visible button',
 });
 test('60.39 r9 release cache and redirect remain consistent',()=>{
  const root=read('../../index.html');const main=read('../src/main.js');const ui=read('../src/powershell-manager/powershell-ui.js');
- assert.ok(root.includes('opt065-native-r1'));
- assert.ok(main.includes('powershell-ui.js?v=opt065-native-r1'));
- assert.ok(ui.includes('cmd-setup.js?v=opt065-native-r1'));
+ assert.ok(root.includes('opt066-conpty-r1'));
+ assert.ok(main.includes('powershell-ui.js?v=opt066-conpty-r1'));
+ assert.ok(ui.includes('cmd-setup.js?v=opt066-conpty-r1'));
 });
