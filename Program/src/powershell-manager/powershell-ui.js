@@ -114,8 +114,8 @@ export function mountPowerShellUI({host,button,language,manager=new PowerShellMa
    }
    if(action==='close')closeSession(selected);
    if(action==='tool'){const menu=toolMenu();const shouldOpen=menu.hidden;closeToolMenu();if(shouldOpen){menu.hidden=false;toolButton().setAttribute('aria-expanded','true');positionToolMenu();}}
-   if(action==='permissions'){setFeedback(t().rule+' — '+t().notice);q('.psm-menu').hidden=true;}
-   if(action==='revoke'){try{const result=await manager.revokeLocalAccess();setFeedback(result.ok?'Revoked':t().unavailable);}catch{setFeedback(t().unavailable);}q('.psm-menu').hidden=true;}
+   if(action==='permissions'){setFeedback(t().rule+' — '+t().notice);closeToolMenu();}
+   if(action==='revoke'){try{const result=await manager.revokeLocalAccess();setFeedback(result.ok?'Revoked':t().unavailable);}catch{setFeedback(t().unavailable);}closeToolMenu();}
    if(action==='check'){try{const state=await manager.checkConnection();setFeedback(state.configured?(language.value==='en'?'Connected':'已連線'):t().unavailable);}catch{setFeedback(language.value==='en'?'Connection failed. Verify CMD is still running and token is paired.':'連線失敗，請確認 CMD 仍在執行且已完成 Token 配對。');}}
  });
  function setFeedback(value){q('[data-psm="feedback"]').textContent=value;const session=sessions.find(x=>x.id===selected);if(session)session.feedback=value;}
