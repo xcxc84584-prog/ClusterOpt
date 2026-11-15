@@ -18,7 +18,7 @@ test('54 Explorer refresh preserves selected and expanded entries when external 
  assert.doesNotMatch(explorer,/Explorer directory read: '\+error\);node\.children=\[\]/);
 });
 test('54 Explorer menu shows labeled actions and back navigation',()=>{
- assert.match(explorer,/explorer-action-label/);
+ assert.match(explorer,/button\.append\(symbol\)/);
  assert.match(explorer,/explorer-action-symbol/);
  assert.match(explorer,/key==='more'\|\|key==='back'/);
  assert.match(css,/\.explorer-action-label/);
