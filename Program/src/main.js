@@ -1,3 +1,4 @@
+import {RenderCoordinator} from './editor-render/render-coordinator.js?v=opt047-pr03';
 import {PerformanceMonitor} from './performance/performance-monitor.js?v=opt046-pmu';
 import {matchingWindow} from './text-highlighter/matching-window.js?v=opt038-matcher';
 import {transcodeToUtf8} from './fmc/chinese-transcoder.js';
@@ -720,10 +721,20 @@ capturePosition();
 scheduleRecovery();monitor.onEdit(active);updateLines();updatePos();$('#filename').textContent=docs.get(active).data.name+' *';
 const activeTab=[...$('#tabs').children].find(tab=>tab.classList.contains('active'));
 if(activeTab)activeTab.querySelector('.name').textContent=docs.get(active).data.name+' ●';status(t('unsaved'));});
+// Visual-only scroll updates are coalesced; persistence and slice navigation stay synchronous.
+const scrollRenderCoordinator = new RenderCoordinator({
+  onError:error=>omu.emit('RenderCoordinator','ScrollRender',500,String(error),true)
+});
+let scrollRenderRevision = 0;
 editor.addEventListener('scroll',()=>{
- highlightRenderer.sync();
-  syncGutterScroll();
-  syncTabGuides();
+  scrollRenderCoordinator.schedule({source:'scroll',revision:++scrollRenderRevision,
+    render:snapshot=>{
+      if(!snapshot.isCurrent())return;
+      highlightRenderer.sync();
+      syncGutterScroll();
+      syncTabGuides();
+    }
+  });
   if (active && virtualSessions.has(active)) {
     virtualSessions.get(active).setPosition(
       virtualSessions.get(active).center,
