@@ -30,3 +30,7 @@ Local-first browser IDE (GitHub Pages). Current release: **v0.0.50** (through st
 51.6: latest-wins syntax task scheduler with AbortSignal, revision-checked commit and cancellation; does NOT move Shiki to a Web Worker, so tokenization may still block UI.
 
 v0.0.52: File → Tool → 文本著色器可設定 Ctrl+(Shift)+A–Z/0–9；Ctrl+C/V/X/Z/Y 不觸發物理 Block 重載，普通文件 Ctrl+Z/Y 避免全量 refresh；未知編輯仍保留安全回退。
+
+## v0.0.52 PR-02 — Shortcut input UI
+
+- File → Tool → 文本著色器：快捷鍵改用 readonly 輸入框錄製，不再使用 select；Esc 取消、Tab 導覽、衝突提示與儲存／重設。僅 UI，原有 OCDA 48 物件、FLAG/MVCC/VTE 不變。真實瀏覽器／IME 待測。

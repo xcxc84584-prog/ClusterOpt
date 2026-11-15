@@ -1649,37 +1649,71 @@ function setHighlighterEnabled(enabled){
 }
 try{TEXT_HIGHLIGHTER.enabled=localStorage.getItem('cluster.textHighlighter.enabled')!=='false';}catch(_){}
 try{highlighterShortcut=restoreHighlightShortcut(localStorage);}catch(_){}
-const shortcutKey=$('#highlighterShortcutKey');
-for(const key of 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'){
-  const option=document.createElement('option');option.value=key;option.textContent=key;
-  shortcutKey.append(option);
+const shortcutInput=$('#highlighterShortcutInput');
+const shortcutSave=$('#highlighterShortcutSave');
+const shortcutStatus=$('#highlighterShortcutStatus');
+let shortcutDraft=null;
+function formatHighlightShortcut(shortcut){
+  return 'Ctrl + '+(shortcut.shift?'Shift + ':'')+shortcut.key;
 }
 function showHighlightShortcut(){
-  $('#highlighterShortcutShift').checked=highlighterShortcut.shift;
-  shortcutKey.value=highlighterShortcut.key;
-  $('#highlighterShortcutStatus').textContent='Ctrl + '+
-    (highlighterShortcut.shift?'Shift + ':'')+highlighterShortcut.key;
+  shortcutDraft=null;
+  shortcutInput.value=formatHighlightShortcut(highlighterShortcut);
+  shortcutInput.placeholder='點擊後按下快捷鍵';
+  shortcutSave.disabled=true;
+  shortcutStatus.textContent='目前使用：'+formatHighlightShortcut(highlighterShortcut);
+  shortcutStatus.dataset.state='saved';
 }
 showHighlightShortcut();
-$('#highlighterShortcutSave').addEventListener('click',()=>{
+shortcutInput.addEventListener('focus',()=>{
+  shortcutInput.placeholder='請按 Ctrl + (Shift) + 字母／數字';
+  shortcutStatus.textContent='正在錄製快捷鍵；按 Esc 取消。';
+  shortcutStatus.dataset.state='recording';
+});
+shortcutInput.addEventListener('keydown',event=>{
+  if(event.key==='Tab')return; // Preserve keyboard navigation.
+  event.preventDefault();
+  event.stopPropagation();
+  if(event.key==='Escape'){showHighlightShortcut();shortcutInput.blur();return;}
+  if(event.isComposing||event.key==='Process'||event.repeat)return;
+  const key=String(event.key).toUpperCase();
+  if(['CONTROL','SHIFT','META','ALT'].includes(key))return;
   const candidate=normalizeHighlightShortcut({
-    shift:$('#highlighterShortcutShift').checked,key:shortcutKey.value
+    shift:event.shiftKey,key
   });
-  if(!candidate){
-    $('#highlighterShortcutStatus').textContent='快捷鍵衝突或格式無效；請改用 Ctrl + Shift + 字母／數字。';
-    return;
+  if(!event.ctrlKey&&!event.metaKey){
+    shortcutStatus.textContent='必須同時按住 Ctrl。';
+    shortcutStatus.dataset.state='error';return;
   }
-  if(!persistHighlightShortcut(localStorage,candidate)){
-    $('#highlighterShortcutStatus').textContent='設定儲存失敗，快捷鍵未變更。';
-    return;
+  if(event.altKey||!candidate){
+    shortcutStatus.textContent='快捷鍵不可用或與既有操作衝突，請換一組。';
+    shortcutStatus.dataset.state='error';return;
   }
-  highlighterShortcut=candidate;showHighlightShortcut();
+  shortcutDraft=candidate;
+  shortcutInput.value=formatHighlightShortcut(candidate);
+  shortcutSave.disabled=false;
+  shortcutStatus.textContent='已錄製；點擊「儲存快捷鍵」套用。';
+  shortcutStatus.dataset.state='ready';
+});
+shortcutInput.addEventListener('paste',event=>event.preventDefault());
+shortcutInput.addEventListener('drop',event=>event.preventDefault());
+shortcutSave.addEventListener('click',()=>{
+  if(!shortcutDraft)return;
+  if(!persistHighlightShortcut(localStorage,shortcutDraft)){
+    shortcutStatus.textContent='設定儲存失敗，快捷鍵未變更。';
+    shortcutStatus.dataset.state='error';return;
+  }
+  highlighterShortcut=shortcutDraft;showHighlightShortcut();
 });
 $('#highlighterShortcutReset').addEventListener('click',()=>{
   if(persistHighlightShortcut(localStorage,DEFAULT_HIGHLIGHT_SHORTCUT)){
     highlighterShortcut=DEFAULT_HIGHLIGHT_SHORTCUT;showHighlightShortcut();
-  }else $('#highlighterShortcutStatus').textContent='無法儲存預設設定。';
+  }else{
+    shortcutStatus.textContent='無法儲存預設設定。';
+    shortcutStatus.dataset.state='error';
+  }
 });
+highlighterDialog.addEventListener('close',showHighlightShortcut);
 document.addEventListener('keydown',event=>{
   if(!shouldHandleEditorShortcut(event,editor,highlighterDialog)||
     !matchesHighlightShortcut(event,highlighterShortcut))return;
