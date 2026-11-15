@@ -1,7 +1,7 @@
 // v0.0.60 PR-02 — Browser UI only. Never runs OS commands.
 import {PowerShellManager} from './powershell-manager.js';
-import {PowerShellClient} from './powershell-client.js?v=opt060-psm-r7';
-import {createSetupCmd,SETUP_FILENAME} from './cmd-setup.js?v=opt060-psm-r7';
+import {PowerShellClient} from './powershell-client.js?v=opt060-psm-r8';
+import {createSetupCmd,SETUP_FILENAME} from './cmd-setup.js?v=opt060-psm-r8';
 const COPY={
  'zh-Hant':{title:'PowerShell',setup:'配置本地代理',desc:'尚未連線至 PowerShell Local Agent。此介面不可執行命令。',check:'檢查連線',tool:'PowerShell 工具',permissions:'權限管理',revoke:'撤銷本地權限',unavailable:'本地代理尚未提供。無法執行命令。',command:'環境檢查指令（CMD）',hint:'這是選用的環境診斷指令；請在 Windows CMD 執行。Token 僅輸入於上方配對欄位。',close:'關閉',status:'未配置',rule:'預設權限：可申請',notice:'權限管理需先配置可信任的本地代理；目前僅提供規則說明。'},
  en:{title:'PowerShell',setup:'Set up Local Agent',desc:'PowerShell Local Agent is not connected. Commands cannot be executed here.',check:'Check connection',tool:'PowerShell tools',permissions:'Permission management',revoke:'Revoke local access',unavailable:'Local Agent is not available. Commands are disabled.',command:'Environment check (CMD)',hint:'Optional environment diagnostics for Windows CMD. Enter the token only in the pairing field.',close:'Close',status:'Not configured',rule:'Default permission: Requestable',notice:'Permission management requires a trusted Local Agent. This is an informational preview.'}
@@ -35,10 +35,10 @@ export function mountPowerShellUI({host,button,language,manager=new PowerShellMa
  host.append(pane);
  const terminal=document.createElement('section');
  terminal.className='psm-terminal';terminal.hidden=true;
- terminal.innerHTML='<div class="psm-terminal-head"><strong data-psm-terminal="heading"></strong><span data-psm-terminal="mode"></span><button type="button" data-psm-action="settings"></button></div><div class="psm-terminal-output" role="log" aria-live="polite" aria-label="PowerShell output"></div><div class="psm-terminal-actions"><button type="button" data-psm-action="version"></button><button type="button" data-psm-action="location"></button><button type="button" data-psm-action="clear"></button></div>';
+ terminal.innerHTML='<div class="psm-terminal-head"><strong data-psm-terminal="heading"></strong><span data-psm-terminal="mode"></span><button type="button" data-psm-action="settings"></button></div><div class="psm-terminal-output" role="log" aria-live="polite" aria-label="PowerShell output"></div><form class="psm-terminal-input"><label for="psmCommandInput">PS&gt;</label><input id="psmCommandInput" type="text" autocomplete="off" spellcheck="false" aria-label="PowerShell command" placeholder="Get-Location"><button type="submit" data-psm-action="run">Run</button></form><div class="psm-terminal-actions"><button type="button" data-psm-action="version"></button><button type="button" data-psm-action="location"></button><button type="button" data-psm-action="clear"></button></div>';
  pane.append(terminal);
  function renderMode(){const setupView=pane.querySelector('.psm-body');setupView.hidden=connected;terminal.hidden=!connected;pane.classList.toggle('psm-connected',connected);}
- function appendOutput(message){const line=document.createElement('pre');line.textContent=message;terminal.querySelector('.psm-terminal-output').append(line);terminal.querySelector('.psm-terminal-output').scrollTop=terminal.querySelector('.psm-terminal-output').scrollHeight;}
+ function appendOutput(message){const session=sessions.find(x=>x.id===selected);if(session)session.output.push(message);const line=document.createElement('pre');line.textContent=message;terminal.querySelector('.psm-terminal-output').append(line);terminal.querySelector('.psm-terminal-output').scrollTop=terminal.querySelector('.psm-terminal-output').scrollHeight;}
  function setConnected(value){connected=Boolean(value);renderMode();translate();}
 
  const setup=document.createElement('div');setup.className='psm-quick-setup';
@@ -67,7 +67,10 @@ export function mountPowerShellUI({host,button,language,manager=new PowerShellMa
    q('[data-psm-action="download"]').textContent=extra.download;
    q('[data-psm-action="pair"]').textContent=extra.pair;
    button.title=msg.title;button.setAttribute('aria-label',msg.title);
-   const labels=language.value==='en'?{heading:'PowerShell · Local Agent',mode:'Read-only / Allowlisted',settings:'Connection settings',version:'PowerShell version',location:'Current directory',clear:'Clear output'}:{heading:'PowerShell · 本地代理',mode:'唯讀 / 白名單',settings:'連線設定',version:'PowerShell 版本',location:'目前目錄',clear:'清除輸出'};
+   const labels=language.value==='en'?{heading:'PowerShell · Local Agent',mode:'Interactive / Confirm each command',settings:'Connection settings',version:'PowerShell version',location:'Current directory',clear:'Clear output'}:{heading:'PowerShell · 本地代理',mode:'互動模式 / 每條命令需確認',settings:'連線設定',version:'PowerShell 版本',location:'目前目錄',clear:'清除輸出'};
+   const runLabel=language.value==='en'?'Run':'執行';
+   terminal.querySelector('[data-psm-action="run"]').textContent=runLabel;
+   terminal.querySelector('#psmCommandInput').placeholder=language.value==='en'?'Enter PowerShell command':'輸入 PowerShell 命令';
    for(const [key,value] of Object.entries(labels)){const node=terminal.querySelector('[data-psm-terminal="'+key+'"]')||terminal.querySelector('[data-psm-action="'+key+'"]');if(node)node.textContent=value;}
    q('[data-psm="status"]').textContent=connected?(language.value==='en'?'Connected':'已連線'):msg.status;
  }
@@ -93,10 +96,12 @@ export function mountPowerShellUI({host,button,language,manager=new PowerShellMa
    host.classList.add('psm-mode');button.setAttribute('aria-pressed','true');
    // A session has its own setup status/feedback, independent from other tabs.
    q('[data-psm="feedback"]').textContent=sessions.find(x=>x.id===id).feedback||'';
+   terminal.querySelector('.psm-terminal-output').replaceChildren();
+   for(const message of sessions.find(x=>x.id===id).output){const line=document.createElement('pre');line.textContent=message;terminal.querySelector('.psm-terminal-output').append(line);}
    renderMode();translate();syncTabs();
  }
  function createSession(){
-   const session={id:++sequence,feedback:''};sessions.push(session);
+   const session={id:++sequence,feedback:'',history:[],historyIndex:0,output:[]};sessions.push(session);
    selectSession(session.id);return session.id;
  }
  function hide(){closeToolMenu();open=false;pane.hidden=true;host.classList.remove('psm-mode');button.setAttribute('aria-pressed','false');closeToolMenu();syncTabs();}
@@ -116,9 +121,32 @@ export function mountPowerShellUI({host,button,language,manager=new PowerShellMa
  }
  function show(){if(selected!==null)selectSession(selected);else createSession();}
  button.addEventListener('click',createSession);
+ const commandForm=terminal.querySelector('.psm-terminal-input');
+ const commandInput=terminal.querySelector('#psmCommandInput');
+ commandInput.addEventListener('keydown',event=>{
+  const session=sessions.find(x=>x.id===selected);if(!session)return;
+  if(event.key==='ArrowUp'){event.preventDefault();session.historyIndex=Math.max(0,session.historyIndex-1);commandInput.value=session.history[session.historyIndex]||'';}
+  if(event.key==='ArrowDown'){event.preventDefault();session.historyIndex=Math.min(session.history.length,session.historyIndex+1);commandInput.value=session.history[session.historyIndex]||'';}
+ });
+ commandForm.addEventListener('submit',async event=>{
+  event.preventDefault();if(!connected||terminalBusy)return;
+  const command=commandInput.value.trim();if(!command)return;
+  if(command.length>2048){appendOutput('Command exceeds 2048 characters.');return;}
+  const session=sessions.find(x=>x.id===selected);if(!session)return;
+  const allowed=window.confirm((language.value==='en'?'Execute this PowerShell command on your computer?':'確定要在本機執行這條 PowerShell 命令嗎？')+'\\n\\n'+command);
+  if(!allowed)return;
+  session.history.push(command);session.historyIndex=session.history.length;
+  commandInput.value='';terminalBusy=true;commandInput.disabled=true;
+  appendOutput('PS> '+command);
+  try{const result=await manager.executeCommand({action:'interactive',command,confirm:true});
+   appendOutput(result.ok?String(result.output||('(exit '+result.exitCode+')')):(result.code||'Command failed'));
+  }catch(error){appendOutput((language.value==='en'?'Execution error: ':'執行錯誤：')+(error?.message||'UNKNOWN'));}
+  finally{terminalBusy=false;commandInput.disabled=false;commandInput.focus();}
+ });
  pane.addEventListener('click',async event=>{
    const action=event.target.closest('[data-psm-action]')?.dataset.psmAction;
    if(!action)return;
+   if(action==='run')return;
    if(action==='download'){
      const cmd=createSetupCmd();
      const url=URL.createObjectURL(new Blob([cmd],{type:'application/octet-stream'}));
@@ -133,14 +161,14 @@ export function mountPowerShellUI({host,button,language,manager=new PowerShellMa
      if(!ok){pairButton.disabled=false;setFeedback(language.value==='en'?'Token must be exactly 64 hexadecimal characters.':'Token 必須是 64 個十六進位字元。');return;}
      try{
        const state=await manager.checkConnection();
-       if(state.configured){setConnected(true);appendOutput(language.value==='en'?'Local Agent authenticated. Read-only commands are available.':'本地代理驗證成功，已開啟唯讀 PowerShell 介面。');setFeedback('');}
+       if(state.configured){setConnected(true);appendOutput(language.value==='en'?'Local Agent authenticated. Confirm each command before execution.':'本地代理驗證成功，命令執行前需逐條確認。');setFeedback('');}
        else setFeedback((language.value==='en'?'Pairing failed: ':'配對失敗：')+(state.error||'NETWORK_UNAVAILABLE')+(language.value==='en'?'. Check agent, token and browser local-network access.':'。請確認代理視窗、Token 與瀏覽器本地網路權限。'));
      }catch{setFeedback(language.value==='en'?'Cannot reach local agent on 127.0.0.1:43881.':'無法連線至 127.0.0.1:43881。');}
      finally{pairButton.disabled=false;}
    }
    if(action==='close')closeSession(selected);
    if(action==='settings'){setConnected(false);closeToolMenu();}
-   if(action==='clear')terminal.querySelector('.psm-terminal-output').replaceChildren();
+   if(action==='clear'){terminal.querySelector('.psm-terminal-output').replaceChildren();const session=sessions.find(x=>x.id===selected);if(session)session.output=[];}
    if((action==='version'||action==='location')&&!terminalBusy){
      terminalBusy=true;
      appendOutput('PS> '+(action==='version'?'$PSVersionTable.PSVersion.ToString()':'(Get-Location).Path'));
