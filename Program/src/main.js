@@ -502,7 +502,8 @@ tab.append(name,close);
 tab.onclick=()=>switchDoc(id);
 $('#tabs').append(tab);
 }
-if(d){const changedDocument = editor.dataset.doc !== active;
+const changedDocument=!!d&&editor.dataset.doc!==active;
+if(d){
 if(changedDocument){
   highlightRenderer.clear();
   lastGutterSignature='';
