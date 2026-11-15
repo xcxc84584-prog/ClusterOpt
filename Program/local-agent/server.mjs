@@ -100,7 +100,7 @@ export function createPersistentSession(){
    // Base64 avoids command injection through the protocol framing; the decoded script is user-provided code.
    const b64=Buffer.from(running.command,'utf8').toString('base64');
    const line="$__cluster_script=[Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('"+b64+"')); try { Invoke-Expression $__cluster_script 2>&1 | Out-String -Width 240 | Write-Output } finally { Write-Output '"+running.marker+"' }";
-   child.stdin.write(line+'\n');
+   child.stdin.write(line+'\n\n');
  }
  return {
   run(command){if(closed)throw new Error('SESSION_CLOSED');if(pending.length>=20)throw new Error('QUEUE_FULL');const marker='__CLUSTER_END_'+randomBytes(12).toString('hex')+'__';pending.push({command,marker});drain();return {queued:pending.length,busy:Boolean(running)};},
