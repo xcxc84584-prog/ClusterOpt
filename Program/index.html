@@ -4,9 +4,9 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>
-      Cluster Opt 0.0.58
+      Cluster Opt 0.0.59
     </title>
-    <link rel="stylesheet" href="./src/style.css?v=opt058-file-tool-i18n">
+    <link rel="stylesheet" href="./src/style.css?v=opt059-shortcut-i18n">
   </head>
   <body>
     <div id="app">
@@ -19,7 +19,7 @@
             Cluster
           </strong>
           <small>
-            v0.0.58
+            v0.0.59
           </small>
         </div>
         <div class="header-utility"><button id="explorerToggle" type="button" aria-controls="explorerPanel" aria-expanded="false" title="檔案總管">☰ Explorer</button></div><div class="menu-wrap">
@@ -200,10 +200,10 @@
       <div class="highlighter-content"><label class="highlighter-switch"><input id="highlighterEnabled" type="checkbox" checked> 啟用 Shiki 語法著色</label><p id="highlighterHint">依檔案類型自動識別語言；色彩跟隨介面調色盤。</p><p id="highlighterSlices">僅處理被著色切片及其相鄰切片，不修改文件。</p><label class="highlighter-switch"><input id="highlighterPerformance" type="checkbox"><span id="highlighterPerformanceLabel">效能化（僅著色可見文本）</span></label><p id="highlighterPerformanceHint">僅解析目前視窗中的文字；捲動離開後卸載舊著色資料。</p><section class="highlighter-shortcut" aria-labelledby="highlighterShortcutLabel">
           <div class="highlighter-shortcut-heading">
             <div><h3 id="highlighterShortcutLabel">切換快捷鍵</h3>
-              <p>點擊輸入框，直接按下想使用的快捷鍵。</p></div>
-            <span class="highlighter-shortcut-tag">EDITOR ONLY</span>
+              <p id="highlighterShortcutDescription">點擊輸入框，直接按下想使用的快捷鍵。</p></div>
+            <span id="highlighterShortcutScope" class="highlighter-shortcut-tag">EDITOR ONLY</span>
           </div>
-          <label for="highlighterShortcutInput" class="highlighter-shortcut-input-label">快捷鍵組合</label>
+          <label for="highlighterShortcutInput" id="highlighterShortcutCombination" class="highlighter-shortcut-input-label">快捷鍵組合</label>
           <div class="highlighter-shortcut-field">
             <span class="highlighter-shortcut-icon" aria-hidden="true">⌨</span>
             <input id="highlighterShortcutInput" type="text" autocomplete="off"
@@ -220,7 +220,7 @@
       <div class="palette-modal-footer"><span>CLUSTER / TEXT</span><button id="highlighterDone" type="button">完成</button></div>
     </dialog>
     <input type="file" id="fileInput" multiple hidden>
-    <script type="module" src="./src/main.js?v=opt058-file-tool-i18n">
+    <script type="module" src="./src/main.js?v=opt059-shortcut-i18n">
     </script>
   <dialog id="blockedTypesDialog" class="file-tool-dialog" aria-labelledby="blockedTypesTitle">
     <div class="file-tool-dialog-head"><div><span class="file-tool-eyebrow">CLUSTER / FILE TOOL</span><h2 id="blockedTypesTitle">屏蔽檔案類型</h2><p id="blockedTypesDescription">隱藏 Explorer 中的指定副檔名，不會刪除原始檔案。</p></div><button type="button" id="blockedTypesClose" aria-label="關閉">×</button></div>
