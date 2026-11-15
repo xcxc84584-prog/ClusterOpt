@@ -594,7 +594,12 @@ export class Explorer {
     this.#tree.replaceChildren(fragment);
   }
   #button(name,kind,depth){
-    const button=document.createElement('button');button.type='button';
+    const button=document.createElement('div');button.setAttribute('role','button');
+    button.tabIndex=0;
+    button.addEventListener('keydown',event=>{
+      if(event.target!==button)return;
+      if(event.key==='Enter'||event.key===' '){event.preventDefault();button.click();}
+    });
     button.className='explorer-entry';button.style.paddingInlineStart=(10+depth*15)+'px';
     button.title=name;
     const arrow=document.createElement('span');arrow.className='explorer-arrow';
