@@ -33,7 +33,7 @@ import {createFileManagerClass} from './file-manager.js';
 import {createGlobalPropertyRegistryClass} from './global-properties.js';
 import {createSyncStatusClass} from './sync-status.js';
 import {LanguageProperty} from './language.js?v=opt038-i18n';
-import {mountPowerShellUI} from './powershell-manager/powershell-ui.js?v=opt062-psm-r1&hotfix=2';
+import {mountPowerShellUI} from './powershell-manager/powershell-ui.js?v=opt062-psm-r2';
 // Normalize stale bookmarked release query parameters without discarding user data.
 if(typeof window!=='undefined'&&window.location?.search){
  const params=new URLSearchParams(window.location.search);
