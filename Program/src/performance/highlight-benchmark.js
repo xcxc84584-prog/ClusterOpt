@@ -1,5 +1,6 @@
 import {performance} from 'node:perf_hooks';
 import {buildLineStarts,remapRanges} from '../text-highlighter/highlight-renderer.js';
+import {patchLineStarts,patchTokenRanges} from '../text-highlighter/incremental-line-index.js';
 
 function summarize(samples){
   const sorted=[...samples].sort((a,b)=>a-b);
@@ -17,7 +18,9 @@ export function benchmarkHighlight({lines=10000,iterations=30,width=64}={}){
   const ranges=Array.from({length:Math.min(lines,20000)},(_,i)=>({
     start:i*width,end:i*width+Math.min(width,8),token:'plain'
   }));
-  const samples={lineIndex:[],rangeRemap:[]};
+  const samples={lineIndex:[],rangeRemap:[],knownLinePatch:[],knownTokenPatch:[]};
+  const oldStarts=buildLineStarts(text);
+  const patch={start:mid,end:mid,text:'z',previousLength:text.length};
   for(let i=0;i<iterations;i++){
     let start=performance.now();
     const starts=buildLineStarts(changed);
@@ -27,8 +30,18 @@ export function benchmarkHighlight({lines=10000,iterations=30,width=64}={}){
     const mapped=remapRanges(ranges,text,changed);
     samples.rangeRemap.push(performance.now()-start);
     if(!mapped.length)throw new Error('Unexpected empty range map');
+    start=performance.now();
+    const patched=patchLineStarts(oldStarts,patch);
+    samples.knownLinePatch.push(performance.now()-start);
+    if(patched.length!==starts.length)throw new Error('Line patch mismatch');
+    start=performance.now();
+    const tokenPatch=patchTokenRanges(ranges,patch);
+    samples.knownTokenPatch.push(performance.now()-start);
+    if(tokenPatch.length!==mapped.length)throw new Error('Token patch mismatch');
   }
   return {configuration:{lines,iterations,width,bytes:text.length},
     environment:'Node.js, no Shiki network, no DOM or browser input latency',
-    lineIndex:summarize(samples.lineIndex),rangeRemap:summarize(samples.rangeRemap)};
+    lineIndex:summarize(samples.lineIndex),rangeRemap:summarize(samples.rangeRemap),
+    knownLinePatch:summarize(samples.knownLinePatch),
+    knownTokenPatch:summarize(samples.knownTokenPatch)};
 }
