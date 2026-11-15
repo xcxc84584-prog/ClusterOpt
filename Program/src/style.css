@@ -1328,3 +1328,14 @@ body > .explorer-context .explorer-context-label { overflow-wrap:anywhere; }
  .psm-pane .psm-pair-row input,.psm-pane .psm-pair-row button{flex:1 1 100%}
  .psm-pane .psm-footer button{width:100%}
 }
+
+/* v0.0.60: visible PowerShell controls and menus in all palette variants. */
+.psm-pane .psm-top .psm-actions{display:flex;align-items:center;gap:8px}
+.psm-pane .psm-top .psm-actions [data-psm="status"]{color:var(--ui-text-on-surface,var(--ui-text));font-size:12px;font-weight:650;white-space:nowrap}
+.psm-pane .psm-top .psm-actions button{display:inline-flex;align-items:center;justify-content:center;min-width:36px;min-height:36px;padding:6px;font-size:20px;line-height:1;color:var(--ui-text-on-control,var(--ui-text));background:var(--ui-control);border:1px solid var(--ui-border)}
+.psm-pane .psm-menu:not([hidden]){display:grid;grid-auto-rows:minmax(38px,auto);min-width:190px;gap:6px;padding:9px;background:var(--ui-surface);border:1px solid var(--ui-border);box-shadow:0 10px 26px #0005}
+.psm-pane .psm-menu button{display:block;min-height:36px;width:100%;text-align:left;padding:8px 12px;color:var(--ui-text-on-control,var(--ui-text));background:var(--ui-control);border:1px solid var(--ui-border);font-size:13px;line-height:1.35;white-space:normal}
+.psm-pane .psm-menu button:hover,.psm-pane .psm-top button:hover{background:var(--ui-hover);color:var(--ui-text-on-control,var(--ui-text))}
+.psm-pane .psm-body .psm-primary,.psm-pane .psm-body .psm-pair-row button{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:10px 16px;font-size:13px;font-weight:700;line-height:1.4;color:var(--ui-text-on-control,var(--ui-text));background:var(--ui-control);border:1px solid var(--ui-border);opacity:1;visibility:visible}
+.psm-pane .psm-footer [data-psm="feedback"]{min-height:20px}
+.psm-pane .psm-menu[hidden]{display:none!important}
