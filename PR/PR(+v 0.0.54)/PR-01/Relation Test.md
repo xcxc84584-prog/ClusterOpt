@@ -1,0 +1,2 @@
+# Relation Test
+Node static regression tests: menu labels, back navigation, polling visible expanded roots, preservation of existing node identities and failure state, release cache; existing CI. Browser acceptance: externally add/delete/rename file in expanded root, nested expanded folder, collapsed folder then expand, menu scroll dismiss, dark/light, mobile, permission errors. No real filesystem browser tests yet.
