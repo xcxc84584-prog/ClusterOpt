@@ -1083,3 +1083,7 @@ body > .explorer-context .explorer-context-label { overflow-wrap:anywhere; }
   background:var(--ui-control);
 }
 .explorer-action-hint[hidden],#explorerSearch[hidden] { display:none !important; }
+
+/* Highlighter overlay shares the textarea's exact font metrics and clipped viewport. */
+#highlightOverlay {box-sizing:border-box;overflow:hidden;}
+#highlightOverlay > div {width:max-content;min-width:100%;will-change:transform;}
