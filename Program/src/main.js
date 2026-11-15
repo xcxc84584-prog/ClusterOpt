@@ -37,8 +37,8 @@ import {mountPowerShellUI} from './powershell-manager/powershell-ui.js?v=opt062-
 // Normalize stale bookmarked release query parameters without discarding user data.
 if(typeof window!=='undefined'&&window.location?.search){
  const params=new URLSearchParams(window.location.search);
- if(params.get('v')!=='0.0.62'||params.get('build')!=='opt062-psm-r1'){
-  params.set('v','0.0.62');params.set('build','opt062-psm-r1');
+ if(params.get('v')!=='0.0.62'||params.get('build')!=='opt062-psm-r2'){
+  params.set('v','0.0.62');params.set('build','opt062-psm-r2');
   window.history.replaceState(window.history.state,'',window.location.pathname+'?'+params.toString()+window.location.hash);
  }
 }
