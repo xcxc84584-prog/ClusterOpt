@@ -13,6 +13,7 @@ export class AgentFlagGateway {
   get ownerId() { return this.#agentId; }
   read(index) { return this.#session.agentRead(index, this.#agentId); }
   write(index, content) { return this.#session.edit(index, content, this.#agentId); }
+  patch(index, change) { return this.#session.editPatch(index, change, this.#agentId); }
   status(index) { return this.#session.getFlagStatus(index); }
   owned() { return this.#session.listOwnedFlags(this.#agentId); }
   /**

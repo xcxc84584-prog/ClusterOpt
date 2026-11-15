@@ -1,4 +1,4 @@
-# ClusterOpt Object List — v0.0.49.4
+# ClusterOpt Object List — v0.0.49.5
 
 Source of truth: `Program/src/dependency-registry.js` (createClusterDependencies). Registry entries: **38**. Runtime UI objects and implementation modules are not automatically additional OCDA registry objects.
 
@@ -43,4 +43,4 @@ Source of truth: `Program/src/dependency-registry.js` (createClusterDependencies
 | StoragePriority | `storage-priority.js` | Storage priority configuration |
 | ChineseTranscoder | `fmc/chinese-transcoder.js` | Text encoding conversion |
 
-Updated for 49.4: EditPath added. All previously registered objects preserved. For directional relations, inspect `createClusterDependencies().edges()`.
+Updated for 49.5: 38 objects retained. VirtualFileSession now exposes version-checked micro-range patches under parent WTF/MVCC; bound AgentFlagGateway and UserFlagGateway expose patch(). No independent micro-slice leases. For directional relations, inspect `createClusterDependencies().edges()`.
