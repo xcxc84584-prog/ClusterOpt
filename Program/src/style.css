@@ -1224,3 +1224,29 @@ body > .explorer-context .explorer-context-label { overflow-wrap:anywhere; }
   height:27px; max-height:27px; justify-content:center;
 }
 #explorerTree .explorer-inline-action .explorer-action-label { display:none !important; }
+
+/* v0.0.55 Explorer: VS Code-inspired detached context menu.
+   Keep the tree row at normal height; never replace the filename with buttons. */
+body > .explorer-vscode-popup {
+  position:fixed; z-index:2500; box-sizing:border-box;
+  display:flex; flex-direction:column; flex-wrap:nowrap;
+  width:164px; min-width:164px; max-width:164px;
+  max-height:calc(100dvh - 16px); overflow-y:auto; overflow-x:hidden;
+  padding:4px; gap:1px;
+  background:var(--ui-surface); color:var(--ui-text-on-surface);
+  border:1px solid var(--ui-border); border-radius:7px;
+  box-shadow:0 8px 24px #0005;
+}
+body > .explorer-vscode-popup .explorer-inline-action {
+  box-sizing:border-box; display:flex; flex:0 0 30px;
+  width:100%; min-width:0; height:30px; padding:3px 10px;
+  justify-content:flex-start; align-items:center;
+  background:transparent; border:0; border-radius:4px;
+  color:var(--ui-text-on-surface);
+}
+body > .explorer-vscode-popup .explorer-inline-action:hover,
+body > .explorer-vscode-popup .explorer-inline-action:focus-visible {
+  background:var(--ui-hover); outline:1px solid var(--ui-border);
+}
+body > .explorer-vscode-popup .explorer-action-label {display:none!important;}
+body > .explorer-vscode-popup .explorer-action-symbol {font-size:15px;line-height:20px;}
