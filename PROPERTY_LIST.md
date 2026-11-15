@@ -64,3 +64,6 @@ Source of truth: `Program/src/dependency-registry.js`. Properties are shared nam
 
 | `HIGHLIGHT_TASK_GENERATION` | HighlightTaskScheduler |
 | `HIGHLIGHT_TASK_ABORT` | HighlightTaskScheduler |
+
+| `HIGHLIGHT_SHORTCUT_KEY` | TextHighlighterShortcut |
+| `HIGHLIGHT_SHORTCUT_SHIFT` | TextHighlighterShortcut |
